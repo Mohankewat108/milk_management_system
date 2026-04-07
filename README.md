@@ -52,9 +52,14 @@ milk_setting → Stores SNF, FAT, Lacto rates
 💡 Note:
 milk_total_price is a generated column calculated automatically in MySQL.
 
+🚀 Getting Started
+✅ Requirements
+XAMPP / WAMP
+PHP 8.0+
+MySQL
 
-📸 Screenshots
-📊 Dashboard
+
+
 
 
 
