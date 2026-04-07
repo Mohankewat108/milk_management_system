@@ -1,0 +1,184 @@
+body {
+    background-color: rgb(148, 162, 229); 
+}
+
+/* === Tittle of Milk Management System === */
+.heading{
+    background-color: rgb(134, 160, 231, 0.2);
+    color: rgb(255, 255, 255);
+}
+
+/* === moving main and h1(tittle/heading) 
+in the center of screen === */
+main, h1{
+    text-align: center;
+
+}
+
+/* === I created this for 
+the display grid, 
+grid-templete-column 1fr 1fr === */
+main {
+    display: grid;
+    grid-template-columns: 2fr 8fr;
+}
+
+/* === left side of css === */
+.pannel_left_side{
+    background-color: rgb(105, 119, 223, 0.6);
+    color: rgb(21, 9, 29);
+    padding: 10px;
+}
+
+/* === left side image css making image area 200px === */
+.pannel_left_side img {
+    width: 150px;
+    border-radius: 12px;
+}
+
+/* === FROM HERE RIGHT SIDE CSS STARTED === */
+
+/* === Right side background css === */
+.pannel_right_side{
+    background-color: rgb(191, 201, 224);
+     
+}
+
+/* === giving grid-templete-column of showing 
+(total customer_left,
+ today_total_milk_collection and 
+ today_total_milk_bought)
+
+ Top Ten Recent Customer
+
+
+=== */
+.pannel_right_side__total_div_box{
+    background-color: rgb(132, 152, 189);
+    padding: 10px;
+    border-bottom: 2px solid black;
+    margin: 10px; 
+    font-size: 1.3rem; 
+}
+
+/* == this is the css of 
+showing total customer_left,
+ today_total_milk_collection and 
+ today_total_milk_bought === */
+.pannel_right_side_total_div{
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    align-items: center;
+       
+}
+
+/* === Milk recording form === */
+.milk_record input {
+    padding: 7px;
+    margin-right: 2.5rem;
+    text-align: center;   
+}
+input[type="submit"] {
+    background-color: green;
+    color: white;
+    padding: 10px;
+    border: none;
+    cursor: pointer;
+    margin-top: 20px;  
+}
+
+
+
+.top_five_recent_customer_heading{
+    background-color: rgb(132, 152, 189);
+    padding: 15px;
+    border-bottom: 3px solid black;
+}
+
+table{
+    border-collapse: collapse;
+    margin: 0 auto;
+    font-size: 1.4rem;  
+}
+.table_wrapper {
+    overflow-x: auto;
+    width: 100%;
+}
+
+
+td, th{
+    padding: 7px;
+    border: 1px solid black;
+    text-align: center; 
+    border-radius: 2px;  
+    
+}
+
+th{
+    background-color: rgb(154, 154, 241);
+    padding: 18px;
+    
+}
+
+td{
+    background-color: rgb(171, 163, 219);
+    
+}
+
+.delete {
+    background-color: rgb(163, 5, 5);
+    color: black;
+    margin: 7px;
+    padding: 3px;
+    text-decoration: none;
+}
+
+.edit{
+    background-color: rgb(5, 163, 55);
+    color: black;
+    margin: 7px;
+    padding: 3px;
+    text-decoration: none;
+
+}
+
+
+/* === Mobile === */
+@media screen and (max-width: 480px) {
+    .pannel_right_side_total_div {
+        grid-template-columns: 1fr;
+    }
+
+    .pannel_right_side__total_div_box {
+        font-size: 0.9rem;
+        margin: 5px;
+    }
+
+    table {
+        font-size: 0.85rem;
+        display: block;
+        overflow-x: auto;
+    }
+
+    th {
+        padding: 8px;
+    }
+
+    td {
+        padding: 5px;
+    }
+
+    .heading {
+        font-size: 1rem;
+    }
+
+    .pannel_left_side img {
+        width: 60px;
+    }
+
+    .delete, .edit {
+        display: block;
+        margin: 3px auto;
+        text-align: center;
+    }
+}
