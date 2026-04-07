@@ -1,7 +1,9 @@
 Milk Management System
+
 A full-stack web application for managing daily milk collection, customer records, and pricing calculations efficiently.
 
 About The Project
+
 The Milk Management System is designed for dairy businesses to streamline daily operations. It allows staff to record milk collection, track quality parameters, manage customers, and automatically calculate pricing.
 This system improves accuracy, reduces manual work, and provides quick insights into daily milk transactions.
 
@@ -58,13 +60,38 @@ XAMPP / WAMP
 PHP 8.0+
 MySQL
 
+⚡ Installation Steps
+1. Clone the repository (https://github.com/mohankewat108/milk_management_system.git).
+2. Move project ot server folder
+.  XAMPP ---> htdocs
+3. Import DAtabase
+.  Open: http://localhost/phpmyadmin
+.  Import milk.sql
+4. Configure Database
+.  Edit milk_dbconnetion.php
+.  #Demo
+       $host = "localhost";
+       $user = "root";
+       $password = "root";
+       $database = "milk";
+5. Run Project
+.  http://localhost/milk_management/
 
 
+🔮 Future Improvements
+🔐 User authentication (Admin/Staff login)
+📱 Mobile responsive UI
+📊 Advanced reports & analytics
+📤 Export data (PDF/Excel)
+☁️ Cloud deployment
 
 
+👨‍💻 Author
+Mohan Kewat
+🎓 Computer Science Student
+🏫 Niels Brock Copenhagen Business College, Denmark
+📧 mohankewat108@gmail.com
 
-
-
-
-
+📄 License
+This project is open-source and available for educational purposes.
 
