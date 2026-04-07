@@ -1,5 +1,4 @@
 Milk Management System
-
 A full-stack web application for managing daily milk collection, customer records, and pricing calculations efficiently.
 
 About The Project
