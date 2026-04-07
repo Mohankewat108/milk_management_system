@@ -10,8 +10,10 @@ This system improves accuracy, reduces manual work, and provides quick insights 
 Key Features
 
 📊 Dashboard
+
 View total milk collected, average rate per liter, and total earnings for the day.
 ➕ Add Milk Record
+
 Record daily milk entries with:
 Customer name
 Milk quantity (liters)
@@ -19,6 +21,7 @@ SNF, FAT, Lacto values
 Rate per liter
 Staff name
 Collection date
+
 📅 Today's Milk Details
 View all records for the current day
 Search functionality
