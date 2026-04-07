@@ -1,4 +1,5 @@
 Milk Management System
+
 A full-stack web application for managing daily milk collection, customer records, and pricing calculations efficiently.
 
 About The Project
@@ -11,8 +12,8 @@ Key Features
 📊 Dashboard
 
 View total milk collected, average rate per liter, and total earnings for the day.
-➕ Add Milk Record
 
+➕ Add Milk Record
 Record daily milk entries with:
 Customer name
 Milk quantity (liters)
