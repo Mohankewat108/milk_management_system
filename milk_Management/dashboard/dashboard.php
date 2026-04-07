@@ -210,7 +210,7 @@ $settings = $stmt->fetch(PDO::FETCH_ASSOC);
                             <?php endif; ?>
                         </table>
                     </div>
-                    <h1>Mohan</h1>
+                    <h1>#</h1>
                 </div>
             </main>
             <script>
