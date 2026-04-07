@@ -8,12 +8,11 @@ The Milk Management System is designed for dairy businesses to streamline daily 
 This system improves accuracy, reduces manual work, and provides quick insights into daily milk transactions.
 
 Key Features
-
 📊 Dashboard
 
 View total milk collected, average rate per liter, and total earnings for the day.
-➕ Add Milk Record
 
+➕ Add Milk Record
 Record daily milk entries with:
 Customer name
 Milk quantity (liters)
