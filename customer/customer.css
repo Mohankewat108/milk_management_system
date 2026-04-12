@@ -1,0 +1,105 @@
+body{
+    background-color: rgb(112, 112, 182);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    
+    flex-direction: column;
+}
+
+hr {
+    border: none;
+    border-top: 3px solid rgb(2, 1, 7);
+}
+
+
+.customer-top-grid{
+    display: grid;
+    grid-template-columns: 1fr 3fr;
+    gap: 30px;
+    width: 100%;
+    
+    
+    
+}
+
+.customer-detail{
+    background-color: rgb(79, 79, 137);
+    color: rgb(206, 128, 34);
+   
+    
+    width: 100%;
+    text-align: center;
+}
+
+
+.total-div{
+    color:rgb(22, 25, 46);
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    background-color: rgb(100, 100, 175);
+    border: 3px solid rgb(127, 97, 225);
+}
+
+.total-div h1{
+    color: rgb(7, 61, 36);
+}
+.total-div h2{
+    color: rgb(43, 15, 93);
+}
+
+.total-div-box{
+    background-color: rgb(180, 166, 242, 0.2);
+    margin: 5px;
+    text-align: center;
+    
+}
+
+.filter-date-div{
+    display: grid;
+    grid-template-columns: 1fr 4fr ;
+    padding: 10px;
+    align-items: center;
+}
+
+.filter-date-div input{
+    padding: 3.5px;
+    gap: 5px;
+}
+
+table{
+    border-collapse: collapse;
+    margin: 0 auto;
+    font-size: 1.4rem;  
+}
+.table_wrapper {
+    overflow-x: auto;
+    width: 100%;
+}
+
+
+td, th{
+    padding: 7px;
+    border: 1px solid black;
+    text-align: center; 
+    border-radius: 2px;  
+    
+}
+
+th{
+    background-color: rgb(154, 154, 241);
+    padding: 18px;
+    
+}
+
+td{
+    background-color: rgb(171, 163, 219);
+    
+}
+h2 a {
+    text-decoration: none  ;
+}
+
+a {
+    text-decoration: none  ;
+}

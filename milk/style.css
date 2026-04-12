@@ -1,0 +1,31 @@
+body{
+    background-color: rgb(118, 116, 113);
+    
+    text-align: center;
+   
+}
+
+h1 {
+    background-color: rgb(87, 87, 228);
+    color: rgb(238, 238, 8);
+    text-align: center;
+}
+td,th {
+     
+    text-align: center;
+    border:  1px solid black;
+    padding: 10px;
+}
+
+td{
+    background-color: rgb(145, 145, 128);
+}
+
+th{
+    background-color: bisque;
+}
+
+table {
+    border-collapse: collapse;  
+    margin: 0 auto;
+}
