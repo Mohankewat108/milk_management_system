@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Business reports" %} · {{ organization.name }}{% endblock %}
+{% block content %}
+<section class="export-page">
+  <header class="export-hero"><div><span class="profile-section-kicker">{% translate "BUSINESS INTELLIGENCE" %}</span><h1>{% translate "Advanced reports" %}</h1><p>{% translate "Operational and financial indicators for your permitted branches." %}</p></div><span class="export-hero-icon">▥</span></header>
+  <form class="search-form" method="get"><label>{% translate "From" %}<input type="date" name="from" value="{{ date_from }}"></label><label>{% translate "To" %}<input type="date" name="to" value="{{ date_to }}"></label><button class="button" type="submit">{% translate "Apply range" %}</button></form>
+  <div class="export-stats">
+    <article><span>{% translate "Approved collections" %}</span><strong>{{ collection_count }}</strong></article>
+    <article><span>{% translate "Milk volume (L)" %}</span><strong>{{ milk_litres|floatformat:2 }}</strong></article>
+    <article><span>{% translate "Milk value" %}</span><strong>{{ organization.currency }} {{ milk_value|floatformat:2 }}</strong></article>
+    <article><span>{% translate "Average FAT" %}</span><strong>{{ average_fat|default:"—"|floatformat:2 }}</strong></article>
+    <article><span>{% translate "Completed payments" %}</span><strong>{{ organization.currency }} {{ payments_total|floatformat:2 }}</strong></article>
+    <article><span>{% translate "Approved expenses" %}</span><strong>{{ organization.currency }} {{ expenses_total|floatformat:2 }}</strong></article>
+    <article><span>{% translate "Low-stock items" %}</span><strong>{{ low_stock_count }}</strong></article>
+  </div>
+  <section class="panel export-panel"><h2>{% translate "Collection status breakdown" %}</h2><div class="table-wrap"><table><thead><tr><th>{% translate "Status" %}</th><th>{% translate "Records" %}</th></tr></thead><tbody>{% for row in collection_statuses %}<tr><td>{{ row.status|title }}</td><td>{{ row.total }}</td></tr>{% empty %}<tr><td colspan="2">{% translate "No records in this period." %}</td></tr>{% endfor %}</tbody></table></div></section>
+  <p class="export-security-note">{% translate "Reports exclude deleted financial and inventory records, use approved collections for milk value, and respect branch assignments. These indicators are operational summaries, not audited financial statements." %}</p>
+</section>
+{% endblock %}
