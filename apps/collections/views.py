@@ -115,7 +115,7 @@ def collection_edit(request, organization_slug, collection_id):
             records = records.select_for_update()
         entry = records.get(pk=collection_id)
         if entry.status in {MilkCollection.Status.REVERSED, MilkCollection.Status.APPROVED}:
-            messages.error(request, "Reversed collections cannot be edited.")
+            messages.error(request, "Approved or reversed collections cannot be edited; reverse an approved record with a reason.")
             return redirect("collections:list", organization_slug=organization_slug)
         form = CollectionEditForm(request.POST or None, instance=entry)
         if request.method == "POST" and form.is_valid():
@@ -123,7 +123,7 @@ def collection_edit(request, organization_slug, collection_id):
             before = {
                 "quantity_litres": str(entry.quantity_litres),
                 "snf": str(entry.snf), "fat": str(entry.fat),
-                "lactose": str(entry.lactose), "total_amount": str(entry.total_amount),
+                "lactose": str(entry.lactose), "milk_rate": str(entry.milk_rate), "total_amount": str(entry.total_amount),
             }
             from decimal import Decimal, ROUND_HALF_UP
             entry.quantity_litres = data["quantity_litres"]
@@ -147,7 +147,7 @@ def collection_edit(request, organization_slug, collection_id):
                 entry.quantity_litres * entry.milk_rate
             ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
             entry.save(update_fields=[
-                "quantity_litres", "snf", "fat", "lactose",
+                "quantity_litres", "snf", "fat", "lactose", "milk_rate",
                 "lactometer_reading", "milk_temperature_c", "sample_reference",
                 "quality_test_method", "notes", "total_amount", "updated_at",
             ])
