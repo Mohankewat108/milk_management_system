@@ -11,7 +11,14 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from .services import (MAX_SYNC_EXPORT_ROWS, _rows, _safe_cell, _export_totals,\n                      _accumulate_export_totals, _export_summary_row)
+from .services import (
+    MAX_SYNC_EXPORT_ROWS,
+    _accumulate_export_totals,
+    _export_summary_row,
+    _export_totals,
+    _rows,
+    _safe_cell,
+)
 
 
 def build_xlsx(module, queryset):
@@ -24,6 +31,7 @@ def build_xlsx(module, queryset):
     for cell in sheet[1]:
         cell.font = Font(bold=True, color="FFFFFF")
         cell.fill = PatternFill("solid", fgColor="17324D")
+
     count = 0
     totals = _export_totals(module)
     for row in rows:
@@ -32,13 +40,13 @@ def build_xlsx(module, queryset):
             raise ValueError("Export exceeds the 20,000-row instant export limit.")
         _accumulate_export_totals(module, row, totals)
         sheet.append([_safe_cell(value) for value in row])
-    summary_row = _export_summary_row(module, headers, count, totals)
-    sheet.append([_safe_cell(value) for value in summary_row])
-    summary_index = sheet.max_row
-    for cell in sheet[summary_index]:
+
+    sheet.append([_safe_cell(value) for value in _export_summary_row(module, headers, count, totals)])
+    for cell in sheet[sheet.max_row]:
         cell.font = Font(bold=True, color="FFFFFF")
         cell.fill = PatternFill("solid", fgColor="0F766E")
-    sheet.auto_filter.ref = sheet.dimensions
+
+    sheet.auto_filter.ref = f"A1:{get_column_letter(len(headers))}{max(1, sheet.max_row - 1)}"
     for column in sheet.columns:
         width = min(max(max(len(str(cell.value or "")) for cell in column[:200]) + 2, 12), 36)
         sheet.column_dimensions[get_column_letter(column[0].column)].width = width
@@ -62,47 +70,30 @@ def build_pdf(module, queryset, organization_name):
     )
     styles = getSampleStyleSheet()
     navy = colors.HexColor("#17324D")
-    blue = colors.HexColor("#245B83")
     teal = colors.HexColor("#0F766E")
     muted = colors.HexColor("#64748B")
 
     title_style = ParagraphStyle(
-        "ExportTitle",
-        parent=styles["Title"],
-        fontName="Helvetica-Bold",
-        fontSize=20,
-        leading=24,
-        textColor=navy,
-        alignment=TA_CENTER,
+        "ExportTitle", parent=styles["Title"], fontName="Helvetica-Bold",
+        fontSize=20, leading=24, textColor=navy, alignment=TA_CENTER,
         spaceAfter=3 * mm,
     )
     subtitle_style = ParagraphStyle(
-        "ExportSubtitle",
-        parent=styles["Normal"],
-        fontName="Helvetica",
-        fontSize=9,
-        leading=12,
-        textColor=muted,
-        alignment=TA_CENTER,
+        "ExportSubtitle", parent=styles["Normal"], fontName="Helvetica",
+        fontSize=9, leading=12, textColor=muted, alignment=TA_CENTER,
     )
     header_style = ParagraphStyle(
-        "ExportTableHeader",
-        parent=styles["BodyText"],
-        fontName="Helvetica-Bold",
-        fontSize=7,
-        leading=8,
-        textColor=colors.white,
-        alignment=0,
-        wordWrap="CJK",
+        "ExportTableHeader", parent=styles["BodyText"], fontName="Helvetica-Bold",
+        fontSize=7, leading=8, textColor=colors.white, wordWrap="CJK",
     )
     cell_style = ParagraphStyle(
-        "ExportTableCell",
-        parent=styles["BodyText"],
-        fontName="Helvetica",
-        fontSize=7,
-        leading=9,
-        textColor=colors.HexColor("#172B3A"),
+        "ExportTableCell", parent=styles["BodyText"], fontName="Helvetica",
+        fontSize=7, leading=9, textColor=colors.HexColor("#172B3A"),
         wordWrap="CJK",
+    )
+    summary_style = ParagraphStyle(
+        "ExportSummaryCell", parent=cell_style, fontName="Helvetica-Bold",
+        textColor=colors.HexColor("#0F3D3A"),
     )
 
     title = f"{escape(str(organization_name))} — {escape(module.replace('_', ' ').title())}"
@@ -120,31 +111,28 @@ def build_pdf(module, queryset, organization_name):
         if count > 2500:
             raise ValueError("PDF exports are limited to 2,500 rows. Use Excel for larger exports.")
         _accumulate_export_totals(module, row, totals)
-        table_data.append([
-            Paragraph(escape(str(_safe_cell(value))), cell_style)
-            for value in row
-        ])
+        table_data.append([Paragraph(escape(str(_safe_cell(value))), cell_style) for value in row])
 
-    summary_style = ParagraphStyle(\n        "ExportSummaryCell", parent=cell_style, fontName="Helvetica-Bold",\n        textColor=colors.HexColor("#0F3D3A"),\n    )\n    summary_row = _export_summary_row(module, headers, count, totals)\n    table_data.append([Paragraph(escape(str(_safe_cell(value))), summary_style) for value in summary_row])\n    summary_index = len(table_data) - 1\n\n    widths = [doc.width / len(headers)] * len(headers)
-    table = Table(
-        table_data,
-        colWidths=widths,
-        repeatRows=1,
-        hAlign="LEFT",
-        splitByRow=1,
-    )
+    summary_row = _export_summary_row(module, headers, count, totals)
+    table_data.append([Paragraph(escape(str(_safe_cell(value))), summary_style) for value in summary_row])
+    summary_index = len(table_data) - 1
+
+    widths = [doc.width / len(headers)] * len(headers)
+    table = Table(table_data, colWidths=widths, repeatRows=1, hAlign="LEFT", splitByRow=1)
     table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), navy),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
         ("LINEBELOW", (0, 0), (-1, 0), 1.2, teal),
         ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#CBD5E1")),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F3F7FB")]),
+        ("ROWBACKGROUNDS", (0, 1), (-1, summary_index - 1), [colors.white, colors.HexColor("#F3F7FB")]),
+        ("BACKGROUND", (0, summary_index), (-1, summary_index), colors.HexColor("#DCEFEA")),
+        ("LINEABOVE", (0, summary_index), (-1, summary_index), 1, teal),
         ("FONTSIZE", (0, 0), (-1, -1), 7),
         ("LEFTPADDING", (0, 0), (-1, -1), 4),
         ("RIGHTPADDING", (0, 0), (-1, -1), 4),
         ("TOPPADDING", (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),\n        ("BACKGROUND", (0, summary_index), (-1, summary_index), colors.HexColor("#DCEFEA")),\n        ("LINEABOVE", (0, summary_index), (-1, summary_index), 1, teal),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
     ]))
     story.append(table)
     doc.build(story)
