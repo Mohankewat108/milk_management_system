@@ -235,7 +235,7 @@ class PlatformMultiFarmTests(TestCase):
         )
         first_invitation = FarmOwnerInvitation.objects.get(organization__name="Resend Dairy")
         first_path = urlparse(
-            re.search(r"http://testserver(\\S+)", mail.outbox[0].body).group(0)
+            re.search(r"http://testserver(\S+)", mail.outbox[0].body).group(0)
         ).path
 
         response = self.client.post(reverse(
@@ -251,7 +251,7 @@ class PlatformMultiFarmTests(TestCase):
             organization=first_invitation.organization
         ).exclude(pk=first_invitation.pk).get()
         second_path = urlparse(
-            re.search(r"http://testserver(\\S+)", mail.outbox[1].body).group(0)
+            re.search(r"http://testserver(\S+)", mail.outbox[1].body).group(0)
         ).path
         self.assertEqual(self.client.get(first_path).status_code, 410)
         self.assertEqual(self.client.get(second_path).status_code, 200)
