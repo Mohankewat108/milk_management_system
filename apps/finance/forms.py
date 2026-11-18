@@ -20,7 +20,7 @@ class PaymentEntryForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.fields["branch"].queryset = Branch.objects.filter(organization=organization, is_active=True, deleted_at__isnull=True)
         self.fields["customer"].queryset = Customer.objects.filter(organization=organization, is_active=True, deleted_at__isnull=True)
-        self.fields["farmer"].queryset = Farmer.objects.filter(organization=organization, is_active=True)
+        self.fields["farmer"].queryset = Farmer.objects.filter(organization=organization, is_active=True, deleted_at__isnull=True)
 
     def clean(self):
         cleaned = super().clean()
@@ -46,7 +46,7 @@ class ExpenseEntryForm(forms.ModelForm):
 
     def __init__(self, *args, organization, membership, **kwargs):
         super().__init__(*args, **kwargs)
-        branches = Branch.objects.filter(organization=organization, is_active=True)
+        branches = Branch.objects.filter(organization=organization, is_active=True, deleted_at__isnull=True)
         assignments = membership.branch_assignments.values_list("branch_id", flat=True)
         if membership.role not in {"owner", "admin"}:
             branches = branches.filter(pk__in=assignments)
