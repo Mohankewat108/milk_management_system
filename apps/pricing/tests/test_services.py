@@ -7,7 +7,7 @@ from django.test import TestCase
 
 from apps.organizations.models import Branch, Organization
 from apps.pricing.models import PricingConfiguration
-from apps.pricing.services import pricing_for_collection
+from apps.pricing.services import calculate_milk_rate, pricing_for_collection
 
 User = get_user_model()
 
