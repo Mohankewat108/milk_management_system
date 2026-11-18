@@ -1,8 +1,10 @@
 from decimal import Decimal, ROUND_HALF_UP
 from uuid import uuid4
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils import timezone
 
 from apps.pricing.services import (
     calculate_milk_rate,
@@ -38,7 +40,14 @@ def create_collection(
     if lactometer is not None and lactometer < 0:
         raise ValidationError("Lactometer reading cannot be negative.")
 
-    collection_date = collected_at.date()
+    # Resolve the applicable price using the dairy's local business date, not
+    # the server's UTC date. This matters for late-night collections near midnight.
+    try:
+        tenant_tz = ZoneInfo(organization.timezone or timezone.get_current_timezone_name())
+    except ZoneInfoNotFoundError:
+        tenant_tz = timezone.get_current_timezone()
+    local_collected_at = timezone.localtime(collected_at, tenant_tz) if timezone.is_aware(collected_at) else timezone.make_aware(collected_at, tenant_tz)
+    collection_date = local_collected_at.date()
     pricing = pricing_for_collection(
         organization=organization, branch=branch, collection_date=collection_date
     )
@@ -69,7 +78,7 @@ def create_collection(
     }
     return MilkCollection.objects.create(
         organization=organization, branch=branch,
-        reference=f"MC-{collected_at:%Y%m%d}-{uuid4().hex[:8].upper()}",
+        reference=f"MC-{local_collected_at:%Y%m%d}-{uuid4().hex[:8].upper()}",
         farmer=farmer, customer=customer, recorded_by=actor, collected_at=collected_at,
         quantity_litres=quantity, snf=quality[0], fat=quality[1], lactose=quality[2],
         lactometer_reading=lactometer, milk_temperature_c=temperature,

@@ -1,10 +1,12 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from apps.audit.services import record_event
 from apps.organizations.permissions import accessible_branch_ids
+from apps.pricing.services import active_pricing_on
 
 from .decorators import organization_access
 from .forms import BranchForm, OrganizationRegistrationForm
@@ -28,13 +30,9 @@ def register_business(request):
     if request.method == "POST" and form.is_valid():
         data = form.cleaned_data
         organization = register_organization(
-            user=request.user,
-            name=data["name"],
-            legal_name=data.get("legal_name", ""),
-            phone=data.get("phone", ""),
-            email=data.get("email", ""),
-            country=data.get("country", "Nepal"),
-            address=data.get("address", ""),
+            user=request.user, name=data["name"], legal_name=data.get("legal_name", ""),
+            phone=data.get("phone", ""), email=data.get("email", ""),
+            country=data.get("country", "Nepal"), address=data.get("address", ""),
         )
         record_event(actor=request.user, organization=organization, action="organization.created",
                      target=organization, request=request)
@@ -49,7 +47,6 @@ def dashboard(request, organization_slug):
     organization = request.organization
     membership = request.membership
     branch_ids = accessible_branch_ids(membership)
-
     branches = organization.branches.filter(is_active=True)
     customers = organization.customers.filter(is_active=True)
     farmers = organization.farmers.filter(is_active=True)
@@ -59,30 +56,26 @@ def dashboard(request, organization_slug):
         customers = customers.filter(branch_id__in=branch_ids)
         farmers = farmers.filter(branch_id__in=branch_ids)
         collections = collections.filter(branch_id__in=branch_ids)
-
+    today = timezone.localdate()
+    branch_for_rate = branches.first() if branch_ids is not None else None
+    active_rate = active_pricing_on(organization=organization, pricing_date=today, branch=branch_for_rate)
     context = {
-        "organization": organization,
-        "membership": membership,
-        "branch_count": branches.count(),
-        "customer_count": customers.count(),
-        "farmer_count": farmers.count(),
-        "collection_count": collections.count(),
+        "organization": organization, "membership": membership,
+        "branch_count": branches.count(), "customer_count": customers.count(),
+        "farmer_count": farmers.count(), "collection_count": collections.count(),
+        "active_rate": active_rate, "rate_date": today,
         "can_record_collection": membership.role in {
-            Membership.Role.OWNER, Membership.Role.ADMIN,
-            Membership.Role.BRANCH_MANAGER, Membership.Role.COLLECTION_OPERATOR,
+            Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.BRANCH_MANAGER,
+            Membership.Role.COLLECTION_OPERATOR,
         },
-        "can_manage_staff": membership.role in {
-            Membership.Role.OWNER, Membership.Role.ADMIN,
-        },
+        "can_manage_staff": membership.role in {Membership.Role.OWNER, Membership.Role.ADMIN},
         "can_manage_finance": membership.role in {
             Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.ACCOUNTANT,
         },
         "can_manage_inventory": membership.role in {
             Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.INVENTORY_MANAGER,
         },
-        "can_manage_configuration": membership.role in {
-            Membership.Role.OWNER, Membership.Role.ADMIN,
-        },
+        "can_manage_configuration": membership.role in {Membership.Role.OWNER, Membership.Role.ADMIN},
     }
     return render(request, "dashboard/business.html", context)
 
@@ -102,7 +95,5 @@ def branches(request, organization_slug):
         messages.success(request, "Branch created.")
         return redirect("business:branches", organization_slug=organization_slug)
     return render(request, "organizations/branches.html", {
-        "organization": organization,
-        "branches": organization.branches.order_by("name"),
-        "form": form,
+        "organization": organization, "branches": organization.branches.order_by("name"), "form": form,
     })
