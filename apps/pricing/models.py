@@ -20,6 +20,8 @@ class PricingConfiguration(UUIDModel, TimeStampedModel):
     approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="approved_pricing_configurations")
     approved_at = models.DateTimeField(null=True, blank=True)
     notes = models.CharField(max_length=240, blank=True)
+    deleted_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    deleted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
 
     class Meta:
         constraints = [
