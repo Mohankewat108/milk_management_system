@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load locale_dates %}
 {% block title %}My dairy account | {{ organization.name }}{% endblock %}
 {% block content %}
 <div class="page-heading"><div><div class="eyebrow">CUSTOMER SELF-SERVICE PORTAL</div><h1>Welcome, {{ customer.full_name }}</h1><p class="muted">{{ organization.name }}{% if customer.branch %} · {{ customer.branch.name }}{% endif %} · Customer ID {{ customer.code }}</p></div></div>
@@ -16,15 +17,15 @@
 <tr><th>Ward</th><td>{{ customer.ward|default:"Not provided" }}</td><th>Login email</th><td>{{ request.user.email }}</td></tr>
 </tbody></table></div><p class="small muted">Contact the dairy office to correct identity/contact information so transaction and payment records remain auditable.</p></section>
 <section class="panel"><h2>Published milk rate schedule</h2>
-{% if active_rate %}<p class="muted">Approved schedule for your branch on {{ rate_date }}. This is shared by all customers in your dairy unless a branch-specific override applies.</p>
+{% if active_rate %}<p class="muted">Approved schedule for your branch on {{ rate_date|local_date }}. This is shared by all customers in your dairy unless a branch-specific override applies.</p>
 <div class="kpi-grid"><div class="kpi"><span>SNF coefficient</span><strong>{{ active_rate.snf_rate }}</strong></div><div class="kpi"><span>Fat coefficient</span><strong>{{ active_rate.fat_rate }}</strong></div><div class="kpi"><span>Lactose coefficient</span><strong>{{ active_rate.lactose_rate }}</strong></div><div class="kpi"><span>Version</span><strong>v{{ active_rate.version }}</strong></div></div>
-<p><strong>Effective:</strong> {{ active_rate.effective_from }} to {{ active_rate.effective_to|default:"Until replaced" }} · <strong>Scope:</strong> {{ active_rate.scope_label }}</p>
+<p><strong>Effective:</strong> {{ active_rate.effective_from|local_date }} to {{ active_rate.effective_to|local_date|default:"Until replaced" }} · <strong>Scope:</strong> {{ active_rate.scope_label }}</p>
 {% else %}<p class="alert warning">No approved milk rate is published for today. Contact the dairy office.</p>{% endif %}
 </section>
 <section class="panel"><h2>My milk collection history</h2><p class="muted">Only approved collections belonging to your account are shown.</p><div class="table-wrap"><table><thead><tr><th>Date / time</th><th>Reference</th><th>Quantity</th><th>SNF</th><th>Fat</th><th>Lactose</th><th>Lactometer</th><th>Rate / L</th><th>Total</th></tr></thead><tbody>
-{% for item in collections %}<tr><td>{{ item.collected_at|date:"Y-m-d H:i" }}</td><td>{{ item.reference }}</td><td>{{ item.quantity_litres }} L</td><td>{{ item.snf }}</td><td>{{ item.fat }}</td><td>{{ item.lactose }}</td><td>{{ item.lactometer_reading|default:"—" }}</td><td>{{ currency }} {{ item.milk_rate }}</td><td>{{ currency }} {{ item.total_amount }}</td></tr>
+{% for item in collections %}<tr><td>{{ item.collected_at|local_date }}</td><td>{{ item.reference }}</td><td>{{ item.quantity_litres }} L</td><td>{{ item.snf }}</td><td>{{ item.fat }}</td><td>{{ item.lactose }}</td><td>{{ item.lactometer_reading|default:"—" }}</td><td>{{ currency }} {{ item.milk_rate }}</td><td>{{ currency }} {{ item.total_amount }}</td></tr>
 <tr><td colspan="9"><details><summary>View quality test and price calculation</summary>
-<p><strong>Pricing version:</strong> v{{ item.pricing_snapshot.version }} · {{ item.pricing_snapshot.effective_from|default:"Historical rate" }}</p>
+<p><strong>Pricing version:</strong> v{{ item.pricing_snapshot.version }} · {{ item.pricing_snapshot.effective_from|local_date|default:"Historical rate" }}</p>
 <p>SNF: {{ item.snf }} × {{ item.pricing_snapshot.snf_rate }} = {{ item.pricing_snapshot.snf_component|default:"—" }}</p>
 <p>Fat: {{ item.fat }} × {{ item.pricing_snapshot.fat_rate }} = {{ item.pricing_snapshot.fat_component|default:"—" }}</p>
 <p>Lactose: {{ item.lactose }} × {{ item.pricing_snapshot.lactose_rate }} = {{ item.pricing_snapshot.lactose_component|default:"—" }}</p>
@@ -35,7 +36,7 @@
 {% empty %}<tr><td colspan="9">No approved milk collections are available yet.</td></tr>{% endfor %}
 </tbody></table></div></section>
 <section class="panel"><h2>Completed payment history</h2><div class="table-wrap"><table><thead><tr><th>Payment date</th><th>Reference</th><th>Method</th><th>Transaction reference</th><th>Amount</th><th>Status</th></tr></thead><tbody>
-{% for item in payments %}<tr><td>{{ item.paid_at|date:"Y-m-d H:i" }}</td><td>{{ item.reference }}</td><td>{{ item.get_method_display }}</td><td>{{ item.transaction_reference|default:"—" }}</td><td>{{ item.currency }} {{ item.amount }}</td><td>{{ item.get_status_display }}</td></tr>
+{% for item in payments %}<tr><td>{{ item.paid_at|local_date }}</td><td>{{ item.reference }}</td><td>{{ item.get_method_display }}</td><td>{{ item.transaction_reference|default:"—" }}</td><td>{{ item.currency }} {{ item.amount }}</td><td>{{ item.get_status_display }}</td></tr>
 {% empty %}<tr><td colspan="6">No completed payments are available yet.</td></tr>{% endfor %}
 </tbody></table></div></section>
 {% endblock %}

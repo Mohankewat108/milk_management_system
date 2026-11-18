@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods, require_POST
 
 from apps.audit.services import record_event
+from apps.core.nepali_dates import format_local_date, parse_local_date
 from apps.organizations.decorators import organization_access
 from apps.organizations.models import Membership
 from apps.organizations.permissions import accessible_branch_ids, can_access_branch
@@ -30,7 +31,19 @@ def collection_list(request, organization_slug):
     branch_ids = accessible_branch_ids(request.membership)
     if branch_ids is not None:
         records = records.filter(branch_id__in=branch_ids)
-    start, end = request.GET.get("from"), request.GET.get("to")
+    start_text = request.GET.get("from", "").strip()
+    end_text = request.GET.get("to", "").strip()
+    language_code = getattr(request, "LANGUAGE_CODE", "en")
+    date_error = ""
+    try:
+        start = parse_local_date(start_text, language_code)
+        end = parse_local_date(end_text, language_code)
+    except ValueError as exc:
+        start = end = None
+        date_error = str(exc)
+    if start and end and start > end:
+        date_error = "The start date must be on or before the end date."
+        start = end = None
     if start:
         records = records.filter(collected_at__date__gte=start)
     if end:
@@ -40,6 +53,10 @@ def collection_list(request, organization_slug):
     return render(request, "collections/list.html", {
         "organization": organization, "page_obj": page, "total_litres": total_litres,
         "membership": request.membership,
+        "date_from": format_local_date(start, language_code) if start else start_text,
+        "date_to": format_local_date(end, language_code) if end else end_text,
+        "date_error": date_error,
+        "date_calendar": "BS" if language_code == "ne" else "AD",
     })
 
 

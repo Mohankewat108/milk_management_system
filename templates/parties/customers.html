@@ -17,26 +17,30 @@
       <a class="button" href="{% url 'parties:customer_create' organization.slug %}">＋ {% translate "Add customer" %}</a>
     </div>
   </header>
+  <form class="module-export-form" method="post" action="{% url 'data_exports:queue' organization.slug 'customers' %}">{% csrf_token %}<input type="hidden" name="branch" value="{{ branch_filter }}"><input type="hidden" name="status" value="{{ status_filter }}"><select name="file_format" aria-label="Export format"><option value="xlsx">Excel</option><option value="csv">CSV</option><option value="pdf">PDF</option></select><button class="button button-secondary" type="submit">Export customers ↓</button></form>
   <form class="directory-filters" method="get" role="search">
     <div class="filter-field"><label for="customer-search">{% translate "Search customers" %}</label><input id="customer-search" name="q" type="search" value="{{ query }}" placeholder="{% translate 'Search name, code, phone or email' %}"></div>
     <div class="filter-field"><label for="customer-status">{% translate "Status" %}</label><select id="customer-status" name="status"><option value="">{% translate "All statuses" %}</option><option value="active" {% if status_filter == "active" %}selected{% endif %}>{% translate "Active" %}</option><option value="inactive" {% if status_filter == "inactive" %}selected{% endif %}>{% translate "Inactive" %}</option></select></div>
     <div class="filter-field"><label for="customer-branch">{% translate "Branch" %}</label><select id="customer-branch" name="branch"><option value="">{% translate "All accessible branches" %}</option>{% for branch in branches %}<option value="{{ branch.pk }}" {% if branch_filter == branch.pk|stringformat:"s" %}selected{% endif %}>{{ branch.name }}</option>{% endfor %}</select></div>
     <div class="directory-filter-dates">
-      <div class="filter-field"><label for="customer-registered-from">{% translate "Registered from" %}</label><input id="customer-registered-from" type="date" name="registered_from" value="{{ registered_from }}"></div>
-      <div class="filter-field"><label for="customer-registered-to">{% translate "Registered to" %}</label><input id="customer-registered-to" type="date" name="registered_to" value="{{ registered_to }}"></div>
+      <div class="filter-field"><label for="customer-registered-from">{% translate "Registered from" %} ({{ date_calendar }})</label>{% if date_calendar == "BS" %}<input id="customer-registered-from" type="text" inputmode="numeric" data-calendar-date data-calendar="bs" name="registered_from" value="{{ registered_from }}" placeholder="वर्ष-महिना-दिन" autocomplete="off" aria-describedby="registered-date-help">{% else %}<input id="customer-registered-from" type="date" name="registered_from" value="{{ registered_from }}" autocomplete="off" aria-describedby="registered-date-help">{% endif %}</div>
+      <div class="filter-field"><label for="customer-registered-to">{% translate "Registered to" %} ({{ date_calendar }})</label>{% if date_calendar == "BS" %}<input id="customer-registered-to" type="text" inputmode="numeric" data-calendar-date data-calendar="bs" name="registered_to" value="{{ registered_to }}" placeholder="वर्ष-महिना-दिन" autocomplete="off" aria-describedby="registered-date-help">{% else %}<input id="customer-registered-to" type="date" name="registered_to" value="{{ registered_to }}" autocomplete="off" aria-describedby="registered-date-help">{% endif %}</div>
+      <p class="date-filter-help" id="registered-date-help">{% if date_calendar == "BS" %}क्यालेन्डरबाट विक्रम संवत् मिति छान्नुहोस्।{% else %}{% translate "Select dates using the calendar." %}{% endif %}</p>
       <button class="button" type="submit">{% translate "Apply filters" %}</button>
       <a class="button button-secondary" href="{% url 'parties:customers' organization.slug %}">{% translate "Reset" %}</a>
     </div>
   </form>
+  {% if date_error %}<p class="alert error" role="alert">{{ date_error }}</p>{% endif %}
+    <form id="customers-bulk-form" class="bulk-action-toolbar" method="post" action="{% url 'data_exports:bulk_party' organization.slug 'customers' %}">{% csrf_token %}<label>Bulk action <select name="action"><option value="activate">Activate selected</option><option value="deactivate">Deactivate selected</option></select></label><button class="button button-secondary" type="submit">Apply to selected</button></form>
   <section class="panel directory-table-panel" aria-labelledby="customer-directory-title">
     <div class="directory-table-heading"><div><h2 id="customer-directory-title">{% translate "Customer directory" %}</h2><p class="muted small">{% translate "Customer records available in your permitted branches." %}</p></div></div>
     <div class="table-wrap"><table>
-      <thead><tr><th scope="col">{% translate "Code" %}</th><th scope="col">{% translate "Customer name" %}</th><th scope="col">{% translate "Phone" %}</th><th scope="col">{% translate "Email" %}</th><th scope="col">{% translate "Branch" %}</th><th scope="col">{% translate "Status" %}</th><th scope="col">{% translate "Actions" %}</th></tr></thead>
+      <thead><tr><th scope="col"><span class="sr-only">Select</span></th><th scope="col">{% translate "Code" %}</th><th scope="col">{% translate "Customer name" %}</th><th scope="col">{% translate "Phone" %}</th><th scope="col">{% translate "Email" %}</th><th scope="col">{% translate "Branch" %}</th><th scope="col">{% translate "Status" %}</th><th scope="col">{% translate "Actions" %}</th></tr></thead>
       <tbody>{% for item in page_obj %}<tr>
-        <td><strong>{{ item.code }}</strong></td><td>{{ item.full_name }}</td><td>{{ item.phone|default:"—" }}</td><td>{{ item.email|default:"—" }}</td><td>{{ item.branch.name|default:"—" }}</td>
+        <td><input type="checkbox" name="selected" value="{{ item.pk }}" form="customers-bulk-form" aria-label="Select {{ item.full_name }}"></td><td><strong>{{ item.code }}</strong></td><td>{{ item.full_name }}</td><td>{{ item.phone|default:"—" }}</td><td>{{ item.email|default:"—" }}</td><td>{{ item.branch.name|default:"—" }}</td>
         <td>{% if item.is_active %}<span class="status active">{% translate "Active" %}</span>{% else %}<span class="status inactive">{% translate "Inactive" %}</span>{% endif %}</td>
         <td><a class="button button-small button-secondary" href="{% url 'parties:customer_detail' organization.slug item.pk %}">{% translate "View profile" %}</a></td>
-      </tr>{% empty %}<tr><td colspan="7"><div class="directory-empty"><strong>{% translate "No customers found" %}</strong><p>{% translate "Try changing your search or filter criteria." %}</p></div></td></tr>{% endfor %}</tbody>
+      </tr>{% empty %}<tr><td colspan="8"><div class="directory-empty"><strong>{% translate "No customers found" %}</strong><p>{% translate "Try changing your search or filter criteria." %}</p></div></td></tr>{% endfor %}</tbody>
     </table></div>
     {% if page_obj.has_other_pages %}<nav class="pagination" aria-label="{% translate 'Pagination' %}">
       {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">{% translate "Previous" %}</a>{% endif %}

@@ -1,5 +1,5 @@
 {% load static i18n l10n %}<!doctype html>
-<html lang="{{ LANGUAGE_CODE|default:'en' }}">
+<html lang="{{ LANGUAGE_CODE|default:'en' }}" data-nepali-calendar-api="{% url 'nepali_calendar_month' %}">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#eff6ff"><meta name="color-scheme" content="light dark">
@@ -40,7 +40,7 @@
       <div class="sidebar-title">{% translate "Finance & operations" %}</div>
       {% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'accountant' %}<a href="{% url 'finance:list' request.organization.slug %}">▤ <span>{% translate "Payments" %}</span></a><a href="{% url 'finance:expenses' request.organization.slug %}">↗ <span>{% translate "Expenses" %}</span></a>{% endif %}
       {% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'inventory_manager' %}<a href="{% url 'inventory:items' request.organization.slug %}">▣ <span>{% translate "Inventory" %}</span></a>{% endif %}
-      {% if request.membership.role == 'owner' or request.membership.role == 'admin' %}<a href="{% url 'business:trash' request.organization.slug %}">▱ <span>{% translate "Central Trash" %}</span></a><div class="sidebar-title">{% translate "Configuration" %}</div><a href="{% url 'business:branches' request.organization.slug %}">⌖ <span>{% translate "Branches" %}</span></a><a href="{% url 'pricing:settings' request.organization.slug %}">₹ <span>{% translate "Milk rates" %}</span></a><a href="{% url 'pricing:quality' request.organization.slug %}">◇ <span>{% translate "Quality settings" %}</span></a>{% endif %}
+      {% if request.membership.role in "owner admin branch_manager collection_operator quality_officer accountant inventory_manager support" %}<a href="{% url 'data_exports:centre' request.organization.slug %}">⇩ <span>{% translate "Export centre" %}</span></a>{% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'branch_manager' or request.membership.role == 'accountant' %}<a href="{% url 'data_exports:reports' request.organization.slug %}">▥ <span>{% translate "Reports" %}</span></a>{% endif %}{% endif %}{% if request.membership.role == 'owner' or request.membership.role == 'admin' %}<a href="{% url 'business:trash' request.organization.slug %}">▱ <span>{% translate "Central Trash" %}</span></a><div class="sidebar-title">{% translate "Configuration" %}</div><a href="{% url 'business:branches' request.organization.slug %}">⌖ <span>{% translate "Branches" %}</span></a><a href="{% url 'pricing:settings' request.organization.slug %}">₹ <span>{% translate "Milk rates" %}</span></a><a href="{% url 'pricing:quality' request.organization.slug %}">◇ <span>{% translate "Quality settings" %}</span></a>{% endif %}
       {% endif %}
     </nav>
     <div class="sidebar-footer"><span class="small muted">{% translate "Signed in as" %}</span><strong>{{ request.user.get_full_name|default:request.user.username }}</strong></div>
@@ -70,13 +70,27 @@
    }});
    const nodes=[]; while(walker.nextNode()) nodes.push(walker.currentNode);
    nodes.forEach(node=>{node.nodeValue=node.nodeValue.replace(/[0-9]/g,d=>devanagari[Number(d)]);});
+   document.querySelectorAll('input[data-calendar-date]').forEach(input=>{input.value=input.value.replace(/[0-9]/g,d=>devanagari[Number(d)]);input.addEventListener('input',()=>{const ascii=input.value.replace(/[०-९]/g,d=>String('०१२३४५६७८९'.indexOf(d)));input.setCustomValidity(input.value && !/^\d{4}-\d{2}-\d{2}$/.test(ascii)?'Use YYYY-MM-DD format.':'');});input.form?.addEventListener('submit',()=>{input.value=input.value.replace(/[०-९]/g,d=>String('०१२३४५६७८९'.indexOf(d)));});});
  }
  function apply(value){const dark=value==='dark'||(value==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);root.dataset.theme=dark?'dark':'light';if(theme)theme.value=value;try{localStorage.setItem('dairynexus-theme',value);}catch(e){}}
  const saved=(()=>{try{return localStorage.getItem('dairynexus-theme')||'system';}catch(e){return 'system';}})();apply(saved);
  if(theme)theme.addEventListener('change',()=>apply(theme.value));
- if(toggle&&sidebar){toggle.addEventListener('click',()=>{const open=sidebar.classList.toggle('is-open');toggle.setAttribute('aria-expanded',String(open));});}
+ if(toggle&&!sidebar)toggle.hidden=true;
+ if(toggle&&sidebar){
+   const backdrop=document.createElement('button');
+   backdrop.type='button';backdrop.className='mobile-nav-backdrop';backdrop.setAttribute('aria-label','Close navigation');backdrop.setAttribute('tabindex','-1');
+   document.body.appendChild(backdrop);
+   const closeSidebar=()=>{sidebar.classList.remove('is-open');backdrop.classList.remove('is-visible');toggle.setAttribute('aria-expanded','false');document.body.classList.remove('nav-open');};
+   const openSidebar=()=>{sidebar.classList.add('is-open');backdrop.classList.add('is-visible');toggle.setAttribute('aria-expanded','true');document.body.classList.add('nav-open');const first=sidebar.querySelector('a');first?.focus({preventScroll:true});};
+   toggle.addEventListener('click',()=>sidebar.classList.contains('is-open')?closeSidebar():openSidebar());
+   backdrop.addEventListener('click',closeSidebar);
+   sidebar.querySelectorAll('a').forEach(link=>link.addEventListener('click',closeSidebar));
+   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&sidebar.classList.contains('is-open')){closeSidebar();toggle.focus();}});
+   window.addEventListener('resize',()=>{if(window.innerWidth>850)closeSidebar();});
+ }
  if(window.matchMedia){window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{const v=(()=>{try{return localStorage.getItem('dairynexus-theme')||'system';}catch(e){return 'system';}})();if(v==='system')apply(v);});}
 }());
 </script>
+<script src="{% static 'js/nepali-date-picker.js' %}" defer></script>
 {% block scripts %}{% endblock %}
 </body></html>

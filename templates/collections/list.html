@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load locale_dates %}
 {% block title %}Milk collections | {{ organization.name }}{% endblock %}
 {% block content %}
 <div class="collection-page">
@@ -6,16 +7,18 @@
     <div><div class="eyebrow">{{ organization.name }}</div><h1>Milk collections</h1><p class="muted">Recorded quantity: {{ total_litres|floatformat:3 }} L</p></div>
     <a class="button" href="{% url 'collections:create' organization.slug %}">Record collection</a>
   </div>
+  <div class="module-export-actions"><form method="post" action="{% url 'data_exports:queue' organization.slug 'collections' %}">{% csrf_token %}{% if date_calendar != "BS" %}<input type="hidden" name="from" value="{{ date_from }}"><input type="hidden" name="to" value="{{ date_to }}">{% endif %}<select name="file_format" aria-label="Export format"><option value="xlsx">Excel</option><option value="csv">CSV</option><option value="pdf">PDF</option></select><button class="button button-secondary" type="submit">Export collections ↓</button></form></div>
   <form class="search-form" method="get">
-    <label>From <input type="date" name="from" value="{{ request.GET.from }}"></label>
-    <label>To <input type="date" name="to" value="{{ request.GET.to }}"></label>
+    <label>From ({{ date_calendar }}) {% if date_calendar == "BS" %}<input type="text" inputmode="numeric" data-calendar-date data-calendar="bs" name="from" value="{{ date_from }}" placeholder="वर्ष-महिना-दिन">{% else %}<input type="date" name="from" value="{{ date_from }}">{% endif %}</label>
+    <label>To ({{ date_calendar }}) {% if date_calendar == "BS" %}<input type="text" inputmode="numeric" data-calendar-date data-calendar="bs" name="to" value="{{ date_to }}" placeholder="वर्ष-महिना-दिन">{% else %}<input type="date" name="to" value="{{ date_to }}">{% endif %}</label>
     <button class="button button-secondary" type="submit">Filter</button>
   </form>
+  {% if date_error %}<p class="alert error" role="alert">{{ date_error }}</p>{% endif %}
   <section class="panel table-wrap"><table>
     <thead><tr><th>Reference</th><th>Date</th><th>Branch</th><th>Farmer / Customer</th><th>Litres</th><th>SNF</th><th>FAT</th><th>Lactose</th><th>Rate</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
     <tbody>
     {% for item in page_obj %}<tr>
-      <td>{{ item.reference }}</td><td>{{ item.collected_at|date:"Y-m-d H:i" }}</td><td>{{ item.branch.name }}</td>
+      <td>{{ item.reference }}</td><td>{{ item.collected_at|local_date }}</td><td>{{ item.branch.name }}</td>
       <td>{% if item.farmer %}{{ item.farmer.full_name }}{% else %}{{ item.customer.full_name }}{% endif %}</td>
       <td>{{ item.quantity_litres }}</td><td>{{ item.snf }}</td><td>{{ item.fat }}</td><td>{{ item.lactose }}</td>
       <td>{{ item.milk_rate }}</td><td>{{ item.total_amount }}</td><td><span class="tag">{{ item.get_status_display }}</span></td>
@@ -35,6 +38,6 @@
     </tr>{% empty %}<tr><td colspan="12">No collection records found.</td></tr>{% endfor %}
     </tbody>
   </table></section>
-  <div class="pagination">{% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}<span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">Next</a>{% endif %}</div>
+  <div class="pagination">{% if page_obj.has_previous %}<a href="?{% if date_from %}from={{ date_from|urlencode }}&{% endif %}{% if date_to %}to={{ date_to|urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}<span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a href="?{% if date_from %}from={{ date_from|urlencode }}&{% endif %}{% if date_to %}to={{ date_to|urlencode }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>{% endif %}</div>
 </div>
 {% endblock %}

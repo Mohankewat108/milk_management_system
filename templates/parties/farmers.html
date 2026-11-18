@@ -23,6 +23,7 @@
     </div>
   </header>
 
+  <form class="module-export-form" method="post" action="{% url 'data_exports:queue' organization.slug 'farmers' %}">{% csrf_token %}<input type="hidden" name="branch" value="{{ branch_filter }}"><input type="hidden" name="status" value="{{ status_filter }}"><select name="file_format" aria-label="Export format"><option value="xlsx">Excel</option><option value="csv">CSV</option><option value="pdf">PDF</option></select><button class="button button-secondary" type="submit">Export farmers ↓</button></form>
   <form class="directory-filters" method="get" role="search">
     <div class="filter-field">
       <label for="farmer-search">{% translate "Search farmers" %}</label>
@@ -47,18 +48,21 @@
     </div>
     <div class="directory-filter-dates">
       <div class="filter-field">
-        <label for="registered-from">{% translate "Registered from" %}</label>
-        <input id="registered-from" type="date" name="registered_from" value="{{ registered_from }}">
+        <label for="registered-from">{% translate "Registered from" %} ({{ date_calendar }})</label>
+        {% if date_calendar == "BS" %}<input id="registered-from" type="text" inputmode="numeric" data-calendar-date data-calendar="bs" name="registered_from" value="{{ registered_from }}" placeholder="वर्ष-महिना-दिन" autocomplete="off" aria-describedby="registered-date-help">{% else %}<input id="registered-from" type="date" name="registered_from" value="{{ registered_from }}" autocomplete="off" aria-describedby="registered-date-help">{% endif %}
       </div>
       <div class="filter-field">
-        <label for="registered-to">{% translate "Registered to" %}</label>
-        <input id="registered-to" type="date" name="registered_to" value="{{ registered_to }}">
+        <label for="registered-to">{% translate "Registered to" %} ({{ date_calendar }})</label>
+        {% if date_calendar == "BS" %}<input id="registered-to" type="text" inputmode="numeric" data-calendar-date data-calendar="bs" name="registered_to" value="{{ registered_to }}" placeholder="वर्ष-महिना-दिन" autocomplete="off" aria-describedby="registered-date-help">{% else %}<input id="registered-to" type="date" name="registered_to" value="{{ registered_to }}" autocomplete="off" aria-describedby="registered-date-help">{% endif %}
       </div>
+      <p class="date-filter-help" id="registered-date-help">{% if date_calendar == "BS" %}क्यालेन्डरबाट विक्रम संवत् मिति छान्नुहोस्।{% else %}{% translate "Select dates using the calendar." %}{% endif %}</p>
       <button class="button" type="submit">{% translate "Apply filters" %}</button>
       <a class="button button-secondary" href="{% url 'parties:farmers' organization.slug %}">{% translate "Reset" %}</a>
     </div>
   </form>
 
+  {% if date_error %}<p class="alert error" role="alert">{{ date_error }}</p>{% endif %}
+    <form id="farmers-bulk-form" class="bulk-action-toolbar" method="post" action="{% url 'data_exports:bulk_party' organization.slug 'farmers' %}">{% csrf_token %}<label>Bulk action <select name="action"><option value="activate">Activate selected</option><option value="deactivate">Deactivate selected</option></select></label><button class="button button-secondary" type="submit">Apply to selected</button></form>
   <section class="panel directory-table-panel" aria-labelledby="farmer-directory-title">
     <div class="directory-table-heading">
       <div>
@@ -69,7 +73,7 @@
     <div class="table-wrap">
       <table>
         <thead><tr>
-          <th scope="col">{% translate "Code" %}</th>
+          <th scope="col"><span class="sr-only">Select</span></th><th scope="col">{% translate "Code" %}</th>
           <th scope="col">{% translate "Farmer name" %}</th>
           <th scope="col">{% translate "Phone" %}</th>
           <th scope="col">{% translate "Branch" %}</th>
@@ -79,7 +83,7 @@
         <tbody>
         {% for item in page_obj %}
           <tr>
-            <td><strong>{{ item.code }}</strong></td>
+            <td><input type="checkbox" name="selected" value="{{ item.pk }}" form="farmers-bulk-form" aria-label="Select {{ item.full_name }}"></td><td><strong>{{ item.code }}</strong></td>
             <td>{{ item.full_name }}</td>
             <td>{{ item.phone|default:"—" }}</td>
             <td>{{ item.branch.name|default:"—" }}</td>
@@ -87,7 +91,7 @@
             <td><a class="button button-small button-secondary" href="{% url 'parties:farmer_detail' organization.slug item.pk %}">{% translate "View profile" %}</a></td>
           </tr>
         {% empty %}
-          <tr><td colspan="6"><div class="directory-empty"><strong>{% translate "No farmers found" %}</strong><p>{% translate "Try changing your search or filter criteria." %}</p></div></td></tr>
+          <tr><td colspan="7"><div class="directory-empty"><strong>{% translate "No farmers found" %}</strong><p>{% translate "Try changing your search or filter criteria." %}</p></div></td></tr>
         {% endfor %}
         </tbody>
       </table>

@@ -46,6 +46,7 @@ services:
              python manage.py runserver 0.0.0.0:8000"
     volumes:
       - .:/app
+      - private_uploads:/app/private_uploads
     ports:
       - "8000:8000"
     depends_on:
@@ -54,6 +55,29 @@ services:
       redis:
         condition: service_healthy
 
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    user: "0:0"
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.development
+      DJANGO_DEBUG: "true"
+      DATABASE_URL: postgresql://dairynexus:${POSTGRES_PASSWORD:-local-only-change-this}@db:5432/dairynexus
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,web,worker
+    command: >-
+      sh -c "while true; do python manage.py process_data_jobs --limit 20; sleep 5; done"
+    volumes:
+      - .:/app
+      - private_uploads:/app/private_uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:
+  private_uploads:

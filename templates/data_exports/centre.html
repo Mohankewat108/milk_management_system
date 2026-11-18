@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Export centre" %} · {{ organization.name }}{% endblock %}
+{% block content %}
+<section class="export-page">
+  <header class="export-hero">
+    <div>
+      <span class="profile-section-kicker">{% translate "DATA MANAGEMENT" %}</span>
+      <h1>{% translate "Export Centre" %}</h1>
+      <p>{% translate "Download a copy of your dairy business records." %}</p>
+    </div>
+    <span class="export-hero-icon" aria-hidden="true">⇩</span>
+  </header>
+
+  <section class="panel export-panel">
+    <div class="profile-section-heading">
+      <div>
+        <h2>{% translate "What would you like to download?" %}</h2>
+        <p>{% translate "Choose a record type and file format, then select Export. Your file will be prepared securely." %}</p>
+      </div>
+    </div>
+    <div class="export-module-grid">
+      {% for key,label in allowed_modules %}
+      <article class="export-module-card">
+        <div class="export-module-icon" aria-hidden="true">{% if key == 'farmers' %}♙{% elif key == 'customers' %}♧{% elif key == 'collections' %}◉{% elif key == 'payments' %}▤{% elif key == 'expenses' %}↗{% else %}▣{% endif %}</div>
+        <h3>{{ label }}</h3>
+        <p>{% blocktrans with label=label|lower %}Download your {{ label }} records.{% endblocktrans %}</p>
+        <form method="post" action="{% url 'data_exports:queue' organization.slug key %}" class="export-options">
+          {% csrf_token %}
+          <label>{% translate "File format" %}
+            <select name="file_format">
+              <option value="xlsx">Excel (.xlsx) – recommended</option>
+              <option value="csv">CSV (.csv)</option>
+              <option value="pdf">PDF (.pdf)</option>
+            </select>
+          </label>
+          <button class="button" type="submit">{% translate "Export" %} ↓</button>
+        </form>
+      </article>
+      {% empty %}
+      <p>{% translate "Your role does not currently have export access." %}</p>
+      {% endfor %}
+    </div>
+    <p class="export-security-note">{% translate "Tip: Excel is the easiest format for opening, filtering and editing data. Exports are private and download links expire after seven days." %}</p>
+  </section>
+
+  <section class="panel export-panel">
+    <div class="profile-section-heading">
+      <div>
+        <h2>{% translate "Your downloads" %}</h2>
+        <p>{% translate "When an export is ready, its Download button will appear here." %}</p>
+      </div>
+    </div>
+    <div class="export-stats">
+      <article><span>{% translate "All exports" %}</span><strong>{{ total_exports }}</strong></article>
+      <article><span>{% translate "Ready to download" %}</span><strong>{{ completed_exports }}</strong></article>
+      <article><span>{% translate "Being prepared" %}</span><strong>{{ processing_exports }}</strong></article>
+      <article><span>{% translate "Needs attention" %}</span><strong>{{ failed_exports }}</strong></article>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>{% translate "File" %}</th><th>{% translate "Date" %}</th><th>{% translate "Status" %}</th><th>{% translate "Action" %}</th></tr></thead>
+        <tbody>
+          {% for job in jobs %}
+          <tr>
+            <td>{{ job.get_module_display }} · {{ job.file_format|upper }}</td>
+            <td>{{ job.created_at|date:"Y-m-d H:i" }}</td>
+            <td>{{ job.get_status_display }}{% if job.error_message %}<small>{{ job.error_message }}</small>{% endif %}</td>
+            <td>{% if job.status == 'completed' and job.expires_at > now %}<a class="button button-small" href="{% url 'data_exports:download' organization.slug job.pk %}">{% translate "Download" %} ↓</a>{% elif job.status == 'queued' or job.status == 'processing' %}<span>{% translate "Please wait…" %}</span>{% else %}—{% endif %}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4">{% translate "You have not exported any files yet. Choose a record type above to get started." %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <details class="panel export-panel">
+    <summary><strong>{% translate "Advanced tools" %}</strong> <span class="muted">{% translate "Saved templates, scheduled exports and CSV imports" %}</span></summary>
+    <section class="export-advanced-section">
+      <h2>{% translate "Saved templates" %}</h2>
+      <div class="table-wrap"><table><thead><tr><th>{% translate "Name" %}</th><th>{% translate "Module" %}</th><th>{% translate "Format" %}</th><th>{% translate "Action" %}</th></tr></thead><tbody>
+      {% for item in templates %}<tr><td>{{ item.name }}</td><td>{{ item.get_module_display }}</td><td>{{ item.file_format|upper }}</td><td><form method="post" action="{% url 'data_exports:queue' organization.slug item.module %}">{% csrf_token %}<input type="hidden" name="file_format" value="{{ item.file_format }}">{% for key,value in item.filters.items %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}<button class="button button-small" type="submit">{% translate "Run now" %}</button></form></td></tr>{% empty %}<tr><td colspan="4">{% translate "No saved templates." %}</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+    {% if request.membership.role == "owner" or request.membership.role == "admin" %}
+    <section class="export-advanced-section">
+      <h2>{% translate "Scheduled exports" %}</h2>
+      <p>{% translate "Schedules are processed automatically when the background worker is running." %}</p>
+      <form method="post" action="{% url 'data_exports:schedule_create' organization.slug %}" class="export-schedule-form">{% csrf_token %}
+        <label>{% translate "Schedule name" %}<input name="name" maxlength="100" placeholder="{% translate 'Weekly collection report' %}" required></label>
+        <label>{% translate "Module" %}<select name="module">{% for key,label in allowed_modules %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></label>
+        <label>{% translate "Frequency" %}<select name="frequency"><option value="daily">{% translate "Daily" %}</option><option value="weekly" selected>{% translate "Weekly" %}</option><option value="monthly">{% translate "Monthly" %}</option></select></label>
+        <label>{% translate "Format" %}<select name="file_format"><option value="xlsx">Excel</option><option value="csv">CSV</option><option value="pdf">PDF</option></select></label>
+        <button class="button" type="submit">{% translate "Create schedule" %}</button>
+      </form>
+      <div class="table-wrap"><table><thead><tr><th>{% translate "Schedule" %}</th><th>{% translate "Frequency" %}</th><th>{% translate "Next run" %}</th><th>{% translate "Status" %}</th><th></th></tr></thead><tbody>
+      {% for item in schedules %}<tr><td>{{ item.name }} · {{ item.get_module_display }}</td><td>{{ item.get_frequency_display }}</td><td>{{ item.next_run_at|date:"Y-m-d H:i" }}</td><td>{% if item.is_active %}{% translate "Active" %}{% else %}{% translate "Paused" %}{% endif %}</td><td><form method="post" action="{% url 'data_exports:schedule_toggle' organization.slug item.pk %}">{% csrf_token %}<button class="button button-small button-secondary" type="submit">{% if item.is_active %}{% translate "Pause" %}{% else %}{% translate "Resume" %}{% endif %}</button></form></td></tr>{% empty %}<tr><td colspan="5">{% translate "No scheduled exports." %}</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+    <section class="export-advanced-section">
+      <h2>{% translate "Import Centre" %}</h2>
+      <p>{% translate "Import new farmer or customer records from a CSV file. Existing records are never overwritten." %}</p>
+      <form method="post" enctype="multipart/form-data" action="{% url 'data_exports:import_upload' organization.slug %}" class="export-schedule-form">{% csrf_token %}
+        <label>{% translate "Import type" %}<select name="module"><option value="farmers">{% translate "Farmers" %}</option><option value="customers">{% translate "Customers" %}</option></select></label>
+        <label>{% translate "CSV file (max 10 MB)" %}<input type="file" name="file" accept=".csv,text/csv" required></label>
+        <button class="button" type="submit">{% translate "Upload CSV" %}</button>
+      </form>
+      <p class="export-security-note">{% translate "Required columns: code, full_name. Optional: phone, email, address, branch_code." %} <a href="{% url 'data_exports:import_sample' organization.slug 'farmers' %}">{% translate "Farmer sample" %}</a> · <a href="{% url 'data_exports:import_sample' organization.slug 'customers' %}">{% translate "Customer sample" %}</a></p>
+      <div class="table-wrap"><table><thead><tr><th>{% translate "Uploaded" %}</th><th>{% translate "Type" %}</th><th>{% translate "Status" %}</th><th>{% translate "Imported" %}</th><th>{% translate "Failed" %}</th></tr></thead><tbody>
+      {% for item in imports %}<tr><td>{{ item.created_at|date:"Y-m-d H:i" }}</td><td>{{ item.get_module_display }}</td><td>{{ item.get_status_display }}</td><td>{{ item.imported_rows }}</td><td>{{ item.failed_rows }}</td></tr>{% empty %}<tr><td colspan="5">{% translate "No import batches yet." %}</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+    {% endif %}
+  </details>
+  <p class="export-security-note">{% translate "Your downloads are restricted to your organisation and permitted branches. Finance exports are available only to authorised roles." %}</p>
+</section>
+{% endblock %}

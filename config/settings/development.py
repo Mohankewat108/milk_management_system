@@ -15,6 +15,8 @@ CSRF_TRUSTED_ORIGINS = list(dict.fromkeys([
     *CSRF_TRUSTED_ORIGINS,
     "http://localhost:8000",
     "https://localhost:8000",
+    "http://localhost:8001",
+    "https://localhost:8001",
     "https://*.app.github.dev",
 ]))
 
