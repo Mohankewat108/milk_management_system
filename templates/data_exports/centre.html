@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Export centre" %} · {{ organization.name }}{% endblock %}
+{% block content %}
+<section class="export-page">
+  <header class="export-hero"><div><span class="profile-section-kicker">{% translate "DATA MANAGEMENT" %}</span><h1>{% translate "Export centre" %}</h1><p>{% blocktrans with name=organization.name %}Create secure data exports for {{ name }}.{% endblocktrans %}</p></div><span class="export-hero-icon" aria-hidden="true">⇩</span></header>
+  <div class="export-stats">
+    <article><span>{% translate "Total exports" %}</span><strong>{{ total_exports }}</strong></article>
+    <article><span>{% translate "Completed" %}</span><strong>{{ completed_exports }}</strong></article>
+    <article><span>{% translate "Processing" %}</span><strong>{{ processing_exports }}</strong></article>
+    <article><span>{% translate "Failed" %}</span><strong>{{ failed_exports }}</strong></article>
+  </div>
+  <section class="panel export-panel"><div class="profile-section-heading"><div><span class="profile-section-kicker">{% translate "CREATE A DOWNLOAD" %}</span><h2>{% translate "Choose your data" %}</h2><p>{% translate "CSV exports are available now. Excel and PDF formats will be added in the next phase." %}</p></div></div>
+    <div class="export-module-grid">
+    {% for key,label in allowed_modules %}<article class="export-module-card"><div class="export-module-icon" aria-hidden="true">{% if key == 'farmers' %}♙{% elif key == 'customers' %}♧{% elif key == 'collections' %}◉{% elif key == 'payments' %}▤{% elif key == 'expenses' %}↗{% else %}▣{% endif %}</div><h3>{{ label }}</h3><p>{% blocktrans with label=label|lower %}Export permitted {{ label }} records for this workspace.{% endblocktrans %}</p>
+      <form method="post" action="{% url 'data_exports:csv' organization.slug key %}" class="export-options">{% csrf_token %}<label>{% translate "Branch" %}<select name="branch"><option value="">{% translate "All accessible branches" %}</option>{% for branch in organization.branches.all %}<option value="{{ branch.pk }}">{{ branch.name }}</option>{% endfor %}</select></label><div class="export-filter-row"><label>{% translate "From" %}<input type="date" name="from"></label><label>{% translate "To" %}<input type="date" name="to"></label></div><label>{% translate "Status (optional)" %}<input type="text" name="status" placeholder="{% translate 'e.g. approved' %}"></label><button class="button" type="submit">{% translate "Generate CSV" %} ↓</button></form>
+    </article>{% empty %}<p>{% translate "Your role does not currently have export access." %}</p>{% endfor %}
+    </div>
+  </section>
+  <section class="panel export-panel"><div class="profile-section-heading"><div><span class="profile-section-kicker">{% translate "EXPORT HISTORY" %}</span><h2>{% translate "Recent exports" %}</h2><p>{% translate "Generated files are private and expire after seven days." %}</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>{% translate "Export" %}</th><th>{% translate "Requested by" %}</th><th>{% translate "Records" %}</th><th>{% translate "Created" %}</th><th>{% translate "Expires" %}</th><th>{% translate "Status" %}</th><th>{% translate "Action" %}</th></tr></thead><tbody>{% for job in jobs %}<tr><td>{{ job.get_module_display }} · {{ job.file_format|upper }}</td><td>{{ job.requested_by.get_full_name|default:job.requested_by.username }}</td><td>{{ job.record_count }}</td><td>{{ job.created_at|date:"Y-m-d H:i" }}</td><td>{{ job.expires_at|date:"Y-m-d H:i" }}</td><td>{{ job.get_status_display }}</td><td>{% if job.status == 'completed' and job.expires_at > now %}<a class="button button-small" href="{% url 'data_exports:download' organization.slug job.pk %}">{% translate "Download" %}</a>{% else %}—{% endif %}</td></tr>{% empty %}<tr><td colspan="7">{% translate "No exports have been generated yet." %}</td></tr>{% endfor %}</tbody></table></div>
+  </section>
+  <p class="export-security-note">{% translate "Exports respect your organisation and branch access. Financial exports are limited to authorised finance roles. Download links require an authenticated workspace session." %}</p>
+</section>
+{% endblock %}
