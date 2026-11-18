@@ -154,7 +154,7 @@ def collection_edit(request, organization_slug, collection_id):
             after = {
                 "quantity_litres": str(entry.quantity_litres),
                 "snf": str(entry.snf), "fat": str(entry.fat),
-                "lactose": str(entry.lactose), "total_amount": str(entry.total_amount),
+                "lactose": str(entry.lactose), "milk_rate": str(entry.milk_rate), "total_amount": str(entry.total_amount),
             }
             record_event(
                 actor=request.user, organization=organization,
@@ -185,7 +185,7 @@ def collection_reverse(request, organization_slug, collection_id):
         else:
             old_status = entry.status
             entry.status = MilkCollection.Status.REVERSED
-            entry.notes = (entry.notes + "\\n" if entry.notes else "") + f"REVERSAL: {reason}"
+            entry.notes = (entry.notes + "\n" if entry.notes else "") + f"REVERSAL: {reason}"
             entry.save(update_fields=["status", "notes", "updated_at"])
             record_event(
                 actor=request.user, organization=request.organization,
