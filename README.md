@@ -95,3 +95,21 @@ Advanced supplier purchasing/payables, double-entry accounting, invoice/statemen
 ## Original source
 
 The original PHP implementation remains on main. The original README described the PHP project as educational; confirm licensing before distributing the replacement commercially.
+## Front-end design system
+
+DairyNexus uses a mobile-first, light-theme design system in `static/css/app.css`. The shared layout is `templates/base.html`; new pages should extend it and use the existing component classes rather than adding page-global rules.
+
+### Tokens
+- **Primary:** `--color-primary` and `--color-primary-strong` — trustworthy dairy blue for primary actions and navigation.
+- **Surfaces:** `--color-page`, `--color-surface`, and `--color-border` — soft blue-gray page canvas, white cards and subtle dividers.
+- **Accent:** `--color-accent` — teal accent for supporting emphasis.
+- **Feedback:** `--color-success`, `--color-warning`, `--color-danger`, and `--color-info` with matching background tokens.
+- **Typography, spacing, radii and shadows:** use the `--font-size-*`, `--space-*`, `--radius-*` and `--shadow-*` tokens.
+
+### Components
+Use `.button`, `.button-secondary`, `.panel`, `.content-card`, `.auth-card`, `.page-heading`, `.kpi-grid`, `.tag`, `.status`, `.table-wrap`, `.search-form`, `.pagination`, `.alert` and `.empty` for common page patterns. Forms should use real labels linked to field IDs and keep Django's generated errors adjacent to their fields.
+
+### Accessibility and responsiveness
+The shared shell includes a skip link and visible keyboard focus. Respect reduced-motion preferences. Layout breakpoints are designed for compact mobile, tablet and desktop widths. Tables scroll horizontally inside `.table-wrap`; print styles remove navigation and interactive controls.
+
+Avoid styling `body`, `main`, bare `table` or bare headings in legacy feature stylesheets. Scope any remaining legacy page styles under a page-specific class. Keep Django template tags and server field contracts unchanged.
