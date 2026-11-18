@@ -2,8 +2,8 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db.models import Count
-from django.shortcuts import redirect, render
-from django.views.decorators.http import require_http_methods
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_http_methods, require_POST
 
 from apps.audit.services import record_event
 from apps.organizations.models import Organization
@@ -63,3 +63,39 @@ def organization_create(request):
         )
         return redirect("platform:dashboard")
     return render(request, "platform/organization_form.html", {"form": form})
+
+
+@login_required
+@user_passes_test(is_platform_owner)
+@require_POST
+def organization_set_status(request, organization_id):
+    organization = get_object_or_404(Organization, pk=organization_id)
+    new_status = request.POST.get("status", "").strip()
+    reason = request.POST.get("reason", "").strip()
+    allowed_statuses = {
+        Organization.Status.ACTIVE,
+        Organization.Status.SUSPENDED,
+        Organization.Status.CLOSED,
+    }
+    if new_status not in allowed_statuses:
+        messages.error(request, "Choose a valid farm status.")
+        return redirect("platform:dashboard")
+    if not reason:
+        messages.error(request, "A reason is required for a farm status change.")
+        return redirect("platform:dashboard")
+    old_status = organization.status
+    if old_status == new_status:
+        messages.info(request, "The farm already has that status.")
+        return redirect("platform:dashboard")
+    organization.status = new_status
+    organization.save(update_fields=["status", "updated_at"])
+    record_event(
+        actor=request.user,
+        organization=organization,
+        action="platform.organization.status_changed",
+        target=organization,
+        changes={"from": old_status, "to": new_status, "reason": reason},
+        request=request,
+    )
+    messages.success(request, f"{organization.name} status changed to {organization.get_status_display()}.")
+    return redirect("platform:dashboard")
