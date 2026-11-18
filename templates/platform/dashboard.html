@@ -30,13 +30,19 @@
         {% for org in organizations %}
         <tr>
           <td><strong>{{ org.name }}</strong><br><span class="muted">{{ org.country }} · {{ org.currency }}</span></td>
-          <td>{{ org.owner.email }}</td>
+          <td>{{ org.owner.email }}{% if org.owner_invitation_pending %}<br><span class="tag">Invitation pending</span>{% endif %}</td>
           <td><span class="status">{{ org.get_status_display }}</span></td>
           <td>{{ org.customer_count }}</td>
           <td>{{ org.farmer_count }}</td>
           <td>{{ org.member_count }}</td>
           <td>{{ org.created_at|date:"Y-m-d" }}</td>
           <td>
+            {% if org.owner_invitation_pending %}
+            <form method="post" action="{% url 'platform:organization_resend_invitation' org.id %}" class="stack-sm">
+              {% csrf_token %}
+              <button class="button button-secondary" type="submit">Resend invitation</button>
+            </form>
+            {% endif %}
             {% if org.status != "closed" %}
             <form method="post" action="{% url 'platform:organization_set_status' org.id %}" class="stack-sm">
               {% csrf_token %}
