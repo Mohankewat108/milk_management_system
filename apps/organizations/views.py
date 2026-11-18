@@ -48,9 +48,9 @@ def dashboard(request, organization_slug):
     membership = request.membership
     branch_ids = accessible_branch_ids(membership)
     branches = organization.branches.filter(is_active=True, deleted_at__isnull=True)
-    customers = organization.customers.filter(is_active=True)
-    farmers = organization.farmers.filter(is_active=True)
-    collections = organization.milk_collections.all()
+    customers = organization.customers.filter(is_active=True, deleted_at__isnull=True)
+    farmers = organization.farmers.filter(is_active=True, deleted_at__isnull=True)
+    collections = organization.milk_collections.exclude(status='reversed')
     if branch_ids is not None:
         branches = branches.filter(pk__in=branch_ids)
         customers = customers.filter(branch_id__in=branch_ids)
