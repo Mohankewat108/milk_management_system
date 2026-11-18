@@ -8,6 +8,7 @@ from django.core.exceptions import PermissionDenied
 from django.core.files.base import ContentFile
 from django.db.models import Avg, Count, Sum
 from django.shortcuts import get_object_or_404, redirect, render
+from django.http import HttpResponse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -167,14 +168,23 @@ def reports_dashboard(request, organization_slug):
         inventory = inventory.filter(branch_id__in=branch_ids)
     start = request.GET.get("from", "")
     end = request.GET.get("to", "")
-    if start:
-        collections = collections.filter(collected_at__date__gte=start)
-        payments = payments.filter(paid_at__date__gte=start)
-        expenses = expenses.filter(expense_date__gte=start)
-    if end:
-        collections = collections.filter(collected_at__date__lte=end)
-        payments = payments.filter(paid_at__date__lte=end)
-        expenses = expenses.filter(expense_date__lte=end)
+    from datetime import date
+    try:
+        start_date = date.fromisoformat(start) if start else None
+        end_date = date.fromisoformat(end) if end else None
+        if start_date and end_date and start_date > end_date:
+            raise ValueError
+    except ValueError:
+        messages.error(request, "Choose valid dates with the start date on or before the end date.")
+        return redirect("data_exports:reports", organization_slug=organization_slug)
+    if start_date:
+        collections = collections.filter(collected_at__date__gte=start_date)
+        payments = payments.filter(paid_at__date__gte=start_date)
+        expenses = expenses.filter(expense_date__gte=start_date)
+    if end_date:
+        collections = collections.filter(collected_at__date__lte=end_date)
+        payments = payments.filter(paid_at__date__lte=end_date)
+        expenses = expenses.filter(expense_date__lte=end_date)
     approved = collections.filter(status=MilkCollection.Status.APPROVED)
     context = {
         "organization": request.organization, "date_from": start, "date_to": end,
@@ -193,3 +203,17 @@ def reports_dashboard(request, organization_slug):
 def models_field(name):
     from django.db.models import F
     return F(name)
+
+
+@login_required
+@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN)
+def import_sample(request, organization_slug, module):
+    if module not in {"farmers", "customers"}:
+        raise PermissionDenied
+    response = HttpResponse(
+        "code,full_name,phone,email,address,branch_code\r\nF-1001,Example Farmer,9800000000,farmer@example.com,Parasi,MAIN\r\n",
+        content_type="text/csv; charset=utf-8",
+    )
+    response["Content-Disposition"] = 'attachment; filename="' + module + '-import-template.csv"'
+    response["Cache-Control"] = "private, no-store"
+    return response
