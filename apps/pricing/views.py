@@ -73,7 +73,7 @@ def settings_view(request, organization_slug):
                 )
                 return redirect("pricing:settings", organization_slug=organization_slug)
     history = PricingConfiguration.objects.filter(
-        organization=organization
+        organization=organization, deleted_at__isnull=True
     ).select_related("branch", "created_by", "approved_by")
     lookup_date = request.GET.get("date")
     try:
