@@ -8,8 +8,8 @@
     <a class="button" href="{% url 'collections:create' organization.slug %}">Record collection</a>
   </div>
   <form class="search-form" method="get">
-    <label>From ({{ date_calendar }}) <input type="text" inputmode="numeric" data-calendar-date name="from" value="{{ date_from }}"></label>
-    <label>To ({{ date_calendar }}) <input type="text" inputmode="numeric" data-calendar-date name="to" value="{{ date_to }}"></label>
+    <label>From ({{ date_calendar }}) {% if date_calendar == "BS" %}<input type="text" inputmode="numeric" data-calendar-date data-calendar="bs" name="from" value="{{ date_from }}" placeholder="वर्ष-महिना-दिन">{% else %}<input type="date" name="from" value="{{ date_from }}">{% endif %}</label>
+    <label>To ({{ date_calendar }}) {% if date_calendar == "BS" %}<input type="text" inputmode="numeric" data-calendar-date data-calendar="bs" name="to" value="{{ date_to }}" placeholder="वर्ष-महिना-दिन">{% else %}<input type="date" name="to" value="{{ date_to }}">{% endif %}</label>
     <button class="button button-secondary" type="submit">Filter</button>
   </form>
   {% if date_error %}<p class="alert error" role="alert">{{ date_error }}</p>{% endif %}
