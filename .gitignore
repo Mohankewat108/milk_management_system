@@ -16,3 +16,5 @@ staticfiles/
 .idea/
 .DS_Store
 Thumbs.db
+
+private_uploads/
