@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.db.models import Count, Sum
+from django.db.models import Count
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
 
@@ -33,7 +33,7 @@ def dashboard(request):
         "trial_organizations": Organization.objects.filter(status=Organization.Status.TRIAL).count(),
         "suspended_organizations": Organization.objects.filter(status=Organization.Status.SUSPENDED).count(),
         "user_count": User.objects.count(),
-        "customer_count": Organization.objects.aggregate(total=Sum("customers__id"))["total"] or 0,
+        "customer_count": Organization.objects.aggregate(total=Count("customers", distinct=True))["total"],
         "subscription_count": Subscription.objects.count(),
         "organizations": organizations[:50],
     }
