@@ -1,0 +1,4 @@
+-r base.txt
+gunicorn>=23,<24
+redis>=5,<7
+celery>=5.4,<6
