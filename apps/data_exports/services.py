@@ -199,7 +199,7 @@ def _export_summary_rows(module, headers, totals):
     elif module == "expenses":
         grand_total[8] = totals["sums"].get(8, Decimal("0"))
     elif module == "inventory":
-        grand_total[7] = "—"
+        grand_total[7] = totals["sums"].get(7, Decimal("0"))
         grand_total[9] = totals["stock_value"]
         grand_total[0] = f"TOTAL STOCK VALUE — {count} ITEMS"
     elif module in {"farmers", "customers", "suppliers"}:
@@ -220,7 +220,8 @@ def build_csv(module, queryset):
             raise ValidationError("This export is larger than the safe instant-export limit. Background exports will be available in a later phase.")
         _accumulate_export_totals(module, row, totals)
         writer.writerow([_safe_cell(value) for value in row])
-    for summary_row in _export_summary_rows(module, headers, totals):\n        writer.writerow([_safe_cell(value) for value in summary_row])
+    for summary_row in _export_summary_rows(module, headers, totals):
+        writer.writerow([_safe_cell(value) for value in summary_row])
     return "\ufeff" + buffer.getvalue(), count
 
 
