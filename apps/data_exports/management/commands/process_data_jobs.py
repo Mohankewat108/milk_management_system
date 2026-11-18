@@ -41,10 +41,12 @@ def process_import_batch(batch):
                     raise ValueError("code and full_name are required")
                 if len(code) > 40 or len(name) > 180:
                     raise ValueError("code or full_name exceeds the allowed length")
+                if len(row.get("phone", "")) > 30 or len(row.get("email", "")) > 254:
+                    raise ValueError("phone or email exceeds the allowed length")
                 branch = None
                 branch_code = row.get("branch_code", "")
                 if branch_code:
-                    branch = batch.organization.branches.get(code=branch_code, deleted_at__isnull=True)
+                    branch = batch.organization.branches.get(code=branch_code, deleted_at__isnull=True, is_active=True)
                 values = {
                     "organization": batch.organization, "code": code, "full_name": name,
                     "phone": row.get("phone", "")[:30], "email": row.get("email", ""),
