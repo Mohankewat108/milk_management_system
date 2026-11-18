@@ -46,6 +46,8 @@ def approve_expense(*, expense_id, organization, actor):
     expense.approved_by = actor
     expense.approved_at = timezone.now()
     expense.save(update_fields=["status", "approved_by", "approved_at", "updated_at"])
+    from .ledger_services import post_approved_expense
+    post_approved_expense(expense=expense, actor=actor)
     return expense
 
 
@@ -75,3 +77,20 @@ def record_payment(*, organization, branch, actor, direction, amount, method,
         method=method, status=status, paid_at=paid_at,
         transaction_reference=transaction_reference, notes=notes, recorded_by=actor,
     )
+
+
+
+@transaction.atomic
+def complete_payment(*, payment_id, organization, actor):
+    payment = Payment.objects.select_for_update().get(
+        pk=payment_id, organization=organization, deleted_at__isnull=True
+    )
+    require_actor_branch_access(actor=actor, organization=organization, branch=payment.branch)
+    if payment.status != Payment.Status.PENDING:
+        raise ValidationError("Only pending payments can be completed.")
+    payment.status = Payment.Status.COMPLETED
+    payment.paid_at = timezone.now()
+    payment.save(update_fields=["status", "paid_at", "updated_at"])
+    from .ledger_services import post_completed_payment
+    post_completed_payment(payment=payment, actor=actor)
+    return payment
