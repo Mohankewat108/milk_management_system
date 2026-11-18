@@ -41,10 +41,20 @@ def trash_list(request, organization_slug):
 
 
 @login_required
-@organization_access(*MANAGERS)
+@organization_access()
 @require_POST
 def trash_delete(request, organization_slug, model_key, object_id):
     model = get_registered_model(model_key)
+    allowed_roles = {
+        "customer": MANAGERS, "farmer": MANAGERS, "branch": MANAGERS,
+        "supplier": MANAGERS,
+        "inventory_item": (Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.INVENTORY_MANAGER),
+        "payment": (Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.ACCOUNTANT),
+        "expense": (Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.ACCOUNTANT),
+    }
+    if request.membership.role not in allowed_roles.get(model_key, MANAGERS):
+        messages.error(request, "You do not have permission to move this record to Trash.")
+        return redirect("business:dashboard", organization_slug=organization_slug)
     branch_ids = accessible_branch_ids(request.membership)
     try:
         with transaction.atomic():
