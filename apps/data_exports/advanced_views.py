@@ -114,9 +114,6 @@ def upload_import(request, organization_slug):
     if not upload.name.lower().endswith(".csv") or upload.size > 10 * 1024 * 1024:
         messages.error(request, "Upload a CSV file no larger than 10 MB.")
         return redirect("data_exports:centre", organization_slug=organization_slug)
-    if upload.content_type not in {"text/csv", "application/vnd.ms-excel", "application/octet-stream"}:
-        messages.error(request, "The uploaded file must be a CSV.")
-        return redirect("data_exports:centre", organization_slug=organization_slug)
     batch = ImportBatch.objects.create(
         organization=request.organization, uploaded_by=request.user,
         module=module, file=upload,
