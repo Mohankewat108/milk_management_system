@@ -1,101 +1,96 @@
-Milk Management System
+# DairyNexus — multi-tenant dairy management SaaS
 
-A full-stack web application for managing daily milk collection, customer records, and pricing calculations efficiently.
+DairyNexus is the Python/Django replacement being developed for the original PHP Milk Management System.
 
-About The Project
+> Migration status: active foundation branch, not yet a production-ready commercial release. The original PHP files remain on main and have not been overwritten.
 
-The Milk Management System is designed for dairy businesses to streamline daily operations. It allows staff to record milk collection, track quality parameters, manage customers, and automatically calculate pricing.
-This system improves accuracy, reduces manual work, and provides quick insights into daily milk transactions.
+## Implemented foundation
 
-Key Features
+- Django 5.2-compatible project structure and custom UUID user model.
+- Username/email login, Django sessions, password reset/change and login throttling.
+- Tenant organisations, branch memberships, roles and explicit branch assignments.
+- Separate Customer and Farmer domain models and customer portal.
+- Effective-dated SNF/FAT/Lactose pricing and configurable quality ranges.
+- Server-side Decimal pricing and collection calculations with historical snapshots.
+- Collection submission and approval workflow.
+- Pending/completed payment workflow with transactional verification.
+- Inventory models and transactional stock movement service.
+- Subscription plan/subscription models and superuser platform overview.
+- Audit events, demo seeding, responsive templates, security/operations documentation.
 
-📊 Dashboard:
-View total milk collected, average rate per liter, and total earnings for the day.
+## Stack
 
-➕ Add Milk Record:
-Record daily milk entries with:
-Customer name
-Milk quantity (liters)
-SNF, FAT, Lacto values
-Rate per liter
-Staff name
-Collection date
+Python 3.12+, Django 5.2, PostgreSQL (production), SQLite (local), Django ORM, Django templates, WhiteNoise, Gunicorn and Redis (production cache).
 
-📅 Today's Milk Details:
-View all records for the current day
-Search functionality
-Edit & delete options
+## Windows PowerShell setup
 
-👥 Customer Management:
-Add new customers
-Store contact details (phone, email, address)
-📋 Customer List:
-Easily search and browse all customers.
-⚙️ Milk Quality Settings:
-Admin can update:
-SNF rate
-FAT rate
-Lacto rate
-💰 Automatic Price Calculation
-Total price is calculated automatically using:
+1. Create and activate a Python virtual environment:
 
-Tech Stack
-Layer                Technology
-Frontend             HTML, CSS, JavaScript
-Backend              PHP
-Database             MySQL
-Tools                phpMyAdmin
-Server               XAMpp/ WAMP
+    py -3.12 -m venv .venv
+    .\.venv\Scripts\Activate.ps1
+    python -m pip install --upgrade pip
+    pip install -r requirements/development.txt
+    Copy-Item .env.example .env
 
+2. Set a unique DJANGO_SECRET_KEY in .env. Optionally set DJANGO_DEMO_PASSWORD for local demo logins.
 
-Database Design:
-The system uses 4 main tables:
-customer → Stores customer details
-daily_milk → Stores milk collection records
-staff → Stores staff information
-milk_setting → Stores SNF, FAT, Lacto rates
+3. Generate and review initial migrations. This project uses a custom user model:
 
-💡 Note:
-milk_total_price is a generated column calculated automatically in MySQL.
+    python manage.py makemigrations accounts core organizations parties pricing collections finance inventory audit platform_admin
+    python manage.py migrate
+    python manage.py check
+    python manage.py createsuperuser
 
-🚀 Getting Started:
-✅ Requirements:
-XAMPP / WAMP
-PHP 8.0+
-MySQL
+Commit reviewed migration files before any production deployment. CI generates migrations in its runner for model validation, but production must use reviewed, committed migration files.
 
-⚡ Installation Steps:
-1. Clone the repository (https://github.com/mohankewat108/milk_management_system.git).
-2. Move project ot server folder
-.  XAMPP ---> htdocs
-3. Import DAtabase
-.  Open: http://localhost/phpmyadmin
-.  Import milk.sql
-4. Configure Database
-.  Edit milk_dbconnetion.php
-.  #Demo:
-       $host = "localhost";
-       $user = "root";
-       $password = "root";
-       $database = "milk";
-5. Run Project:
-.  http://localhost/milk_management/
+4. Seed fictional demo data and start the server:
 
+    python manage.py seed_demo_data
+    python manage.py runserver
 
-🔮 Future Improvements
-🔐 User authentication (Admin/Staff login)
-📱 Mobile responsive UI
-📊 Advanced reports & analytics
-📤 Export data (PDF/Excel)
-☁️ Cloud deployment
+Open http://127.0.0.1:8000/.
 
+## Demo accounts
 
-👨‍💻 Author:
-Mohan Kewat:
-🎓 Computer Science Student
-🏫 Niels Brock Copenhagen Business College, Denmark
-📧 mohankewat108@gmail.com
+Set DJANGO_DEMO_PASSWORD before seeding. Usernames are demo-platform-admin, demo-owner-1 through demo-owner-3, demo-staff-1-1 through demo-staff-3-3, and demo-customer-1 through demo-customer-3. Demo identities are fictional and must not be used in production.
 
-📄 License
-This project is open-source and available for educational purposes.
+To clear only organisations already explicitly marked as demo and their dependent business records, run python manage.py seed_demo_data --clear. The command does not clear ordinary organisations or user accounts.
 
+## Main routes
+
+| Route | Purpose |
+|---|---|
+| / | Public landing page |
+| /accounts/register/ | Account registration |
+| /accounts/login/ | Login |
+| /business/register/ | Dairy workspace onboarding |
+| /business/<slug>/ | Business dashboard |
+| /business/<slug>/staff/ | Staff and branch assignments |
+| /business/<slug>/customers/ and /farmers/ | Party directories |
+| /business/<slug>/collections/ | Milk collection list |
+| /business/<slug>/pricing/ | Pricing configuration |
+| /business/<slug>/quality/ | Quality profiles |
+| /business/<slug>/payments/ | Payments |
+| /portal/ | Customer portal |
+| /platform/ | Superuser platform overview |
+| /healthz/ | Database health check |
+
+## Docker
+
+Copy .env.example to .env, set local secret values, then run docker compose up --build. The Compose file is for local development and must not be used as a production deployment procedure.
+
+## Tests
+
+Run python manage.py test and pytest. GitHub Actions runs migration generation, Django checks and the automated test suite on pushes and pull requests.
+
+## Legacy migration blocker
+
+The old README references milk.sql, but that SQL dump is absent from the repository tree. The exact legacy schema and generated milk_total_price expression cannot be verified. No legacy business data has been migrated. Obtain a current MySQL export and schema before planning cutover. See docs/legacy-audit.md.
+
+## Current limitations
+
+Full supplier and expense workflows, invoice/statement generation, subscription charging and plan-limit enforcement, farmer portal, notification delivery, exports, richer reporting, background jobs, MFA, email verification, production email delivery, database-level RLS and committed reviewed migrations remain outstanding. See docs/architecture.md, docs/security.md and docs/operations.md.
+
+## Original source
+
+The original PHP implementation remains on main. The original README described the PHP project as educational; confirm licensing before distributing the replacement commercially.
