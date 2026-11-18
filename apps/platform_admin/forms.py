@@ -8,26 +8,29 @@ User = get_user_model()
 
 
 class PlatformOrganizationCreateForm(forms.ModelForm):
-    owner = forms.ModelChoiceField(
-        queryset=User.objects.filter(is_active=True).order_by("email"),
-        help_text="Select the account that will own and administer this dairy workspace.",
+    owner_first_name = forms.CharField(max_length=150, label="Owner first name")
+    owner_last_name = forms.CharField(max_length=150, required=False, label="Owner last name")
+    owner_email = forms.EmailField(
+        label="Farm owner's email",
+        help_text="We will send a secure invitation to this address. The owner will set their own password.",
     )
 
     class Meta:
         model = Organization
         fields = (
-            "owner", "name", "legal_name", "registration_number", "business_type",
+            "name", "legal_name", "registration_number", "business_type",
             "email", "phone", "country", "currency", "timezone", "address",
         )
-        widgets = {
-            "address": forms.Textarea(attrs={"rows": 3}),
-        }
+        widgets = {"address": forms.Textarea(attrs={"rows": 3})}
 
     def clean_name(self):
         name = self.cleaned_data["name"].strip()
         if not name:
             raise forms.ValidationError("Enter a dairy farm or business name.")
         return name
+
+    def clean_owner_email(self):
+        return self.cleaned_data["owner_email"].strip().lower()
 
     def clean_currency(self):
         return self.cleaned_data["currency"].strip().upper()
