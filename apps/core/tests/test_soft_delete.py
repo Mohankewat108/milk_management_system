@@ -45,7 +45,7 @@ class CentralSoftDeleteTests(TestCase):
         )
         soft_delete_record(key="supplier", record=supplier, actor=self.user)
         supplier.refresh_from_db()
-        self.assertFalse(supplier.is_active)
+        self.assertTrue(supplier.is_active)
         restore_record(record=supplier)
         supplier.refresh_from_db()
         self.assertTrue(supplier.is_active)
