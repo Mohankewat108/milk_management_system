@@ -1,4 +1,5 @@
 import django.db.models.deletion
+import uuid
 from django.conf import settings
 from django.db import migrations, models
 
@@ -11,30 +12,10 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name="customer",
-            name="deleted_at",
-            field=models.DateTimeField(blank=True, db_index=True, null=True),
-        ),
-        migrations.AddField(
-            model_name="customer",
-            name="deleted_by",
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="deleted_customers", to=settings.AUTH_USER_MODEL),
-        ),
-        migrations.AddField(
-            model_name="farmer",
-            name="deleted_at",
-            field=models.DateTimeField(blank=True, db_index=True, null=True),
-        ),
-        migrations.AddField(
-            model_name="farmer",
-            name="deleted_by",
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="deleted_farmers", to=settings.AUTH_USER_MODEL),
-        ),
         migrations.CreateModel(
             name="StaffInvitation",
             fields=[
-                ("id", models.UUIDField(primary_key=True, serialize=False, editable=False)),
+                ("id", models.UUIDField(default=uuid.uuid4, primary_key=True, serialize=False, editable=False)),
                 ("created_at", models.DateTimeField(auto_now_add=True, db_index=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
                 ("email", models.EmailField(db_index=True, max_length=254)),
