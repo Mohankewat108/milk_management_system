@@ -25,8 +25,8 @@ class CollectionEntryForm(forms.Form):
 
     def __init__(self, *args, organization, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["branch"].queryset = Branch.objects.filter(organization=organization, is_active=True)
-        self.fields["farmer"].queryset = Farmer.objects.filter(organization=organization, is_active=True)
+        self.fields["branch"].queryset = Branch.objects.filter(organization=organization, is_active=True, deleted_at__isnull=True)
+        self.fields["farmer"].queryset = Farmer.objects.filter(organization=organization, is_active=True, deleted_at__isnull=True)
         self.fields["customer"].queryset = Customer.objects.filter(organization=organization, is_active=True)
 
     def clean(self):
