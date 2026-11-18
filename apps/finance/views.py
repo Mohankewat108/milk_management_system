@@ -11,9 +11,9 @@ from apps.audit.services import record_event
 from apps.organizations.decorators import organization_access
 from apps.organizations.models import Membership
 from apps.organizations.permissions import accessible_branch_ids, can_access_branch
-from .forms import PaymentEntryForm
-from .models import Payment
-from .services import record_payment
+from .forms import ExpenseEntryForm, PaymentEntryForm
+from .models import Expense, Payment
+from .services import approve_expense, record_expense, record_payment
 
 
 @login_required
@@ -80,3 +80,59 @@ def payment_complete(request, organization_slug, payment_id):
         else:
             messages.error(request, "Only pending payments can be completed.")
     return redirect("finance:list", organization_slug=organization_slug)
+
+
+@login_required
+@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.ACCOUNTANT)
+def expense_list(request, organization_slug):
+    records = Expense.objects.filter(organization=request.organization).select_related(
+        "branch", "recorded_by", "approved_by"
+    ).order_by("-expense_date", "-created_at")
+    branch_ids = accessible_branch_ids(request.membership)
+    if branch_ids is not None:
+        records = records.filter(branch_id__in=branch_ids)
+    page = Paginator(records, 25).get_page(request.GET.get("page"))
+    return render(request, "finance/expenses.html", {
+        "organization": request.organization, "page_obj": page, "membership": request.membership,
+    })
+
+
+@login_required
+@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.ACCOUNTANT)
+@require_http_methods(["GET", "POST"])
+def expense_create(request, organization_slug):
+    organization = request.organization
+    form = ExpenseEntryForm(request.POST or None, organization=organization, membership=request.membership)
+    if request.method == "POST" and form.is_valid():
+        data = form.cleaned_data
+        try:
+            expense = record_expense(
+                organization=organization, branch=data["branch"], actor=request.user,
+                category=data["category"], description=data["description"], supplier_name=data["supplier_name"],
+                amount=data["amount"], expense_date=data["expense_date"], method=data["method"], notes=data["notes"],
+            )
+        except ValidationError as exc:
+            form.add_error(None, exc)
+        else:
+            record_event(actor=request.user, organization=organization, action="expense.recorded",
+                         target=expense, request=request)
+            messages.success(request, f"Expense {expense.reference} recorded pending approval.")
+            return redirect("finance:expenses", organization_slug=organization_slug)
+    return render(request, "finance/expense_form.html", {"organization": organization, "form": form})
+
+
+@login_required
+@organization_access(Membership.Role.OWNER, Membership.Role.ACCOUNTANT)
+@require_POST
+def expense_approve(request, organization_slug, expense_id):
+    try:
+        expense = approve_expense(
+            expense_id=expense_id, organization=request.organization, actor=request.user
+        )
+    except (Expense.DoesNotExist, ValidationError) as exc:
+        messages.error(request, str(exc))
+    else:
+        record_event(actor=request.user, organization=request.organization,
+                     action="expense.approved", target=expense, request=request)
+        messages.success(request, "Expense approved.")
+    return redirect("finance:expenses", organization_slug=organization_slug)
