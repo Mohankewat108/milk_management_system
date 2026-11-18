@@ -5,23 +5,65 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from .models import Payment
+from .models import Expense, Payment
+
+
+@transaction.atomic
+def record_expense(*, organization, branch, actor, category, description,
+                   amount, expense_date, method, supplier_name="", notes=""):
+    if branch.organization_id != organization.id or not branch.is_active:
+        raise ValidationError("Select an active branch belonging to this organisation.")
+    value = Decimal(str(amount))
+    if value <= 0:
+        raise ValidationError("Expense amount must be greater than zero.")
+    return Expense.objects.create(
+        organization=organization,
+        branch=branch,
+        reference=f"EXP-{uuid4().hex[:12].upper()}",
+        category=category,
+        description=description,
+        supplier_name=supplier_name,
+        amount=value,
+        currency=organization.currency,
+        expense_date=expense_date,
+        method=method,
+        recorded_by=actor,
+        notes=notes,
+    )
+
+
+@transaction.atomic
+def approve_expense(*, expense_id, organization, actor):
+    expense = Expense.objects.select_for_update().get(
+        pk=expense_id, organization=organization
+    )
+    if expense.status != Expense.Status.PENDING:
+        raise ValidationError("Only pending expenses can be approved.")
+    expense.status = Expense.Status.APPROVED
+    expense.approved_by = actor
+    expense.approved_at = timezone.now()
+    expense.save(update_fields=["status", "approved_by", "approved_at", "updated_at"])
+    return expense
 
 
 @transaction.atomic
 def record_payment(*, organization, branch, actor, direction, amount, method,
                    customer=None, farmer=None, status=Payment.Status.PENDING, notes="",
                    transaction_reference=""):
-    if branch.organization_id != organization.id:
-        raise ValidationError("Branch does not belong to this organisation.")
+    if branch.organization_id != organization.id or not branch.is_active:
+        raise ValidationError("Select an active branch belonging to this organisation.")
     if bool(customer) == bool(farmer):
         raise ValidationError("Select exactly one customer or farmer.")
     party = customer or farmer
-    if party.organization_id != organization.id:
-        raise ValidationError("The selected party belongs to another organisation.")
+    if party.organization_id != organization.id or not party.is_active:
+        raise ValidationError("The selected party is not active in this organisation.")
     value = Decimal(str(amount))
     if value <= 0:
         raise ValidationError("Payment amount must be greater than zero.")
+    if customer and direction != Payment.Direction.INCOMING:
+        raise ValidationError("Customer payments must be incoming.")
+    if farmer and direction != Payment.Direction.OUTGOING:
+        raise ValidationError("Farmer payments must be outgoing.")
     paid_at = timezone.now() if status == Payment.Status.COMPLETED else None
     return Payment.objects.create(
         organization=organization, branch=branch,

@@ -2,6 +2,8 @@ from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
+from django.core.cache import cache
+from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods, require_POST
 
@@ -12,6 +14,36 @@ class AccountLoginView(LoginView):
     template_name = "accounts/login.html"
     authentication_form = EmailAuthenticationForm
     redirect_authenticated_user = True
+    max_attempts = 10
+    lockout_seconds = 900
+
+    def rate_key(self):
+        ip = self.request.META.get("REMOTE_ADDR", "unknown")
+        return f"dairynexus:login-attempts:{ip}"
+
+    def dispatch(self, request, *args, **kwargs):
+        if cache.get(self.rate_key(), 0) >= self.max_attempts:
+            return HttpResponse(
+                "Too many failed login attempts. Try again in 15 minutes.",
+                status=429,
+                content_type="text/plain",
+            )
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_invalid(self, form):
+        key = self.rate_key()
+        if not cache.add(key, 0, timeout=self.lockout_seconds):
+            try:
+                cache.incr(key)
+            except ValueError:
+                cache.set(key, 1, timeout=self.lockout_seconds)
+        else:
+            cache.incr(key)
+        return super().form_invalid(form)
+
+    def form_valid(self, form):
+        cache.delete(self.rate_key())
+        return super().form_valid(form)
 
 
 @require_http_methods(["GET", "POST"])

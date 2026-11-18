@@ -4,7 +4,12 @@ from uuid import uuid4
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from apps.pricing.services import calculate_milk_rate, pricing_for_collection
+from apps.pricing.services import (
+    calculate_milk_rate,
+    pricing_for_collection,
+    quality_configuration_for,
+    validate_quality_measurements,
+)
 
 from .models import MilkCollection
 
@@ -28,8 +33,15 @@ def create_collection(
     if any(value < 0 for value in quality):
         raise ValidationError("Quality measurements cannot be negative.")
 
+    collection_date = collected_at.date()
     pricing = pricing_for_collection(
-        organization=organization, branch=branch, collection_date=collected_at.date()
+        organization=organization, branch=branch, collection_date=collection_date
+    )
+    quality_config = quality_configuration_for(
+        organization=organization, branch=branch, collection_date=collection_date
+    )
+    quality_snapshot = validate_quality_measurements(
+        snf=quality[0], fat=quality[1], lactose=quality[2], configuration=quality_config
     )
     rate = calculate_milk_rate(snf=quality[0], fat=quality[1], lactose=quality[2], pricing=pricing)
     total = (quantity * rate).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
@@ -40,6 +52,7 @@ def create_collection(
         "lactose_rate": str(pricing.lactose_rate),
         "formula": "(SNF × SNF rate) + (FAT × FAT rate) + (Lactose × Lactose rate)",
         "currency": organization.currency,
+        "quality_profile": quality_snapshot,
     }
     return MilkCollection.objects.create(
         organization=organization, branch=branch,
