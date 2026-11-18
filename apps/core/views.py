@@ -43,8 +43,11 @@ def landing_page(request):
 def nepali_calendar_month(request):
     """Return authoritative BS month metadata for the accessible date picker."""
     try:
-        year = int(request.GET.get("year", ""))
-        month = int(request.GET.get("month", ""))
+        today_bs = nepali_datetime.date.from_datetime_date(date.today())
+        year = int(request.GET.get("year", today_bs.year))
+        month = int(request.GET.get("month", today_bs.month))
+        if not 1 <= month <= 12:
+            raise ValueError("month_out_of_range")
         first_day = nepali_datetime.date(year, month, 1)
         first_gregorian = first_day.to_datetime_date()
         days_in_month = 0
@@ -57,7 +60,6 @@ def nepali_calendar_month(request):
     except (TypeError, ValueError, OverflowError):
         return JsonResponse({"error": "invalid_month"}, status=400)
 
-    today_bs = nepali_datetime.date.from_datetime_date(date.today())
     month_names = [
         "बैशाख", "जेठ", "असार", "साउन", "भदौ", "असोज",
         "कार्तिक", "मंसिर", "पुष", "माघ", "फागुन", "चैत",
