@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Sum
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods, require_POST
@@ -9,6 +10,8 @@ from django.views.decorators.http import require_http_methods, require_POST
 from apps.audit.services import record_event
 from apps.organizations.decorators import organization_access
 from apps.organizations.models import Membership
+from apps.organizations.permissions import accessible_branch_ids, can_access_branch
+
 from .forms import CollectionEntryForm
 from .models import MilkCollection
 from .services import create_collection
@@ -24,6 +27,9 @@ def collection_list(request, organization_slug):
     records = MilkCollection.objects.filter(organization=organization).select_related(
         "branch", "farmer", "customer", "recorded_by"
     ).order_by("-collected_at")
+    branch_ids = accessible_branch_ids(request.membership)
+    if branch_ids is not None:
+        records = records.filter(branch_id__in=branch_ids)
     start, end = request.GET.get("from"), request.GET.get("to")
     if start:
         records = records.filter(collected_at__date__gte=start)
@@ -33,6 +39,7 @@ def collection_list(request, organization_slug):
     page = Paginator(records, 25).get_page(request.GET.get("page"))
     return render(request, "collections/list.html", {
         "organization": organization, "page_obj": page, "total_litres": total_litres,
+        "membership": request.membership,
     })
 
 
@@ -47,8 +54,7 @@ def collection_create(request, organization_slug):
     form = CollectionEntryForm(request.POST or None, organization=organization)
     if request.method == "POST" and form.is_valid():
         data = form.cleaned_data
-        assigned = request.membership.branch_assignments.values_list("branch_id", flat=True)
-        if assigned.exists() and not assigned.filter(pk=data["branch"].pk).exists():
+        if not can_access_branch(request.membership, data["branch"]):
             form.add_error("branch", "You are not assigned to this branch.")
         else:
             try:
@@ -72,13 +78,16 @@ def collection_create(request, organization_slug):
 @organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.QUALITY_OFFICER)
 @require_POST
 def approve_collection(request, organization_slug, collection_id):
-    entry = MilkCollection.objects.get(pk=collection_id, organization=request.organization)
-    if entry.status != MilkCollection.Status.SUBMITTED:
-        messages.error(request, "Only submitted collections can be approved.")
-    else:
-        entry.status = MilkCollection.Status.APPROVED
-        entry.save(update_fields=["status", "updated_at"])
-        record_event(actor=request.user, organization=request.organization,
-                     action="milk_collection.approved", target=entry, request=request)
-        messages.success(request, "Collection approved.")
+    with transaction.atomic():
+        entry = MilkCollection.objects.select_for_update().get(
+            pk=collection_id, organization=request.organization
+        )
+        if entry.status != MilkCollection.Status.SUBMITTED:
+            messages.error(request, "Only submitted collections can be approved.")
+        else:
+            entry.status = MilkCollection.Status.APPROVED
+            entry.save(update_fields=["status", "updated_at"])
+            record_event(actor=request.user, organization=request.organization,
+                         action="milk_collection.approved", target=entry, request=request)
+            messages.success(request, "Collection approved.")
     return redirect("collections:list", organization_slug=organization_slug)
