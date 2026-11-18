@@ -23,6 +23,7 @@
     </div>
   </header>
 
+  <form class="module-export-form" method="post" action="{% url 'data_exports:queue' organization.slug 'farmers' %}">{% csrf_token %}<input type="hidden" name="branch" value="{{ branch_filter }}"><input type="hidden" name="status" value="{{ status_filter }}"><select name="file_format" aria-label="Export format"><option value="xlsx">Excel</option><option value="csv">CSV</option><option value="pdf">PDF</option></select><button class="button button-secondary" type="submit">Export farmers ↓</button></form>
   <form class="directory-filters" method="get" role="search">
     <div class="filter-field">
       <label for="farmer-search">{% translate "Search farmers" %}</label>
