@@ -1,10 +1,11 @@
 from django.contrib import admin
 from django.urls import include, path
 
-from apps.core.views import health_check, landing_page
+from apps.core.views import health_check, landing_page, readiness_check
 
 urlpatterns = [
     path("healthz/", health_check, name="healthz"),
+    path("readyz/", readiness_check, name="readyz"),
     path("admin/", admin.site.urls),
     path("accounts/", include("apps.accounts.urls")),
     path("business/", include("apps.organizations.urls")),
