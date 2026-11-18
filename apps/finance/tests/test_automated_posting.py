@@ -160,3 +160,52 @@ class AutomatedLedgerPostingTests(TestCase):
         self.assertFalse(JournalEntry.objects.exists())
         expense.refresh_from_db()
         self.assertEqual(expense.status, Expense.Status.APPROVED)
+
+    def test_customer_collection_sales_rule_requires_explicit_opt_in(self):
+        customer = Customer.objects.create(
+            organization=self.org, code="C-SELL", full_name="Milk Supplier Customer",
+        )
+        self.config.enable_customer_sales_posting = True
+        self.config.save(update_fields=["enable_customer_sales_posting", "updated_at"])
+        PricingConfiguration.objects.create(
+            organization=self.org, version=1,
+            snf_rate=Decimal("5.0000"), fat_rate=Decimal("7.0000"),
+            lactose_rate=Decimal("1.0000"), effective_from=date(2026, 1, 1),
+            is_approved=True, created_by=self.user,
+        )
+        collection = create_collection(
+            organization=self.org, branch=self.branch, actor=self.user,
+            collected_at=datetime(2026, 11, 19, 6, 0, tzinfo=dt_timezone.utc),
+            quantity_litres="1.000", snf="8.0", fat="4.0", lactose="4.5",
+            customer=customer,
+        )
+        approve_collection(
+            collection_id=collection.pk, organization=self.org, actor=self.user,
+        )
+        journal = self.journal_for("customer_milk_sale", collection.pk)
+        self.assertEqual(
+            journal.lines.get(account=self.accounts["receivable"]).debit,
+            collection.total_amount,
+        )
+        self.assertEqual(
+            journal.lines.get(account=self.accounts["revenue"]).credit,
+            collection.total_amount,
+        )
+
+    def test_posting_failure_rolls_back_expense_approval(self):
+        expense = record_expense(
+            organization=self.org, branch=self.branch, actor=self.user,
+            category="Utilities", description="Expense in closed period",
+            amount="25.00", expense_date=date(2026, 11, 19),
+            method=Payment.Method.CASH,
+        )
+        self.period.status = self.period.Status.CLOSED
+        self.period.save(update_fields=["status", "updated_at"])
+        from django.core.exceptions import ValidationError
+        with self.assertRaises(ValidationError):
+            approve_expense(
+                expense_id=expense.pk, organization=self.org, actor=self.user,
+            )
+        expense.refresh_from_db()
+        self.assertEqual(expense.status, Expense.Status.PENDING)
+        self.assertFalse(JournalEntry.objects.exists())
