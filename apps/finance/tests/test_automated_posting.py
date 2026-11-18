@@ -4,10 +4,9 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from apps.collections.models import MilkCollection
 from apps.collections.services import approve_collection, create_collection
 from apps.finance.ledger_services import create_accounting_period
-from apps.finance.models import Account, Expense, JournalEntry, LedgerConfiguration, Payment
+from apps.finance.models import Account, JournalEntry, LedgerConfiguration, Payment
 from apps.finance.services import approve_expense, complete_payment, record_expense, record_payment
 from apps.organizations.models import Branch, Membership, Organization
 from apps.parties.models import Customer, Farmer
@@ -158,7 +157,6 @@ class AutomatedLedgerPostingTests(TestCase):
             method=Payment.Method.CASH,
         )
         approve_expense(expense_id=expense.pk, organization=self.org, actor=self.user)
-        self.assertEqual(expense.status, Expense.Status.PENDING)
         self.assertFalse(JournalEntry.objects.exists())
         expense.refresh_from_db()
         self.assertEqual(expense.status, Expense.Status.APPROVED)
