@@ -69,8 +69,8 @@
   <h2>Collection history</h2>
   {% if date_error %}<p class="alert error">{{ date_error }}</p>{% endif %}
   <form class="search-form" method="get">
-    <label>From <input type="date" name="from" value="{{ date_from|local_date }}"></label>
-    <label>To <input type="date" name="to" value="{{ date_to|local_date }}"></label>
+    <label>From ({{ date_calendar }}) <input type="text" inputmode="numeric" data-calendar-date name="from" value="{{ date_from|local_date }}"></label>
+    <label>To ({{ date_calendar }}) <input type="text" inputmode="numeric" data-calendar-date name="to" value="{{ date_to|local_date }}"></label>
     <button class="button button-secondary" type="submit">Apply dates</button>
   </form>
   <p class="muted">Selected period: {{ selected_metrics.litres|default:0|floatformat:3 }} L · {{ currency }} {{ selected_metrics.value|default:0|floatformat:2 }} approved collection value</p>
