@@ -49,7 +49,7 @@ def build_xlsx(module, queryset):
             cell.font = Font(bold=True, color=font_color)
             cell.fill = PatternFill("solid", fgColor=fill)
 
-    sheet.auto_filter.ref = f"A1:{get_column_letter(len(headers))}{max(1, sheet.max_row - 1)}"
+    sheet.auto_filter.ref = f"A1:{get_column_letter(len(headers))}{max(1, sheet.max_row - 2)}"
     for column in sheet.columns:
         width = min(max(max(len(str(cell.value or "")) for cell in column[:200]) + 2, 12), 36)
         sheet.column_dimensions[get_column_letter(column[0].column)].width = width
