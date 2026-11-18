@@ -16,6 +16,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods, require_POST
 
 from apps.audit.services import record_event
@@ -143,6 +144,7 @@ def _valid_invitation(invitation, raw_token):
     )
 
 
+@never_cache
 @require_http_methods(["GET", "POST"])
 def owner_invitation_accept(request, invitation_id, token):
     invitation = get_object_or_404(
