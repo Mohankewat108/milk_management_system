@@ -226,3 +226,44 @@ class JournalLine(UUIDModel, TimeStampedModel):
 
     def __str__(self):
         return f"{self.entry.reference} · {self.line_number}"
+
+
+class LedgerConfiguration(UUIDModel, TimeStampedModel):
+    """Organisation-specific control accounts used by automated source posting."""
+
+    organization = models.OneToOneField(
+        Organization, on_delete=models.PROTECT, related_name="ledger_configuration"
+    )
+    cash_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="+")
+    bank_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="+")
+    mobile_wallet_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="+")
+    online_clearing_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="+")
+    other_payment_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="+")
+    receivables_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="+")
+    farmer_payable_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="+")
+    procurement_expense_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="+")
+    sales_revenue_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="+")
+    default_expense_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="+")
+    is_enabled = models.BooleanField(default=False)
+    enable_farmer_collection_posting = models.BooleanField(default=False)
+    enable_customer_sales_posting = models.BooleanField(default=False)
+
+    def clean(self):
+        super().clean()
+        account_fields = (
+            "cash_account", "bank_account", "mobile_wallet_account",
+            "online_clearing_account", "other_payment_account",
+            "receivables_account", "farmer_payable_account",
+            "procurement_expense_account", "sales_revenue_account",
+            "default_expense_account",
+        )
+        errors = {}
+        for field in account_fields:
+            account = getattr(self, field, None)
+            if account and account.organization_id != self.organization_id:
+                errors[field] = "The account must belong to this organisation."
+        if errors:
+            raise ValidationError(errors)
+
+    def __str__(self):
+        return f"Ledger configuration · {self.organization}"
