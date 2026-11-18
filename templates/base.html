@@ -75,7 +75,18 @@
  function apply(value){const dark=value==='dark'||(value==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);root.dataset.theme=dark?'dark':'light';if(theme)theme.value=value;try{localStorage.setItem('dairynexus-theme',value);}catch(e){}}
  const saved=(()=>{try{return localStorage.getItem('dairynexus-theme')||'system';}catch(e){return 'system';}})();apply(saved);
  if(theme)theme.addEventListener('change',()=>apply(theme.value));
- if(toggle&&sidebar){toggle.addEventListener('click',()=>{const open=sidebar.classList.toggle('is-open');toggle.setAttribute('aria-expanded',String(open));});}
+ if(toggle&&sidebar){
+   const backdrop=document.createElement('button');
+   backdrop.type='button';backdrop.className='mobile-nav-backdrop';backdrop.setAttribute('aria-label','Close navigation');backdrop.setAttribute('tabindex','-1');
+   document.body.appendChild(backdrop);
+   const closeSidebar=()=>{sidebar.classList.remove('is-open');backdrop.classList.remove('is-visible');toggle.setAttribute('aria-expanded','false');document.body.classList.remove('nav-open');};
+   const openSidebar=()=>{sidebar.classList.add('is-open');backdrop.classList.add('is-visible');toggle.setAttribute('aria-expanded','true');document.body.classList.add('nav-open');const first=sidebar.querySelector('a');first?.focus({preventScroll:true});};
+   toggle.addEventListener('click',()=>sidebar.classList.contains('is-open')?closeSidebar():openSidebar());
+   backdrop.addEventListener('click',closeSidebar);
+   sidebar.querySelectorAll('a').forEach(link=>link.addEventListener('click',closeSidebar));
+   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&sidebar.classList.contains('is-open')){closeSidebar();toggle.focus();}});
+   window.addEventListener('resize',()=>{if(window.innerWidth>850)closeSidebar();});
+ }
  if(window.matchMedia){window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{const v=(()=>{try{return localStorage.getItem('dairynexus-theme')||'system';}catch(e){return 'system';}})();if(v==='system')apply(v);});}
 }());
 </script>
