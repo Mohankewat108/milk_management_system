@@ -40,6 +40,9 @@ class Payment(UUIDModel, TimeStampedModel):
     notes = models.TextField(blank=True)
     recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="recorded_payments")
 
+    deleted_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    deleted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=["organization", "reference"], name="uniq_payment_reference_org"),
@@ -76,6 +79,9 @@ class Expense(UUIDModel, TimeStampedModel):
     approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="approved_expenses")
     approved_at = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True)
+
+    deleted_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    deleted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
 
     class Meta:
         constraints = [
