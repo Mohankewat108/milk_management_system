@@ -152,17 +152,53 @@ def _safe_cell(value):
     return value
 
 
+def _export_totals(module):
+    return {"quantity": Decimal("0"), "amount": Decimal("0"), "stock_value": Decimal("0")}
+
+
+def _accumulate_export_totals(module, row, totals):
+    if module == "collections":
+        totals["quantity"] += Decimal(str(row[6] or 0))
+        totals["amount"] += Decimal(str(row[12] or 0))
+    elif module == "payments":
+        totals["amount"] += Decimal(str(row[9] or 0))
+    elif module == "expenses":
+        totals["amount"] += Decimal(str(row[8] or 0))
+    elif module == "inventory":
+        totals["stock_value"] += Decimal(str(row[7] or 0)) * Decimal(str(row[9] or 0))
+
+
+def _export_summary_row(module, headers, count, totals):
+    summary = [""] * len(headers)
+    summary[0] = f"TOTAL ({count} records)"
+    if module == "collections":
+        summary[6] = totals["quantity"]
+        summary[12] = totals["amount"]
+    elif module == "payments":
+        summary[9] = totals["amount"]
+    elif module == "expenses":
+        summary[8] = totals["amount"]
+    elif module == "inventory":
+        summary[7] = "—"
+        summary[9] = totals["stock_value"]
+        summary[0] = f"TOTAL STOCK VALUE ({count} items)"
+    return summary
+
+
 def build_csv(module, queryset):
     buffer = io.StringIO(newline="")
     writer = csv.writer(buffer, lineterminator="\r\n")
     headers, rows = _rows(module, queryset)
     writer.writerow(headers)
     count = 0
+    totals = _export_totals(module)
     for row in rows:
         count += 1
         if count > MAX_SYNC_EXPORT_ROWS:
             raise ValidationError("This export is larger than the safe instant-export limit. Background exports will be available in a later phase.")
+        _accumulate_export_totals(module, row, totals)
         writer.writerow([_safe_cell(value) for value in row])
+    writer.writerow([_safe_cell(value) for value in _export_summary_row(module, headers, count, totals)])
     return "\ufeff" + buffer.getvalue(), count
 
 
