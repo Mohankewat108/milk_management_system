@@ -42,6 +42,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="milkcollection",
-            index=models.Index(fields=["customer", "collected_at"], name="collections_customer_date_idx"),
+            index=models.Index(fields=["customer", "collected_at"], name="coll_customer_date_idx"),
         ),
     ]
