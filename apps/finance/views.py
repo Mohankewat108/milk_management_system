@@ -2,9 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.db import transaction
 from django.shortcuts import redirect, render
-from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_POST
 
 from apps.audit.services import record_event
@@ -13,7 +11,7 @@ from apps.organizations.models import Membership
 from apps.organizations.permissions import accessible_branch_ids, can_access_branch
 from .forms import ExpenseEntryForm, PaymentEditForm, PaymentEntryForm
 from .models import Expense, Payment
-from .services import approve_expense, record_expense, record_payment
+from .services import approve_expense, complete_payment, record_expense, record_payment
 
 
 @login_required
@@ -63,22 +61,16 @@ def payment_create(request, organization_slug):
 @organization_access(Membership.Role.OWNER, Membership.Role.ACCOUNTANT)
 @require_POST
 def payment_complete(request, organization_slug, payment_id):
-    with transaction.atomic():
-        payment = Payment.objects.select_for_update().get(
-            pk=payment_id, organization=request.organization
+    try:
+        payment = complete_payment(
+            payment_id=payment_id, organization=request.organization, actor=request.user
         )
-        branch_ids = accessible_branch_ids(request.membership)
-        if branch_ids is not None and payment.branch_id not in branch_ids:
-            messages.error(request, "You are not assigned to this branch.")
-        elif payment.status == Payment.Status.PENDING:
-            payment.status = Payment.Status.COMPLETED
-            payment.paid_at = timezone.now()
-            payment.save(update_fields=["status", "paid_at", "updated_at"])
-            record_event(actor=request.user, organization=request.organization,
-                         action="payment.completed", target=payment, request=request)
-            messages.success(request, "Payment marked as completed.")
-        else:
-            messages.error(request, "Only pending payments can be completed.")
+    except (Payment.DoesNotExist, ValidationError) as exc:
+        messages.error(request, str(exc))
+    else:
+        record_event(actor=request.user, organization=request.organization,
+                     action="payment.completed", target=payment, request=request)
+        messages.success(request, "Payment marked as completed.")
     return redirect("finance:list", organization_slug=organization_slug)
 
 

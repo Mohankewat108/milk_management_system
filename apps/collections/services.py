@@ -87,3 +87,28 @@ def create_collection(
         milk_rate=rate, total_amount=total, pricing=pricing,
         pricing_snapshot=snapshot, notes=notes,
     )
+
+
+@transaction.atomic
+def approve_collection(*, collection_id, organization, actor):
+    """Approve a submitted collection and post its configured accounting effect atomically."""
+    from django.utils import timezone
+    from apps.organizations.permissions import require_actor_branch_access
+    from apps.finance.ledger_services import (
+        post_approved_customer_collection_sale,
+        post_approved_farmer_collection,
+    )
+
+    entry = MilkCollection.objects.select_for_update().get(
+        pk=collection_id, organization=organization
+    )
+    require_actor_branch_access(actor=actor, organization=organization, branch=entry.branch)
+    if entry.status != MilkCollection.Status.SUBMITTED:
+        raise ValidationError("Only submitted collections can be approved.")
+    entry.status = MilkCollection.Status.APPROVED
+    entry.save(update_fields=["status", "updated_at"])
+    if entry.farmer_id:
+        post_approved_farmer_collection(collection=entry, actor=actor)
+    elif entry.customer_id:
+        post_approved_customer_collection_sale(collection=entry, actor=actor)
+    return entry

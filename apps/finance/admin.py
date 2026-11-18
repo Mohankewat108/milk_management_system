@@ -20,7 +20,7 @@ class ExpenseAdmin(admin.ModelAdmin):
                        "recorded_by", "approved_by", "approved_at", "created_at", "updated_at")
 
 
-from .models import Account, AccountingPeriod, JournalEntry, JournalLine
+from .models import Account, AccountingPeriod, JournalEntry, JournalLine, LedgerConfiguration
 
 
 @admin.register(Account)
@@ -62,3 +62,9 @@ class JournalEntryAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(LedgerConfiguration)
+class LedgerConfigurationAdmin(admin.ModelAdmin):
+    list_display = ("organization", "is_enabled", "enable_farmer_collection_posting", "enable_customer_sales_posting")
+    list_filter = ("is_enabled", "enable_farmer_collection_posting", "enable_customer_sales_posting")

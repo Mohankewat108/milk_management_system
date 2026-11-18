@@ -15,7 +15,7 @@ from apps.organizations.permissions import accessible_branch_ids, can_access_bra
 
 from .forms import CollectionEditForm, CollectionEntryForm
 from .models import MilkCollection
-from .services import create_collection
+from .services import approve_collection as approve_collection_service, create_collection
 
 
 @login_required
@@ -100,20 +100,16 @@ def collection_create(request, organization_slug):
 @organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.QUALITY_OFFICER)
 @require_POST
 def approve_collection(request, organization_slug, collection_id):
-    with transaction.atomic():
-        records = MilkCollection.objects.filter(organization=request.organization)
-        branch_ids = accessible_branch_ids(request.membership)
-        if branch_ids is not None:
-            records = records.filter(branch_id__in=branch_ids)
-        entry = get_object_or_404(records.select_for_update(), pk=collection_id)
-        if entry.status != MilkCollection.Status.SUBMITTED:
-            messages.error(request, "Only submitted collections can be approved.")
-        else:
-            entry.status = MilkCollection.Status.APPROVED
-            entry.save(update_fields=["status", "updated_at"])
-            record_event(actor=request.user, organization=request.organization,
-                         action="milk_collection.approved", target=entry, request=request)
-            messages.success(request, "Collection approved.")
+    try:
+        entry = approve_collection_service(
+            collection_id=collection_id, organization=request.organization, actor=request.user
+        )
+    except (MilkCollection.DoesNotExist, ValidationError) as exc:
+        messages.error(request, str(exc))
+    else:
+        record_event(actor=request.user, organization=request.organization,
+                     action="milk_collection.approved", target=entry, request=request)
+        messages.success(request, "Collection approved.")
     return redirect("collections:list", organization_slug=organization_slug)
 
 

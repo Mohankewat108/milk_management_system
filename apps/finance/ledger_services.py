@@ -1,5 +1,6 @@
 from decimal import Decimal
 from uuid import uuid4
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -158,4 +159,165 @@ def reverse_journal_entry(*, entry_id, organization, actor, reversal_date, reaso
         lines=reversed_lines, source_type="journal_reversal", source_id=original.pk,
         idempotency_key=f"reverse:{original.pk}", reference=f"REV-{uuid4().hex[:12].upper()}",
         reversal_of=original,
+    )
+
+
+
+def _organization_local_date(organization, value):
+    if value is None:
+        return timezone.now().date()
+    if timezone.is_naive(value):
+        return value.date()
+    try:
+        tenant_timezone = ZoneInfo(organization.timezone or timezone.get_current_timezone_name())
+    except ZoneInfoNotFoundError:
+        tenant_timezone = timezone.get_current_timezone()
+    return timezone.localtime(value, tenant_timezone).date()
+
+
+def _enabled_ledger_configuration(organization):
+    from .models import LedgerConfiguration
+    try:
+        configuration = LedgerConfiguration.objects.select_related(
+            "cash_account", "bank_account", "mobile_wallet_account",
+            "online_clearing_account", "other_payment_account",
+            "receivables_account", "farmer_payable_account",
+            "procurement_expense_account", "sales_revenue_account",
+            "default_expense_account",
+        ).get(organization=organization, is_enabled=True)
+    except LedgerConfiguration.DoesNotExist:
+        return None
+    account_fields = (
+        "cash_account", "bank_account", "mobile_wallet_account",
+        "online_clearing_account", "other_payment_account",
+        "receivables_account", "farmer_payable_account",
+        "procurement_expense_account", "sales_revenue_account",
+        "default_expense_account",
+    )
+    expected_types = {
+        "cash_account": Account.AccountType.ASSET,
+        "bank_account": Account.AccountType.ASSET,
+        "mobile_wallet_account": Account.AccountType.ASSET,
+        "online_clearing_account": Account.AccountType.ASSET,
+        "other_payment_account": Account.AccountType.ASSET,
+        "receivables_account": Account.AccountType.ASSET,
+        "farmer_payable_account": Account.AccountType.LIABILITY,
+        "procurement_expense_account": Account.AccountType.EXPENSE,
+        "sales_revenue_account": Account.AccountType.INCOME,
+        "default_expense_account": Account.AccountType.EXPENSE,
+    }
+    for field in account_fields:
+        account = getattr(configuration, field)
+        if account.organization_id != organization.id or not account.is_active:
+            raise ValidationError(f"Ledger mapping {field} must reference an active account in this organisation.")
+        if account.account_type != expected_types[field]:
+            raise ValidationError(f"Ledger mapping {field} must use an {expected_types[field]} account.")
+    return configuration
+
+
+def _payment_asset_account(configuration, method):
+    from .models import Payment
+    return {
+        Payment.Method.CASH: configuration.cash_account,
+        Payment.Method.BANK: configuration.bank_account,
+        Payment.Method.MOBILE: configuration.mobile_wallet_account,
+        Payment.Method.ONLINE: configuration.online_clearing_account,
+        Payment.Method.OTHER: configuration.other_payment_account,
+    }[method]
+
+
+@transaction.atomic
+def post_approved_expense(*, expense, actor):
+    """Post expense debit and payment-source credit; safe to retry."""
+    configuration = _enabled_ledger_configuration(expense.organization)
+    if configuration is None:
+        return None
+    if expense.status != "approved":
+        raise ValidationError("Only approved expenses can be posted.")
+    cash_account = _payment_asset_account(configuration, expense.method)
+    return post_journal_entry(
+        organization=expense.organization, branch=expense.branch, actor=actor,
+        entry_date=expense.expense_date, description=f"Expense {expense.reference}: {expense.description}",
+        source_type="expense", source_id=expense.pk,
+        idempotency_key=f"expense:{expense.pk}:approved",
+        lines=[
+            {"account": configuration.default_expense_account, "debit": expense.amount, "credit": 0},
+            {"account": cash_account, "debit": 0, "credit": expense.amount},
+        ],
+    )
+
+
+@transaction.atomic
+def post_completed_payment(*, payment, actor):
+    """Post customer receipt or farmer payout to the configured control accounts."""
+    configuration = _enabled_ledger_configuration(payment.organization)
+    if configuration is None:
+        return None
+    from .models import Payment
+    if payment.status != Payment.Status.COMPLETED:
+        raise ValidationError("Only completed payments can be posted.")
+    asset_account = _payment_asset_account(configuration, payment.method)
+    if payment.direction == Payment.Direction.INCOMING and payment.customer_id:
+        lines = [
+            {"account": asset_account, "debit": payment.amount, "credit": 0},
+            {"account": configuration.receivables_account, "debit": 0, "credit": payment.amount},
+        ]
+        description = f"Customer receipt {payment.reference}"
+    elif payment.direction == Payment.Direction.OUTGOING and payment.farmer_id:
+        lines = [
+            {"account": configuration.farmer_payable_account, "debit": payment.amount, "credit": 0},
+            {"account": asset_account, "debit": 0, "credit": payment.amount},
+        ]
+        description = f"Farmer payout {payment.reference}"
+    else:
+        raise ValidationError("Payment direction and party do not match a supported posting rule.")
+    return post_journal_entry(
+        organization=payment.organization, branch=payment.branch, actor=actor,
+        entry_date=_organization_local_date(payment.organization, payment.paid_at), description=description,
+        source_type="payment", source_id=payment.pk,
+        idempotency_key=f"payment:{payment.pk}:completed", lines=lines,
+    )
+
+
+@transaction.atomic
+def post_approved_farmer_collection(*, collection, actor):
+    """Recognise approved farmer milk as procurement expense and farmer payable."""
+    configuration = _enabled_ledger_configuration(collection.organization)
+    if configuration is None or not configuration.enable_farmer_collection_posting:
+        return None
+    from apps.collections.models import MilkCollection
+    if collection.status != MilkCollection.Status.APPROVED or not collection.farmer_id:
+        raise ValidationError("Only approved farmer collections can be posted.")
+    return post_journal_entry(
+        organization=collection.organization, branch=collection.branch, actor=actor,
+        entry_date=_organization_local_date(collection.organization, collection.collected_at),
+        description=f"Farmer milk procurement {collection.reference}",
+        source_type="milk_collection", source_id=collection.pk,
+        idempotency_key=f"milk-collection:{collection.pk}:approved",
+        lines=[
+            {"account": configuration.procurement_expense_account, "debit": collection.total_amount, "credit": 0},
+            {"account": configuration.farmer_payable_account, "debit": 0, "credit": collection.total_amount},
+        ],
+    )
+
+
+@transaction.atomic
+def post_approved_customer_collection_sale(*, collection, actor):
+    """Optional sale posting; enabled only after the dairy confirms customer-collection semantics."""
+    configuration = _enabled_ledger_configuration(collection.organization)
+    if configuration is None or not configuration.enable_customer_sales_posting:
+        return None
+    from apps.collections.models import MilkCollection
+    if collection.status != MilkCollection.Status.APPROVED or not collection.customer_id:
+        raise ValidationError("Only approved customer collections can be posted as sales.")
+    return post_journal_entry(
+        organization=collection.organization, branch=collection.branch, actor=actor,
+        entry_date=collection.collected_at.date(),
+        description=f"Customer milk sale {collection.reference}",
+        source_type="customer_milk_sale", source_id=collection.pk,
+        idempotency_key=f"customer-milk-sale:{collection.pk}:approved",
+        lines=[
+            {"account": configuration.receivables_account, "debit": collection.total_amount, "credit": 0},
+            {"account": configuration.sales_revenue_account, "debit": 0, "credit": collection.total_amount},
+        ],
     )
