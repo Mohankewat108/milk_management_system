@@ -166,6 +166,9 @@ def customer_list(request, organization_slug):
     except ValueError as exc:
         from_date = to_date = None
         date_error = str(exc)
+    if from_date and to_date and from_date > to_date:
+        from_date = to_date = None
+        date_error = "The start date must be on or before the end date."
     if from_date:
         records = records.filter(created_at__date__gte=from_date)
     if to_date:
@@ -222,6 +225,9 @@ def farmer_list(request, organization_slug):
     except ValueError as exc:
         from_date = to_date = None
         date_error = str(exc)
+    if from_date and to_date and from_date > to_date:
+        from_date = to_date = None
+        date_error = "The start date must be on or before the end date."
     if from_date:
         records = records.filter(created_at__date__gte=from_date)
     if to_date:
