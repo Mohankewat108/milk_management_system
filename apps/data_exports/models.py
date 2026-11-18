@@ -33,7 +33,7 @@ class ExportJob(UUIDModel, TimeStampedModel):
 
     class Meta:
         ordering = ["-created_at"]
-        indexes = [models.Index(fields=["organization", "created_at"]), models.Index(fields=["organization", "status"])]
+        indexes = [models.Index(fields=["organization", "created_at"], name="dex_exp_org_created_idx"), models.Index(fields=["organization", "status"], name="dex_exp_org_status_idx")]
 
     def __str__(self):
         return f"{self.get_module_display()} · {self.created_at:%Y-%m-%d}"
