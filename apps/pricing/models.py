@@ -7,7 +7,12 @@ from apps.organizations.models import Branch, Organization
 
 
 class PricingConfiguration(UUIDModel, TimeStampedModel):
+    class Scope(models.TextChoices):
+        ORGANIZATION = "organization", "All customers and branches"
+        BRANCH = "branch", "One branch only"
+
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="pricing_configurations")
+    # Null branch is the canonical dairy-wide rate chart shared by every customer.
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, null=True, blank=True, related_name="pricing_configurations")
     version = models.PositiveIntegerField()
     snf_rate = models.DecimalField(max_digits=12, decimal_places=4)
@@ -17,6 +22,9 @@ class PricingConfiguration(UUIDModel, TimeStampedModel):
     effective_to = models.DateField(null=True, blank=True)
     is_approved = models.BooleanField(default=False)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="created_pricing_configurations")
+    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="approved_pricing_configurations")
+    approved_at = models.DateTimeField(null=True, blank=True)
+    notes = models.CharField(max_length=240, blank=True)
 
     class Meta:
         constraints = [
@@ -25,6 +33,14 @@ class PricingConfiguration(UUIDModel, TimeStampedModel):
             models.CheckConstraint(condition=Q(snf_rate__gte=0) & Q(fat_rate__gte=0) & Q(lactose_rate__gte=0), name="pricing_rates_nonnegative"),
         ]
         ordering = ["-effective_from", "-version"]
+        indexes = [
+            models.Index(fields=["organization", "effective_from", "effective_to"], name="pricing_org_dates_idx"),
+            models.Index(fields=["organization", "branch", "is_approved"], name="pricing_scope_active_idx"),
+        ]
+
+    @property
+    def scope_label(self):
+        return self.branch.name if self.branch_id else "All customers / all branches"
 
     def __str__(self) -> str:
         return f"{self.organization.name} · v{self.version}"
