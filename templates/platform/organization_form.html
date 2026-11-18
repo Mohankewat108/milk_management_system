@@ -4,23 +4,39 @@
 <section class="content-card">
   <div class="eyebrow">PLATFORM OWNER · TENANT ONBOARDING</div>
   <h1>Create a dairy farm</h1>
-  <p class="muted">Create an independent dairy workspace and assign an existing account as its farm owner. The owner can later manage customers, farmers, employees and operations inside this farm.</p>
+  <p class="muted">Create an independent dairy workspace. We will email its owner a secure invitation to activate their account and set their own password.</p>
   <form method="post" novalidate>
     {% csrf_token %}
     {{ form.non_field_errors }}
+    <h2>Farm owner invitation</h2>
     <div class="form-grid">
       {% for field in form %}
+      {% if field.name == "owner_first_name" or field.name == "owner_last_name" or field.name == "owner_email" %}
       <div class="form-field">
         <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span class="required"> *</span>{% endif %}</label>
         {{ field }}
         {% if field.help_text %}<small class="field-help">{{ field.help_text }}</small>{% endif %}
         {% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
       </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+    <h2>Farm details</h2>
+    <div class="form-grid">
+      {% for field in form %}
+      {% if field.name != "owner_first_name" and field.name != "owner_last_name" and field.name != "owner_email" %}
+      <div class="form-field">
+        <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span class="required"> *</span>{% endif %}</label>
+        {{ field }}
+        {% if field.help_text %}<small class="field-help">{{ field.help_text }}</small>{% endif %}
+        {% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+      </div>
+      {% endif %}
       {% endfor %}
     </div>
     <div class="form-actions">
       <a class="button button-secondary" href="{% url 'platform:dashboard' %}">Cancel</a>
-      <button class="button" type="submit">Create dairy farm</button>
+      <button class="button" type="submit">Create farm and send invitation</button>
     </div>
   </form>
 </section>
