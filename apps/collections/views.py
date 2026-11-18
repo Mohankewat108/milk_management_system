@@ -12,7 +12,7 @@ from apps.organizations.decorators import organization_access
 from apps.organizations.models import Membership
 from apps.organizations.permissions import accessible_branch_ids, can_access_branch
 
-from .forms import CollectionEntryForm
+from .forms import CollectionEditForm, CollectionEntryForm
 from .models import MilkCollection
 from .services import create_collection
 
@@ -96,3 +96,66 @@ def approve_collection(request, organization_slug, collection_id):
                          action="milk_collection.approved", target=entry, request=request)
             messages.success(request, "Collection approved.")
     return redirect("collections:list", organization_slug=organization_slug)
+
+
+@login_required
+@organization_access(
+    Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.BRANCH_MANAGER,
+    Membership.Role.COLLECTION_OPERATOR, Membership.Role.QUALITY_OFFICER,
+)
+@require_http_methods(["GET", "POST"])
+def collection_edit(request, organization_slug, collection_id):
+    organization = request.organization
+    branch_ids = accessible_branch_ids(request.membership)
+    with transaction.atomic():
+        records = MilkCollection.objects.filter(organization=organization)
+        if branch_ids is not None:
+            records = records.filter(branch_id__in=branch_ids)
+        if request.method == "POST":
+            records = records.select_for_update()
+        entry = records.get(pk=collection_id)
+        if entry.status == MilkCollection.Status.REVERSED:
+            messages.error(request, "Reversed collections cannot be edited.")
+            return redirect("collections:list", organization_slug=organization_slug)
+        form = CollectionEditForm(request.POST or None, instance=entry)
+        if request.method == "POST" and form.is_valid():
+            data = form.cleaned_data
+            before = {
+                "quantity_litres": str(entry.quantity_litres),
+                "snf": str(entry.snf), "fat": str(entry.fat),
+                "lactose": str(entry.lactose), "total_amount": str(entry.total_amount),
+            }
+            from decimal import Decimal, ROUND_HALF_UP
+            entry.quantity_litres = data["quantity_litres"]
+            entry.snf = data["snf"]
+            entry.fat = data["fat"]
+            entry.lactose = data["lactose"]
+            entry.lactometer_reading = data.get("lactometer_reading")
+            entry.milk_temperature_c = data.get("milk_temperature_c")
+            entry.sample_reference = data.get("sample_reference", "")
+            entry.quality_test_method = data.get("quality_test_method", "")
+            entry.notes = data.get("notes", "")
+            # Do not silently apply a newer tariff: keep this record's rate snapshot.
+            entry.total_amount = (
+                entry.quantity_litres * entry.milk_rate
+            ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            entry.save(update_fields=[
+                "quantity_litres", "snf", "fat", "lactose",
+                "lactometer_reading", "milk_temperature_c", "sample_reference",
+                "quality_test_method", "notes", "total_amount", "updated_at",
+            ])
+            after = {
+                "quantity_litres": str(entry.quantity_litres),
+                "snf": str(entry.snf), "fat": str(entry.fat),
+                "lactose": str(entry.lactose), "total_amount": str(entry.total_amount),
+            }
+            record_event(
+                actor=request.user, organization=organization,
+                action="milk_collection.updated", target=entry,
+                changes={"before": before, "after": after}, request=request,
+            )
+            messages.success(request, f"Collection {entry.reference} updated.")
+            return redirect("collections:list", organization_slug=organization_slug)
+    return render(request, "collections/edit.html", {
+        "organization": organization, "entry": entry, "form": form,
+    })
