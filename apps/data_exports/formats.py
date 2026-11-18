@@ -43,8 +43,8 @@ def build_xlsx(module, queryset):
 
     for summary_index, summary_row in enumerate(_export_summary_rows(module, headers, totals)):
         sheet.append([_safe_cell(value) for value in summary_row])
-        fill = "E8F1F8" if summary_index == 0 else "0F766E"
-        font_color = "17324D" if summary_index == 0 else "FFFFFF"
+        fill = "0F766E" if summary_index == 0 else "E8F1F8"
+        font_color = "FFFFFF" if summary_index == 0 else "17324D"
         for cell in sheet[sheet.max_row]:
             cell.font = Font(bold=True, color=font_color)
             cell.fill = PatternFill("solid", fgColor=fill)
@@ -119,8 +119,8 @@ def build_pdf(module, queryset, organization_name):
     summary_rows = _export_summary_rows(module, headers, totals)
     for summary_row in summary_rows:
         table_data.append([Paragraph(escape(str(_safe_cell(value))), summary_style) for value in summary_row])
-    average_index = len(table_data) - 2
-    total_index = len(table_data) - 1
+    total_index = len(table_data) - 2
+    average_index = len(table_data) - 1
 
     widths = [doc.width / len(headers)] * len(headers)
     table = Table(table_data, colWidths=widths, repeatRows=1, hAlign="LEFT", splitByRow=1)
