@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import secrets
 
 from django.conf import settings
 from django.contrib import messages
@@ -33,10 +34,17 @@ def is_platform_owner(user):
 @login_required
 @user_passes_test(is_platform_owner)
 def dashboard(request):
+    from django.db.models import Exists, OuterRef
+    pending_owner_membership = Membership.objects.filter(
+        organization_id=OuterRef("pk"),
+        role=Membership.Role.OWNER,
+        status=Membership.Status.INVITED,
+    )
     organizations = Organization.objects.select_related("owner").annotate(
         member_count=Count("memberships", distinct=True),
         customer_count=Count("customers", distinct=True),
         farmer_count=Count("farmers", distinct=True),
+        owner_invitation_pending=Exists(pending_owner_membership),
     ).order_by("-created_at")
     context = {
         "organization_count": Organization.objects.count(),
@@ -233,4 +241,71 @@ def organization_set_status(request, organization_id):
         request=request,
     )
     messages.success(request, f"{organization.name} status changed to {organization.get_status_display()}.")
+    return redirect("platform:dashboard")
+
+
+@login_required
+@user_passes_test(is_platform_owner)
+@require_POST
+def organization_resend_invitation(request, organization_id):
+    organization = get_object_or_404(
+        Organization.objects.select_related("owner"), pk=organization_id
+    )
+    membership = get_object_or_404(
+        Membership,
+        organization=organization,
+        user=organization.owner,
+        role=Membership.Role.OWNER,
+        status=Membership.Status.INVITED,
+    )
+    email = organization.owner.email
+    raw_token = secrets.token_urlsafe(32)
+    with transaction.atomic():
+        FarmOwnerInvitation.objects.filter(
+            organization=organization,
+            email=email,
+            accepted_at__isnull=True,
+            revoked_at__isnull=True,
+        ).update(revoked_at=timezone.now())
+        invitation = FarmOwnerInvitation.objects.create(
+            organization=organization,
+            user=organization.owner,
+            invited_by=request.user,
+            email=email,
+            token_hash=hashlib.sha256(raw_token.encode("utf-8")).hexdigest(),
+            expires_at=timezone.now() + timezone.timedelta(hours=48),
+        )
+    invite_path = reverse(
+        "platform:owner_invitation_accept",
+        kwargs={"invitation_id": invitation.pk, "token": raw_token},
+    )
+    context = {
+        "owner_name": organization.owner.first_name,
+        "farm_name": organization.name,
+        "invitation_url": request.build_absolute_uri(invite_path),
+        "expires_at": invitation.expires_at,
+    }
+    try:
+        send_mail(
+            f"Your DairyNexus invitation for {organization.name}",
+            render_to_string("emails/farm_owner_invitation.txt", context),
+            settings.DEFAULT_FROM_EMAIL,
+            [email],
+            html_message=render_to_string("emails/farm_owner_invitation.html", context),
+            fail_silently=False,
+        )
+    except Exception:
+        messages.error(request, "The invitation could not be sent. Check the SMTP configuration.")
+        record_event(
+            actor=request.user, organization=organization,
+            action="platform.owner_invitation.resend_failed",
+            target=invitation, request=request,
+        )
+        return redirect("platform:dashboard")
+    record_event(
+        actor=request.user, organization=organization,
+        action="platform.owner_invitation.resent",
+        target=invitation, request=request,
+    )
+    messages.success(request, f"A fresh invitation was sent to {email}. The previous link is no longer valid.")
     return redirect("platform:dashboard")
