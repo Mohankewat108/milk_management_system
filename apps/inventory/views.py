@@ -21,7 +21,7 @@ from .services import move_stock
 @organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.INVENTORY_MANAGER)
 def item_list(request, organization_slug):
     organization = request.organization
-    items = InventoryItem.objects.filter(organization=organization, is_active=True).select_related("branch", "supplier")
+    items = InventoryItem.objects.filter(organization=organization, is_active=True, deleted_at__isnull=True).select_related("branch", "supplier")
     branch_ids = accessible_branch_ids(request.membership)
     if branch_ids is not None:
         items = items.filter(branch_id__in=branch_ids)
@@ -92,7 +92,7 @@ def supplier_list(request, organization_slug):
                      target=supplier, request=request)
         messages.success(request, f"Supplier {supplier.name} created.")
         return redirect("inventory:suppliers", organization_slug=organization_slug)
-    suppliers = Supplier.objects.filter(organization=organization).order_by("name")
+    suppliers = Supplier.objects.filter(organization=organization, deleted_at__isnull=True).order_by("name")
     return render(request, "inventory/suppliers.html", {
         "organization": organization, "form": form, "suppliers": suppliers,
     })
