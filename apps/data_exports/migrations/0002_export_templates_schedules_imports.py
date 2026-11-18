@@ -10,18 +10,6 @@ class Migration(migrations.Migration):
         ("organizations", "0004_branch_soft_delete"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
 
-        migrations.AlterField(
-            model_name="exportjob", name="module",
-            field=models.CharField(choices=[("farmers", "Farmers"), ("customers", "Customers"), ("collections", "Milk collections"), ("payments", "Payments"), ("expenses", "Expenses"), ("inventory", "Inventory"), ("suppliers", "Suppliers")], db_index=True, max_length=24),
-        ),
-        migrations.AlterField(
-            model_name="savedexporttemplate", name="module",
-            field=models.CharField(choices=[("farmers", "Farmers"), ("customers", "Customers"), ("collections", "Milk collections"), ("payments", "Payments"), ("expenses", "Expenses"), ("inventory", "Inventory"), ("suppliers", "Suppliers")], max_length=24),
-        ),
-        migrations.AlterField(
-            model_name="scheduledexport", name="module",
-            field=models.CharField(choices=[("farmers", "Farmers"), ("customers", "Customers"), ("collections", "Milk collections"), ("payments", "Payments"), ("expenses", "Expenses"), ("inventory", "Inventory"), ("suppliers", "Suppliers")], max_length=24),
-        ),
     ]
 
     operations = [
@@ -91,5 +79,17 @@ class Migration(migrations.Migration):
                 ("uploaded_by", models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name="data_imports", to=settings.AUTH_USER_MODEL)),
             ],
             options={"ordering": ["-created_at"], "indexes": [models.Index(fields=["organization", "created_at"], name="dex_import_org_created_idx")]},
+        ),
+        migrations.AlterField(
+            model_name="exportjob", name="module",
+            field=models.CharField(choices=[("farmers", "Farmers"), ("customers", "Customers"), ("collections", "Milk collections"), ("payments", "Payments"), ("expenses", "Expenses"), ("inventory", "Inventory"), ("suppliers", "Suppliers")], db_index=True, max_length=24),
+        ),
+        migrations.AlterField(
+            model_name="savedexporttemplate", name="module",
+            field=models.CharField(choices=[("farmers", "Farmers"), ("customers", "Customers"), ("collections", "Milk collections"), ("payments", "Payments"), ("expenses", "Expenses"), ("inventory", "Inventory"), ("suppliers", "Suppliers")], max_length=24),
+        ),
+        migrations.AlterField(
+            model_name="scheduledexport", name="module",
+            field=models.CharField(choices=[("farmers", "Farmers"), ("customers", "Customers"), ("collections", "Milk collections"), ("payments", "Payments"), ("expenses", "Expenses"), ("inventory", "Inventory"), ("suppliers", "Suppliers")], max_length=24),
         ),
     ]
