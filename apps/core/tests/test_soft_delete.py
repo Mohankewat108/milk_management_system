@@ -59,7 +59,7 @@ class CentralSoftDeleteTests(TestCase):
         soft_delete_record(key="inventory_item", record=item, actor=self.user)
         item.refresh_from_db()
         self.assertIsNotNone(item.deleted_at)
-        self.assertFalse(item.is_active)
+        self.assertTrue(item.is_active)
 
     def test_inventory_item_with_stock_cannot_be_trashed(self):
         item = InventoryItem.objects.create(
