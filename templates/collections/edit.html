@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ entry.reference }} | {{ organization.name }}{% endblock %}
+{% block content %}
+<section class="content-card">
+  <div class="eyebrow">{{ organization.name }} · {{ entry.reference }}</div>
+  <h1>Edit milk collection</h1>
+  <p class="muted">Update measured collection values. The original pricing configuration and rate are retained as a historical snapshot. Changes are recorded in the audit trail.</p>
+  <form method="post">{% csrf_token %}{{ form.non_field_errors }}
+    {% for field in form %}
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.help_text %}<small class="muted">{{ field.help_text }}</small>{% endif %}
+      {{ field.errors }}
+    {% endfor %}
+    <div class="actions"><button class="button" type="submit">Save changes</button><a class="button button-secondary" href="{% url 'collections:list' organization.slug %}">Cancel</a></div>
+  </form>
+</section>
+{% endblock %}
