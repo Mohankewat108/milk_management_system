@@ -17,6 +17,7 @@
       <a class="button" href="{% url 'parties:customer_create' organization.slug %}">＋ {% translate "Add customer" %}</a>
     </div>
   </header>
+  <form class="module-export-form" method="post" action="{% url 'data_exports:queue' organization.slug 'customers' %}">{% csrf_token %}<input type="hidden" name="branch" value="{{ branch_filter }}"><input type="hidden" name="status" value="{{ status_filter }}"><select name="file_format" aria-label="Export format"><option value="xlsx">Excel</option><option value="csv">CSV</option><option value="pdf">PDF</option></select><button class="button button-secondary" type="submit">Export customers ↓</button></form>
   <form class="directory-filters" method="get" role="search">
     <div class="filter-field"><label for="customer-search">{% translate "Search customers" %}</label><input id="customer-search" name="q" type="search" value="{{ query }}" placeholder="{% translate 'Search name, code, phone or email' %}"></div>
     <div class="filter-field"><label for="customer-status">{% translate "Status" %}</label><select id="customer-status" name="status"><option value="">{% translate "All statuses" %}</option><option value="active" {% if status_filter == "active" %}selected{% endif %}>{% translate "Active" %}</option><option value="inactive" {% if status_filter == "inactive" %}selected{% endif %}>{% translate "Inactive" %}</option></select></div>
