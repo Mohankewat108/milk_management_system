@@ -63,11 +63,12 @@ def settings_view(request, organization_slug):
                         actor=request.user, organization=organization,
                         action="pricing.created", target=pricing, request=request,
                     )
+                    created_pricing = pricing
             if not form.errors:
                 messages.success(
                     request,
                     "Dairy-wide rate schedule published for all customers."
-                    if pricing.is_approved and pricing.branch_id is None
+                    if created_pricing.is_approved and created_pricing.branch_id is None
                     else "Rate schedule saved. It will apply after owner approval and its start date.",
                 )
                 return redirect("pricing:settings", organization_slug=organization_slug)
