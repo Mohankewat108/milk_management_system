@@ -66,3 +66,31 @@ class ExpenseWorkflowTests(TestCase):
                 category="Utilities", description="Cross tenant",
                 amount="100", expense_date=date(2026, 11, 18), method="cash",
             )
+
+    def test_accountant_cannot_approve_expense_in_unassigned_branch(self):
+        from django.core.exceptions import PermissionDenied
+        from apps.organizations.models import BranchAssignment
+
+        second_branch = Branch.objects.create(
+            organization=self.organization, code="SECOND", name="Second"
+        )
+        accountant = User.objects.create_user(
+            username="branch-accountant", email="branch-accountant@example.test",
+            password="LongDemoPass!123",
+        )
+        membership = Membership.objects.create(
+            user=accountant, organization=self.organization,
+            role=Membership.Role.ACCOUNTANT,
+        )
+        BranchAssignment.objects.create(membership=membership, branch=self.branch)
+        expense = record_expense(
+            organization=self.organization, branch=second_branch, actor=self.user,
+            category="Utilities", description="Second branch electricity",
+            amount="50.00", expense_date=date(2026, 11, 18), method="cash",
+        )
+        with self.assertRaises(PermissionDenied):
+            approve_expense(
+                expense_id=expense.pk, organization=self.organization, actor=accountant
+            )
+        expense.refresh_from_db()
+        self.assertEqual(expense.status, Expense.Status.PENDING)
