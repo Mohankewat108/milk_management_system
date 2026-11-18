@@ -7,4 +7,7 @@ STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
 }
-DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}}
+# Use PostgreSQL in CI when DATABASE_URL is supplied; keep an isolated in-memory
+# SQLite database for a quick local test run when it is not.
+if not env("DATABASE_URL", default=""):
+    DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}}
