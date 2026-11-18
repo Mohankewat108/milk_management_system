@@ -62,8 +62,10 @@ def _party_profile_context(*, party, kind, request):
     start, end, date_error = _date_bounds(request)
 
     relation = "customer" if kind == "customer" else "farmer"
+    # MilkCollection uses workflow states (draft/submitted/approved/rejected/reversed)
+    # and does not implement soft deletion. Do not filter on deleted_at here.
     collections = MilkCollection.objects.filter(
-        organization=request.organization, deleted_at__isnull=True,
+        organization=request.organization,
         **{relation: party},
     ).select_related("branch", "recorded_by", "pricing").order_by("-collected_at")
     collections = _party_scope(collections, request.membership)
