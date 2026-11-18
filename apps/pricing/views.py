@@ -37,7 +37,7 @@ def settings_view(request, organization_slug):
                 # Lock the tenant row to serialize concurrent edits to the same rate schedule.
                 type(organization).objects.select_for_update().get(pk=organization.pk)
                 overlaps = PricingConfiguration.objects.filter(
-                    organization=organization, branch=branch,
+                    organization=organization, branch=branch, deleted_at__isnull=True,
                     effective_from__lte=_effective_end(end),
                 ).filter(Q(effective_to__isnull=True) | Q(effective_to__gte=start))
                 if overlaps.exists():
@@ -94,7 +94,7 @@ def settings_view(request, organization_slug):
 def approve_pricing(request, organization_slug, pricing_id):
     with transaction.atomic():
         pricing = PricingConfiguration.objects.select_for_update().get(
-            pk=pricing_id, organization=request.organization
+            pk=pricing_id, organization=request.organization, deleted_at__isnull=True
         )
         if pricing.is_approved:
             messages.info(request, "This rate schedule is already approved.")
