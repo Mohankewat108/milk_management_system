@@ -1,4 +1,4 @@
-{% load static i18n %}<!doctype html>
+{% load static i18n l10n %}<!doctype html>
 <html lang="{{ LANGUAGE_CODE|default:'en' }}">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -48,15 +48,29 @@
   <div class="workspace-main">
 {% endif %}
 <main id="main-content" class="page-shell">
+  {% localize on %}
   {% if user.is_authenticated %}<div class="shell-context"><span class="context-dot" aria-hidden="true"></span>{% translate "Secure dairy workspace" %}</div>{% endif %}
   {% if messages %}<div class="messages" role="status" aria-live="polite">{% for message in messages %}<div class="alert {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
   {% block content %}{% endblock %}
+  {% endlocalize %}
 </main>
 {% if user.is_authenticated %}</div></div>{% endif %}
 <footer class="footer"><span class="footer-brand">DairyNexus</span><span>{% translate "Dairy operations, made accountable." %}</span></footer>
 <script>
 (function(){
  const root=document.documentElement, theme=document.getElementById('theme-select'), toggle=document.getElementById('sidebar-toggle'), sidebar=document.getElementById('app-sidebar');
+ // Display native Devanagari digits in Nepali and Hindi without changing form values or stored data.
+ const lang=(root.lang||'en').toLowerCase().split('-')[0];
+ if(lang==='ne'||lang==='hi'){
+   const devanagari='०१२३४५६७८९';
+   const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode(node){
+     const parent=node.parentElement;
+     if(!parent||parent.closest('script,style,textarea,input,select,option,code,pre,[data-no-digit-localize]')) return NodeFilter.FILTER_REJECT;
+     return /[0-9]/.test(node.nodeValue)?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT;
+   }});
+   const nodes=[]; while(walker.nextNode()) nodes.push(walker.currentNode);
+   nodes.forEach(node=>{node.nodeValue=node.nodeValue.replace(/[0-9]/g,d=>devanagari[Number(d)]);});
+ }
  function apply(value){const dark=value==='dark'||(value==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);root.dataset.theme=dark?'dark':'light';if(theme)theme.value=value;try{localStorage.setItem('dairynexus-theme',value);}catch(e){}}
  const saved=(()=>{try{return localStorage.getItem('dairynexus-theme')||'system';}catch(e){return 'system';}})();apply(saved);
  if(theme)theme.addEventListener('change',()=>apply(theme.value));
