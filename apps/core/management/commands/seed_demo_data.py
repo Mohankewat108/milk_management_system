@@ -13,6 +13,7 @@ from apps.collections.models import MilkCollection
 from apps.collections.services import create_collection
 from apps.finance.models import Payment
 from apps.inventory.models import InventoryItem, StockMovement
+from apps.inventory.services import move_stock
 from apps.organizations.models import Branch, BranchAssignment, Membership, Organization
 from apps.parties.models import Customer, Farmer
 from apps.platform_admin.models import Subscription, SubscriptionPlan
@@ -22,7 +23,7 @@ User = get_user_model()
 
 
 class Command(BaseCommand):
-    help = "Create a reproducible 108-record DairyNexus demonstration dataset."
+    help = "Create a reproducible linked DairyNexus demonstration dataset."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -99,6 +100,7 @@ class Command(BaseCommand):
             staff_roles = [
                 Membership.Role.BRANCH_MANAGER,
                 Membership.Role.COLLECTION_OPERATOR,
+                Membership.Role.QUALITY_OFFICER,
                 Membership.Role.ACCOUNTANT,
             ]
             for staff_no, role in enumerate(staff_roles, start=1):
@@ -242,20 +244,30 @@ class Command(BaseCommand):
 
         for item_no in range(1, 6):
             org, branches = org_branches[(item_no - 1) % len(org_branches)]
-            InventoryItem.objects.get_or_create(
+            item, created = InventoryItem.objects.get_or_create(
                 organization=org, code=f"DEMO-ITEM-{item_no:02d}",
                 defaults={
                     "branch": branches[(item_no - 1) % 2],
                     "name": ["Milk can", "Sanitiser", "Testing reagent", "Filter cloth", "Packaging roll"][item_no - 1],
-                    "unit": "piece", "current_stock": Decimal("15.000"),
+                    "unit": "piece", "current_stock": Decimal("0.000"),
                     "reorder_level": Decimal("5.000"), "purchase_price": Decimal("250.00"),
                 },
             )
+            if created:
+                move_stock(
+                    item_id=item.pk,
+                    organization=org,
+                    actor=org.owner,
+                    kind=StockMovement.Kind.PURCHASE,
+                    quantity="15.000",
+                    reason="Demo opening stock",
+                    reference=f"DEMO-OPENING-{item_no:02d}",
+                )
 
         self.stdout.write(self.style.SUCCESS(
-            "DairyNexus demo data is ready: 3 organisations, 6 branches, 12 business users "
-            "(3 owners + 9 staff), 15 farmers, 20 customers, 30 collections, "
-            "6 pricing versions, 10 payments and 5 inventory items (108 core records)."
+            "DairyNexus demo data is ready: 3 organisations, 6 branches, 12 staff "
+            "(plus 3 owners and 1 platform administrator), 15 farmers, 20 customers, "
+            "30 collections, 6 pricing versions, 10 payments and 5 inventory items."
         ))
         self.stdout.write("Demo account usernames use the demo-platform-admin, demo-owner-N, "
                           "demo-staff-N-M and demo-customer-N patterns.")

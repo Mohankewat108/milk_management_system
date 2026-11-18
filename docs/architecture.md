@@ -22,8 +22,8 @@ DairyNexus is a modular monolith built with Django. Each domain is a Django appl
 | `parties` | Customer and Farmer records and customer self-service portal |
 | `pricing` | Effective-dated price configurations, quality profiles and calculation/validation services |
 | `collections` | Milk collection workflow, pricing snapshot, approvals |
-| `finance` | Payment recording and verification |
-| `inventory` | Inventory items and transactional stock ledger |
+| `finance` | Payment recording/verification and approval-based expense records |
+| `inventory` | Supplier directory, inventory items and transactional stock ledger |
 | `platform_admin` | Subscription plans, subscriptions and superuser overview |
 | `audit` | Actor, tenant, event and target audit trail |
 | `core` | Shared UUID/time-stamped bases, health endpoint and demo seeding |
@@ -55,7 +55,11 @@ Historical collection snapshots are not recomputed when current prices or qualit
 
 ## Finance
 
-Payments have direction, method, amount, currency and pending/completed/failed/reversed state. Newly recorded payments remain pending. An authorised owner/accountant performs the explicit completion action. Updates use row locking and audit events. This is not a full double-entry accounting ledger; reconciliation, invoice allocation and accounting-period close are later scope.
+Payments have direction, method, amount, currency and pending/completed/failed/reversed state. Customer payments must be incoming and farmer payments outgoing. Newly recorded payments remain pending. An authorised owner/accountant performs the explicit completion action. Expenses have a tenant, branch, category, amount, date, recorder and approval state; owner/accountant approval is required. Updates use row locking and audit events. This is not a full double-entry accounting ledger; reconciliation, invoice allocation, supplier payables and accounting-period close are later scope.
+
+## Inventory and suppliers
+
+Suppliers and items are tenant-scoped. Items belong to a branch and can refer to an organisation supplier. Stock changes are posted as ledger movements (purchase/return/transfer in increase stock; usage/transfer out decrease stock). The service locks the item row and prevents negative balances. This is an operational stock ledger, not yet a full purchasing/warehouse system with purchase orders, goods-received notes, transfers between branches and supplier settlement.
 
 ## Data integrity
 

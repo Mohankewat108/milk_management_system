@@ -14,7 +14,8 @@ DairyNexus is the Python/Django replacement being developed for the original PHP
 - Server-side Decimal pricing and collection calculations with historical snapshots.
 - Collection submission and approval workflow.
 - Pending/completed payment workflow with transactional verification.
-- Inventory models and transactional stock movement service.
+- Inventory items, supplier directory and transactional stock movement workflow.
+- Pending/approved expense recording alongside payment management.
 - Subscription plan/subscription models and superuser platform overview.
 - Audit events, demo seeding, responsive templates, security/operations documentation.
 
@@ -89,7 +90,7 @@ The old README references milk.sql, but that SQL dump is absent from the reposit
 
 ## Current limitations
 
-Full supplier and expense workflows, invoice/statement generation, subscription charging and plan-limit enforcement, farmer portal, notification delivery, exports, richer reporting, background jobs, MFA, email verification, production email delivery, database-level RLS and committed reviewed migrations remain outstanding. See docs/architecture.md, docs/security.md and docs/operations.md.
+Advanced supplier purchasing/payables, double-entry accounting, invoice/statement generation, subscription charging and plan-limit enforcement, farmer portal, notification delivery, exports, richer reporting, background jobs, MFA, email verification, production email delivery, database-level RLS and committed reviewed migrations remain outstanding. See docs/architecture.md, docs/security.md and docs/operations.md.
 
 ## Original source
 

@@ -14,9 +14,11 @@ The tables below summarise the principal business models currently present in co
 | PricingConfiguration | organization | optional branch, version, three rates, effective date range, approval | decimal rates, nonnegative checks, version unique per organisation |
 | QualityConfiguration | organization | optional branch, version, min/max SNF/FAT/lactose, effective date range, approval | each minimum must be nonnegative and maximum >= minimum |
 | MilkCollection | organization | branch, one farmer/customer, actor, timestamp, litres, quality, rate, amount, pricing snapshot, status | positive quantity; exactly one party; historical rate/config retained |
-| Payment | organization | branch, direction, one party, decimal amount, currency, method, status, paid timestamp | positive amount; exactly one party; initially pending in web workflow |
-| InventoryItem | organization | branch, code, name, unit, stock, reorder level, purchase price | code unique within organisation |
-| StockMovement | organization | item, kind, quantity delta, reason, reference, actor | movement history; service locks item row and disallows negative stock |
+| Payment | organization | branch, direction, one party, decimal amount, currency, method, status, paid timestamp | positive amount; exactly one party; customers incoming, farmers outgoing; initially pending |
+| Expense | organization | branch, category, description, supplier name, amount, currency, expense date, method, approval actors/status | positive amount; pending until authorised approval |
+| Supplier | organization | code, name, contact, phone, email, address, tax number, active state | supplier code unique within organisation |
+| InventoryItem | organization | branch, optional supplier, code, name, category, unit, stock, reorder level, purchase price | code unique within organisation |
+| StockMovement | organization | item, kind, signed quantity delta, reason, reference, actor | movement history; service locks item row and disallows negative stock |
 | SubscriptionPlan | — | name, code, monthly/annual price, limits, features | unique name and code |
 | Subscription | organization | plan, status, start/end date, auto-renew | historical subscription records retained |
 | AuditEvent | optional organization | actor, action, target type/id, JSON changes, IP and user agent | ordered newest-first; admin is read-only |
