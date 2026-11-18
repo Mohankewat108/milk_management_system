@@ -134,14 +134,14 @@ def _safe_cell(value):
         return str(value)
     if isinstance(value, bool):
         return "Yes" if value else "No"
-    if isinstance(value, str) and value[:1] in {"=", "+", "-", "@", "\\t", "\\r"}:
+    if isinstance(value, str) and value[:1] in {"=", "+", "-", "@", "\t", "\r"}:
         return "'" + value
     return value
 
 
 def build_csv(module, queryset):
     buffer = io.StringIO(newline="")
-    writer = csv.writer(buffer, lineterminator="\\r\\n")
+    writer = csv.writer(buffer, lineterminator="\r\n")
     headers, rows = _rows(module, queryset)
     writer.writerow(headers)
     count = 0
@@ -150,7 +150,7 @@ def build_csv(module, queryset):
         if count > MAX_SYNC_EXPORT_ROWS:
             raise ValidationError("This export is larger than the safe instant-export limit. Background exports will be available in a later phase.")
         writer.writerow([_safe_cell(value) for value in row])
-    return "\\ufeff" + buffer.getvalue(), count
+    return "\ufeff" + buffer.getvalue(), count
 
 
 def export_queryset(*, module, organization, membership, params):
