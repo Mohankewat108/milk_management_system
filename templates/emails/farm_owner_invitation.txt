@@ -1,0 +1,13 @@
+Hello {{ owner_name|default:"there" }},
+
+You have been invited to become the owner of {{ farm_name }} on DairyNexus.
+
+To activate your account and access your dairy workspace, open this secure invitation link:
+
+{{ invitation_url }}
+
+This invitation expires at {{ expires_at|date:"d M Y, H:i T" }} (48 hours after it was issued).
+
+If you were not expecting this invitation, you can ignore this email. No account access is granted until the invitation is accepted.
+
+DairyNexus
