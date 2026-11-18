@@ -47,7 +47,7 @@
       <tbody>{% for p in history %}
         <tr><td>v{{ p.version }}</td><td>{{ p.scope_label }}</td><td>{{ p.snf_rate }}</td><td>{{ p.fat_rate }}</td><td>{{ p.lactose_rate }}</td><td>{{ p.effective_from }}</td><td>{{ p.effective_to|default:"Open" }}</td>
           <td>{% if p.is_approved %}Approved{% else %}Pending{% endif %}</td>
-          <td>{% if not p.is_approved and membership.role == "owner" %}<form method="post" action="{% url 'pricing:approve' organization.slug p.id %}">{% csrf_token %}<button class="button button-small" type="submit">Approve</button></form>{% else %}—{% endif %}</td>
+          <td>{% if not p.is_approved %}<a class="button button-small button-secondary" href="{% url 'pricing:edit' organization.slug p.id %}">Edit</a><form method="post" action="{% url 'business:trash_delete' organization.slug 'pricing' p.id %}">{% csrf_token %}<button class="button button-small button-ghost" type="submit">Delete</button></form>{% if membership.role == "owner" %}<form method="post" action="{% url 'pricing:approve' organization.slug p.id %}">{% csrf_token %}<button class="button button-small" type="submit">Approve</button></form>{% endif %}{% else %}—{% endif %}</td>
         </tr>
       {% empty %}<tr><td colspan="9">No rate schedules created yet.</td></tr>{% endfor %}</tbody>
     </table></div>
