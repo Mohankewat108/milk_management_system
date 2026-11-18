@@ -47,7 +47,7 @@ def dashboard(request, organization_slug):
     organization = request.organization
     membership = request.membership
     branch_ids = accessible_branch_ids(membership)
-    branches = organization.branches.filter(is_active=True)
+    branches = organization.branches.filter(is_active=True, deleted_at__isnull=True)
     customers = organization.customers.filter(is_active=True)
     farmers = organization.farmers.filter(is_active=True)
     collections = organization.milk_collections.all()
