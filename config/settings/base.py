@@ -53,8 +53,7 @@ AUTH_USER_MODEL = "accounts.User"
 AUTHENTICATION_BACKENDS = ["apps.accounts.backends.EmailOrUsernameBackend"]
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-     "OPTIONS": {"min_length": 12}},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 12}},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
@@ -76,6 +75,7 @@ LOGIN_REDIRECT_URL = "business:workspace"
 LOGOUT_REDIRECT_URL = "accounts:login"
 DEFAULT_CURRENCY = env("DJANGO_DEFAULT_CURRENCY", default="NPR")
 REDIS_URL = env("REDIS_URL", default="redis://localhost:6379/0")
+DEMO_PASSWORD = env("DJANGO_DEMO_PASSWORD", default="")
 SESSION_COOKIE_AGE = 60 * 60 * 8
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_COOKIE_HTTPONLY = True
