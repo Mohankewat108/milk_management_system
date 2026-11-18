@@ -190,7 +190,7 @@ class JournalEntry(UUIDModel, TimeStampedModel):
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        if self.status == self.Status.POSTED:
+        if self.pk and JournalEntry.objects.filter(pk=self.pk, status=self.Status.POSTED).exists():
             raise ValidationError("Posted journal entries cannot be deleted; create a reversal instead.")
         return super().delete(*args, **kwargs)
 
@@ -215,12 +215,12 @@ class JournalLine(UUIDModel, TimeStampedModel):
         ]
 
     def save(self, *args, **kwargs):
-        if self.entry.status == JournalEntry.Status.POSTED:
+        if JournalEntry.objects.filter(pk=self.entry_id, status=JournalEntry.Status.POSTED).exists():
             raise ValidationError("Lines on a posted journal are immutable.")
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        if self.entry.status == JournalEntry.Status.POSTED:
+        if JournalEntry.objects.filter(pk=self.entry_id, status=JournalEntry.Status.POSTED).exists():
             raise ValidationError("Lines on a posted journal cannot be deleted.")
         return super().delete(*args, **kwargs)
 
