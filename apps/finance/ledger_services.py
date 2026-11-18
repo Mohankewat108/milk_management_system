@@ -58,7 +58,7 @@ def create_accounting_period(*, organization, code, name, starts_on, ends_on):
 @transaction.atomic
 def post_journal_entry(
     *, organization, branch, actor, entry_date, description, lines,
-    source_type="", source_id="", idempotency_key="", reference=None,
+    source_type="", source_id="", idempotency_key="", reference=None, reversal_of=None,
 ):
     """Create and post an immutable, balanced journal in one database transaction.
 
@@ -118,7 +118,7 @@ def post_journal_entry(
         reference=reference or f"JRN-{uuid4().hex[:12].upper()}",
         entry_date=entry_date, description=description,
         source_type=source_type, source_id=str(source_id),
-        idempotency_key=idempotency_key, created_by=actor,
+        idempotency_key=idempotency_key, created_by=actor, reversal_of=reversal_of,
     )
     JournalLine.objects.bulk_create([
         JournalLine(entry=entry, **line) for line in normalized
@@ -157,4 +157,5 @@ def reverse_journal_entry(*, entry_id, organization, actor, reversal_date, reaso
         entry_date=reversal_date, description=f"Reversal of {original.reference}: {reason}"[:240],
         lines=reversed_lines, source_type="journal_reversal", source_id=original.pk,
         idempotency_key=f"reverse:{original.pk}", reference=f"REV-{uuid4().hex[:12].upper()}",
+        reversal_of=original,
     )
