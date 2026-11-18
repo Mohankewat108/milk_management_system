@@ -83,6 +83,7 @@ class PlatformMultiFarmTests(TestCase):
         self.assertEqual(len(mail.outbox), 1)
 
         invitation_path = urlparse(re.search(r"http://testserver(\S+)", mail.outbox[0].body).group(0)).path
+        self.client.logout()
         response = self.client.get(invitation_path)
         self.assertEqual(response.status_code, 200)
         response = self.client.post(invitation_path, {
@@ -123,7 +124,8 @@ class PlatformMultiFarmTests(TestCase):
         response = self.client.get(invitation_path)
         self.assertEqual(response.status_code, 200)
         response = self.client.post(invitation_path)
-        self.assertRedirects(response, reverse("business:workspace"))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("business:workspace"))
         self.assertEqual(
             Membership.objects.get(
                 user=self.farm_owner, organization=invitation.organization
@@ -254,5 +256,6 @@ class PlatformMultiFarmTests(TestCase):
             re.search(r"http://testserver(\S+)", mail.outbox[1].body).group(0)
         ).path
         self.assertEqual(self.client.get(first_path).status_code, 410)
+        self.client.logout()
         self.assertEqual(self.client.get(second_path).status_code, 200)
         self.assertIsNone(second_invitation.revoked_at)
