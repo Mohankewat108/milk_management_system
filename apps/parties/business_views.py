@@ -7,6 +7,7 @@ from django.core.paginator import Paginator
 from django.db.models import Avg, Count, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from zoneinfo import ZoneInfo
 from django.views.decorators.http import require_http_methods
 
 from apps.audit.services import record_event
@@ -50,7 +51,10 @@ def _date_bounds(request):
 
 
 def _party_profile_context(*, party, kind, request):
-    today = timezone.localdate()
+    try:
+        today = timezone.now().astimezone(ZoneInfo(request.organization.timezone)).date()
+    except Exception:
+        today = timezone.localdate()
     week_start = today - timedelta(days=today.weekday())
     month_start = today.replace(day=1)
     previous_month_end = month_start - timedelta(days=1)
@@ -90,10 +94,12 @@ def _party_profile_context(*, party, kind, request):
     ).select_related("branch", "recorded_by").order_by("-paid_at", "-created_at")
     payments = _party_scope(payments, request.membership)
     completed = payments.filter(status=Payment.Status.COMPLETED)
-    completed_sum = completed.aggregate(v=Sum("amount"))["v"] or Decimal("0")
     payment_direction = Payment.Direction.INCOMING if kind == "customer" else Payment.Direction.OUTGOING
     completed_sum = completed.filter(direction=payment_direction).aggregate(v=Sum("amount"))["v"] or Decimal("0")
 
+    filtered_approved = filtered_approved.filter(
+        branch_id__in=accessible_branch_ids(request.membership)
+    ) if accessible_branch_ids(request.membership) is not None else filtered_approved
     selected_metrics = filtered_approved.aggregate(
         litres=Sum("quantity_litres"), value=Sum("total_amount"),
         average_fat=Avg("fat"), average_snf=Avg("snf"),
