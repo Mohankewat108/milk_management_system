@@ -22,12 +22,13 @@
     <div class="filter-field"><label for="customer-status">{% translate "Status" %}</label><select id="customer-status" name="status"><option value="">{% translate "All statuses" %}</option><option value="active" {% if status_filter == "active" %}selected{% endif %}>{% translate "Active" %}</option><option value="inactive" {% if status_filter == "inactive" %}selected{% endif %}>{% translate "Inactive" %}</option></select></div>
     <div class="filter-field"><label for="customer-branch">{% translate "Branch" %}</label><select id="customer-branch" name="branch"><option value="">{% translate "All accessible branches" %}</option>{% for branch in branches %}<option value="{{ branch.pk }}" {% if branch_filter == branch.pk|stringformat:"s" %}selected{% endif %}>{{ branch.name }}</option>{% endfor %}</select></div>
     <div class="directory-filter-dates">
-      <div class="filter-field"><label for="customer-registered-from">{% translate "Registered from" %}</label><input id="customer-registered-from" type="date" name="registered_from" value="{{ registered_from }}"></div>
-      <div class="filter-field"><label for="customer-registered-to">{% translate "Registered to" %}</label><input id="customer-registered-to" type="date" name="registered_to" value="{{ registered_to }}"></div>
+      <div class="filter-field"><label for="customer-registered-from">{% translate "Registered from" %} ({{ date_calendar }})</label><input id="customer-registered-from" type="text" inputmode="numeric" pattern="[0-9०-९]{4}-[0-9०-९]{2}-[0-9०-९]{2}" data-calendar-date name="registered_from" value="{{ registered_from }}"></div>
+      <div class="filter-field"><label for="customer-registered-to">{% translate "Registered to" %} ({{ date_calendar }})</label><input id="customer-registered-to" type="text" inputmode="numeric" pattern="[0-9०-९]{4}-[0-9०-९]{2}-[0-9०-९]{2}" data-calendar-date name="registered_to" value="{{ registered_to }}"></div>
       <button class="button" type="submit">{% translate "Apply filters" %}</button>
       <a class="button button-secondary" href="{% url 'parties:customers' organization.slug %}">{% translate "Reset" %}</a>
     </div>
   </form>
+  {% if date_error %}<p class="alert error" role="alert">{{ date_error }}</p>{% endif %}
   <section class="panel directory-table-panel" aria-labelledby="customer-directory-title">
     <div class="directory-table-heading"><div><h2 id="customer-directory-title">{% translate "Customer directory" %}</h2><p class="muted small">{% translate "Customer records available in your permitted branches." %}</p></div></div>
     <div class="table-wrap"><table>
