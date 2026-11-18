@@ -13,6 +13,7 @@ class ExportJob(UUIDModel, TimeStampedModel):
         PAYMENTS = "payments", "Payments"
         EXPENSES = "expenses", "Expenses"
         INVENTORY = "inventory", "Inventory"
+        SUPPLIERS = "suppliers", "Suppliers"
 
     class Status(models.TextChoices):
         QUEUED = "queued", "Queued"
