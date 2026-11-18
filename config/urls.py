@@ -16,6 +16,7 @@ urlpatterns = [
     path("business/", include("apps.pricing.urls")),
     path("business/", include("apps.finance.urls")),
     path("business/", include("apps.inventory.urls")),
+    path("business/", include("apps.data_exports.urls")),
     path("platform/", include("apps.platform_admin.urls")),
     path("portal/", include("apps.parties.customer_urls")),
     path("", landing_page, name="home"),
