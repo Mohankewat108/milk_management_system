@@ -519,3 +519,30 @@ label { color: var(--color-text-secondary); }
   .directory-filter-dates { grid-column:auto; grid-template-columns:1fr; }
   .directory-table-heading { align-items:flex-start; flex-direction:column; }
 }
+
+
+/* Accessible Bikram Sambat date picker */
+.bs-date-control{position:relative;display:flex;align-items:stretch;width:100%;min-width:0}
+.bs-date-control>input{flex:1 1 auto;min-width:0;padding-right:3.25rem}
+.bs-date-trigger{position:absolute;right:.45rem;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:2.25rem;height:2.25rem;border:1px solid var(--color-border);border-radius:.55rem;background:var(--color-surface);color:var(--color-primary);font-size:1.15rem;cursor:pointer}
+.bs-date-trigger:hover{background:var(--color-primary-soft)}
+.bs-calendar{position:absolute;z-index:100;top:calc(100% + .5rem);right:0;width:min(330px,calc(100vw - 2rem));padding:.9rem;border:1px solid var(--color-border-strong);border-radius:1rem;background:var(--color-surface);color:var(--color-text-primary);box-shadow:0 16px 44px rgb(0 0 0 / 22%)}
+.bs-calendar[hidden]{display:none}
+.bs-calendar-header{display:grid;grid-template-columns:2.4rem 1fr 2.4rem;align-items:center;gap:.5rem;margin-bottom:.8rem}
+.bs-calendar-heading{text-align:center;font-size:1rem;font-weight:800}
+.bs-calendar-nav{width:2.35rem;height:2.35rem;border:1px solid var(--color-border);border-radius:.65rem;background:var(--color-page);color:var(--color-text-primary);font-size:1.45rem;cursor:pointer}
+.bs-calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:.25rem}
+.bs-calendar-weekday{padding:.35rem 0;text-align:center;color:var(--color-text-muted);font-size:.72rem;font-weight:800}
+.bs-calendar-day{min-width:0;aspect-ratio:1;border:1px solid transparent;border-radius:.6rem;background:transparent;color:var(--color-text-primary);font-weight:650;cursor:pointer}
+.bs-calendar-day:hover{border-color:var(--color-primary);background:var(--color-primary-soft);color:var(--color-primary)}
+.bs-calendar-day.is-today{border-color:var(--color-accent);font-weight:900}
+.bs-calendar-day.is-selected{background:var(--color-primary);color:white;border-color:var(--color-primary)}
+.bs-calendar-empty{aspect-ratio:1}
+.bs-calendar-footer{display:flex;justify-content:space-between;gap:.6rem;margin-top:.8rem;padding-top:.7rem;border-top:1px solid var(--color-border)}
+.bs-calendar-today,.bs-calendar-clear{border:0;background:transparent;color:var(--color-primary);font-size:.82rem;font-weight:750;cursor:pointer;padding:.35rem .5rem}
+.bs-calendar-error{grid-column:1/-1;color:var(--color-danger);font-size:.85rem}
+.date-filter-help{grid-column:1/-1;margin:0;color:var(--color-text-muted);font-size:.8rem}
+:root[data-theme="dark"] .bs-calendar{background:#172536;border-color:#40566e}
+:root[data-theme="dark"] .bs-calendar-nav{background:#20364c;color:#e7eef8;border-color:#40566e}
+:root[data-theme="dark"] .bs-date-trigger{background:#20364c;border-color:#40566e;color:#9bc8ff}
+@media(max-width:520px){.bs-calendar{right:auto;left:0}.bs-calendar-day{font-size:.85rem}}
