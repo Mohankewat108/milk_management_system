@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load locale_dates %}
 {% block title %}{{ party.full_name }} · {{ organization.name }}{% endblock %}
 {% block content %}
 <div class="page-heading">
@@ -24,7 +25,7 @@
     <div><span class="muted">Phone</span><strong>{{ party.phone|default:"—" }}</strong></div>
     <div><span class="muted">Email</span><strong>{{ party.email|default:"—" }}</strong></div>
     <div><span class="muted">Address</span><strong>{{ party.address|default:"—" }}</strong></div>
-    <div><span class="muted">Registered</span><strong>{{ party.created_at|date:"Y-m-d" }}</strong></div>
+    <div><span class="muted">Registered</span><strong>{{ party.created_at|local_date }}</strong></div>
     <div><span class="muted">Portal account</span><strong>{% if party.user %}Linked{% else %}Not linked{% endif %}</strong></div>
   </div>
 </section>
@@ -68,8 +69,8 @@
   <h2>Collection history</h2>
   {% if date_error %}<p class="alert error">{{ date_error }}</p>{% endif %}
   <form class="search-form" method="get">
-    <label>From <input type="date" name="from" value="{{ date_from|date:'Y-m-d' }}"></label>
-    <label>To <input type="date" name="to" value="{{ date_to|date:'Y-m-d' }}"></label>
+    <label>From <input type="date" name="from" value="{{ date_from|local_date }}"></label>
+    <label>To <input type="date" name="to" value="{{ date_to|local_date }}"></label>
     <button class="button button-secondary" type="submit">Apply dates</button>
   </form>
   <p class="muted">Selected period: {{ selected_metrics.litres|default:0|floatformat:3 }} L · {{ currency }} {{ selected_metrics.value|default:0|floatformat:2 }} approved collection value</p>
@@ -77,15 +78,15 @@
     <thead><tr><th>Date</th><th>Reference</th><th>Branch</th><th>Quantity</th><th>FAT</th><th>SNF</th><th>Rate</th><th>Value</th><th>Status</th><th>Recorded by</th></tr></thead>
     <tbody>
     {% for item in history %}
-      <tr><td>{{ item.collected_at|date:"Y-m-d H:i" }}</td><td>{{ item.reference }}</td><td>{{ item.branch.name }}</td><td>{{ item.quantity_litres|floatformat:3 }} L</td><td>{{ item.fat }}</td><td>{{ item.snf }}</td><td>{{ item.milk_rate }}</td><td>{{ currency }} {{ item.total_amount }}</td><td>{{ item.get_status_display }}</td><td>{{ item.recorded_by.get_full_name|default:item.recorded_by.username }}</td></tr>
+      <tr><td>{{ item.collected_at|local_date }}</td><td>{{ item.reference }}</td><td>{{ item.branch.name }}</td><td>{{ item.quantity_litres|floatformat:3 }} L</td><td>{{ item.fat }}</td><td>{{ item.snf }}</td><td>{{ item.milk_rate }}</td><td>{{ currency }} {{ item.total_amount }}</td><td>{{ item.get_status_display }}</td><td>{{ item.recorded_by.get_full_name|default:item.recorded_by.username }}</td></tr>
     {% empty %}<tr><td colspan="10">No collection records match this date range.</td></tr>{% endfor %}
     </tbody>
   </table></div>
   {% if history.has_other_pages %}
   <nav class="pagination" aria-label="Collection pages">
-    {% if history.has_previous %}<a href="?from={{ date_from|date:'Y-m-d' }}&to={{ date_to|date:'Y-m-d' }}&page={{ history.previous_page_number }}">Previous</a>{% endif %}
+    {% if history.has_previous %}<a href="?from={{ date_from|local_date }}&to={{ date_to|local_date }}&page={{ history.previous_page_number }}">Previous</a>{% endif %}
     <span>Page {{ history.number }} of {{ history.paginator.num_pages }}</span>
-    {% if history.has_next %}<a href="?from={{ date_from|date:'Y-m-d' }}&to={{ date_to|date:'Y-m-d' }}&page={{ history.next_page_number }}">Next</a>{% endif %}
+    {% if history.has_next %}<a href="?from={{ date_from|local_date }}&to={{ date_to|local_date }}&page={{ history.next_page_number }}">Next</a>{% endif %}
   </nav>
   {% endif %}
 </section>
@@ -97,7 +98,7 @@
     <thead><tr><th>Date</th><th>Reference</th><th>Direction</th><th>Method</th><th>Amount</th><th>Status</th></tr></thead>
     <tbody>
     {% for item in payments %}
-      <tr><td>{{ item.paid_at|date:"Y-m-d H:i"|default:"—" }}</td><td>{{ item.reference }}</td><td>{{ item.get_direction_display }}</td><td>{{ item.get_method_display }}</td><td>{{ item.currency }} {{ item.amount }}</td><td>{{ item.get_status_display }}</td></tr>
+      <tr><td>{{ item.paid_at|local_date|default:"—" }}</td><td>{{ item.reference }}</td><td>{{ item.get_direction_display }}</td><td>{{ item.get_method_display }}</td><td>{{ item.currency }} {{ item.amount }}</td><td>{{ item.get_status_display }}</td></tr>
     {% empty %}<tr><td colspan="6">No payments recorded.</td></tr>{% endfor %}
     </tbody>
   </table></div>
