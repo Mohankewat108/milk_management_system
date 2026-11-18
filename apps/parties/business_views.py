@@ -36,10 +36,12 @@ def customer_list(request, organization_slug):
 @require_http_methods(["GET", "POST"])
 def customer_create(request, organization_slug):
     org = request.organization
-    form = CustomerForm(request.POST or None, organization=org)
+    form = CustomerForm(request.POST or None, organization=org, membership=request.membership)
     if request.method == "POST" and form.is_valid():
         data = form.cleaned_data
-        if data.get("branch") and not can_access_branch(request.membership, data["branch"]):
+        if request.membership.role not in {Membership.Role.OWNER, Membership.Role.ADMIN} and not data.get("branch"):
+            form.add_error("branch", "Select a branch assigned to your staff account.")
+        elif data.get("branch") and not can_access_branch(request.membership, data["branch"]):
             form.add_error("branch", "You are not assigned to this branch.")
         else:
             customer = form.save(commit=False)
@@ -72,10 +74,12 @@ def farmer_list(request, organization_slug):
 @require_http_methods(["GET", "POST"])
 def farmer_create(request, organization_slug):
     org = request.organization
-    form = FarmerForm(request.POST or None, organization=org)
+    form = FarmerForm(request.POST or None, organization=org, membership=request.membership)
     if request.method == "POST" and form.is_valid():
         data = form.cleaned_data
-        if data.get("branch") and not can_access_branch(request.membership, data["branch"]):
+        if request.membership.role not in {Membership.Role.OWNER, Membership.Role.ADMIN} and not data.get("branch"):
+            form.add_error("branch", "Select a branch assigned to your staff account.")
+        elif data.get("branch") and not can_access_branch(request.membership, data["branch"]):
             form.add_error("branch", "You are not assigned to this branch.")
         else:
             farmer = form.save(commit=False)
