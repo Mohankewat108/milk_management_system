@@ -95,3 +95,11 @@ class ExportFormatTests(SimpleTestCase):
         payload, count = build_pdf("farmers", self.queryset, "Test Dairy")
         self.assertTrue(payload.startswith(b"%PDF"))
         self.assertEqual(count, 1)
+
+
+class PrivateStorageTests(SimpleTestCase):
+    def test_private_storage_does_not_generate_public_urls(self):
+        from apps.data_exports.storage import private_storage
+
+        with self.assertRaises(ValueError):
+            private_storage.url("private_exports/example.xlsx")
