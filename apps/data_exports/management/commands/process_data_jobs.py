@@ -1,9 +1,12 @@
 import csv
 import io
+import calendar
 from datetime import timedelta
 
 from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand
+from django.core.mail import send_mail
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
@@ -50,7 +53,9 @@ def process_import_batch(batch):
                     values["branch"] = branch
                 if model.objects.filter(organization=batch.organization, code=code).exists():
                     raise ValueError("duplicate code already exists in this organisation")
-                model.objects.create(**values)
+                instance = model(**values)
+                instance.full_clean()
+                instance.save()
                 imported += 1
             except Exception as exc:
                 failed += 1
@@ -67,6 +72,12 @@ def process_import_batch(batch):
         batch.failed_rows = max(total, 1)
     batch.processed_at = timezone.now()
     batch.save(update_fields=["total_rows", "imported_rows", "failed_rows", "row_errors", "status", "processed_at", "updated_at"])
+    if batch.uploaded_by.email:
+        send_mail(
+            f"DairyNexus import {batch.status}: {batch.get_module_display()}",
+            f"Imported: {batch.imported_rows}; failed rows: {batch.failed_rows}. Review Import Centre for row-level errors.",
+            settings.DEFAULT_FROM_EMAIL, [batch.uploaded_by.email], fail_silently=True,
+        )
     return batch
 
 
@@ -86,6 +97,11 @@ class Command(BaseCommand):
             process_import_batch(batch)
             self.stdout.write(f"Import {batch.pk}: {batch.status} ({batch.imported_rows} imported, {batch.failed_rows} failed)")
         now = timezone.now()
+        for expired in ExportJob.objects.filter(expires_at__lte=now).exclude(status=ExportJob.Status.EXPIRED):
+            if expired.file:
+                expired.file.delete(save=False)
+            expired.status = ExportJob.Status.EXPIRED
+            expired.save(update_fields=["status", "updated_at"])
         for schedule in ScheduledExport.objects.filter(is_active=True, next_run_at__lte=now).select_related("organization", "created_by")[:limit]:
             try:
                 membership = Membership.objects.get(organization=schedule.organization, user=schedule.created_by, status=Membership.Status.ACTIVE)
@@ -103,7 +119,11 @@ class Command(BaseCommand):
                 elif schedule.frequency == ScheduledExport.Frequency.WEEKLY:
                     schedule.next_run_at += timedelta(days=7)
                 else:
-                    schedule.next_run_at += timedelta(days=30)
+                    current = schedule.next_run_at
+                    year = current.year + (1 if current.month == 12 else 0)
+                    month = 1 if current.month == 12 else current.month + 1
+                    day = min(current.day, calendar.monthrange(year, month)[1])
+                    schedule.next_run_at = current.replace(year=year, month=month, day=day)
                 schedule.save(update_fields=["last_run_at", "next_run_at", "updated_at"])
                 self.stdout.write(f"Schedule {schedule.pk}: queued {job.pk}")
             except Exception as exc:
