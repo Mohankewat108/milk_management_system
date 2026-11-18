@@ -1,5 +1,5 @@
 import csv
-from datetime import date
+from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from django.contrib.auth.decorators import login_required
@@ -55,8 +55,10 @@ def customer_portal(request, format=None):
     ).select_related("branch").order_by("-paid_at", "-created_at")
 
     month_start = today.replace(day=1)
+    month_start_at = datetime.combine(month_start, time.min, tzinfo=tenant_timezone)
+    tomorrow_at = datetime.combine(today + timedelta(days=1), time.min, tzinfo=tenant_timezone)
     month_collections = collections.filter(
-        collected_at__date__gte=month_start, collected_at__date__lte=today
+        collected_at__gte=month_start_at, collected_at__lt=tomorrow_at
     )
     month_summary = month_collections.aggregate(
         litres=Sum("quantity_litres"), amount=Sum("total_amount")
@@ -72,11 +74,13 @@ def customer_portal(request, format=None):
         date_error = "The start date must be on or before the end date."
         start_date, end_date = month_start, today
 
+    period_start_at = datetime.combine(start_date, time.min, tzinfo=tenant_timezone)
+    period_end_at = datetime.combine(end_date + timedelta(days=1), time.min, tzinfo=tenant_timezone)
     filtered_collections = collections.filter(
-        collected_at__date__gte=start_date, collected_at__date__lte=end_date
+        collected_at__gte=period_start_at, collected_at__lt=period_end_at
     )
     filtered_payments = payments.filter(
-        paid_at__date__gte=start_date, paid_at__date__lte=end_date
+        paid_at__gte=period_start_at, paid_at__lt=period_end_at
     )
 
     if format == "csv" or request.GET.get("format") == "csv":
