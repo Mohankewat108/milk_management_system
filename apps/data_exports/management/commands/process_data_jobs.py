@@ -111,6 +111,8 @@ class Command(BaseCommand):
         for old_import in ImportBatch.objects.filter(created_at__lte=now - timedelta(days=30)):
             if old_import.file:
                 old_import.file.delete(save=False)
+                old_import.file = ""
+                old_import.save(update_fields=["file", "updated_at"])
         for expired in ExportJob.objects.filter(expires_at__lte=now).exclude(status=ExportJob.Status.EXPIRED):
             if expired.file:
                 expired.file.delete(save=False)
