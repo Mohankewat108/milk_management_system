@@ -2,6 +2,9 @@ from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from datetime import date
+
+import nepali_datetime
 from django.urls import reverse
 
 
@@ -35,3 +38,42 @@ def landing_page(request):
     if request.user.is_authenticated:
         return redirect(reverse("business:workspace"))
     return render(request, "public/home.html")
+
+
+def nepali_calendar_month(request):
+    """Return authoritative BS month metadata for the accessible date picker."""
+    try:
+        year = int(request.GET.get("year", ""))
+        month = int(request.GET.get("month", ""))
+        first_day = nepali_datetime.date(year, month, 1)
+        first_gregorian = first_day.to_datetime_date()
+        days_in_month = 0
+        for day in range(1, 33):
+            try:
+                nepali_datetime.date(year, month, day)
+                days_in_month = day
+            except ValueError:
+                break
+    except (TypeError, ValueError, OverflowError):
+        return JsonResponse({"error": "invalid_month"}, status=400)
+
+    today_bs = nepali_datetime.date.from_datetime_date(date.today())
+    month_names = [
+        "बैशाख", "जेठ", "असार", "साउन", "भदौ", "असोज",
+        "कार्तिक", "मंसिर", "पुष", "माघ", "फागुन", "चैत",
+    ]
+    return JsonResponse({
+        "year": year,
+        "month": month,
+        "month_name": month_names[month - 1],
+        "days_in_month": days_in_month,
+        "first_weekday": first_gregorian.weekday(),
+        "today": {"year": today_bs.year, "month": today_bs.month, "day": today_bs.day},
+        "days": [
+            {
+                "day": day,
+                "gregorian": nepali_datetime.date(year, month, day).to_datetime_date().isoformat(),
+            }
+            for day in range(1, days_in_month + 1)
+        ],
+    })
