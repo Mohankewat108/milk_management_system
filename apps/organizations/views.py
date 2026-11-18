@@ -4,6 +4,8 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
 
 from apps.audit.services import record_event
+from apps.organizations.permissions import accessible_branch_ids
+
 from .decorators import organization_access
 from .forms import BranchForm, OrganizationRegistrationForm
 from .models import Membership
@@ -45,13 +47,42 @@ def register_business(request):
 @organization_access()
 def dashboard(request, organization_slug):
     organization = request.organization
+    membership = request.membership
+    branch_ids = accessible_branch_ids(membership)
+
+    branches = organization.branches.filter(is_active=True)
+    customers = organization.customers.filter(is_active=True)
+    farmers = organization.farmers.filter(is_active=True)
+    collections = organization.milk_collections.all()
+    if branch_ids is not None:
+        branches = branches.filter(pk__in=branch_ids)
+        customers = customers.filter(branch_id__in=branch_ids)
+        farmers = farmers.filter(branch_id__in=branch_ids)
+        collections = collections.filter(branch_id__in=branch_ids)
+
     context = {
         "organization": organization,
-        "membership": request.membership,
-        "branch_count": organization.branches.filter(is_active=True).count(),
-        "customer_count": organization.customers.filter(is_active=True).count(),
-        "farmer_count": organization.farmers.filter(is_active=True).count(),
-        "collection_count": organization.milk_collections.count(),
+        "membership": membership,
+        "branch_count": branches.count(),
+        "customer_count": customers.count(),
+        "farmer_count": farmers.count(),
+        "collection_count": collections.count(),
+        "can_record_collection": membership.role in {
+            Membership.Role.OWNER, Membership.Role.ADMIN,
+            Membership.Role.BRANCH_MANAGER, Membership.Role.COLLECTION_OPERATOR,
+        },
+        "can_manage_staff": membership.role in {
+            Membership.Role.OWNER, Membership.Role.ADMIN,
+        },
+        "can_manage_finance": membership.role in {
+            Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.ACCOUNTANT,
+        },
+        "can_manage_inventory": membership.role in {
+            Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.INVENTORY_MANAGER,
+        },
+        "can_manage_configuration": membership.role in {
+            Membership.Role.OWNER, Membership.Role.ADMIN,
+        },
     }
     return render(request, "dashboard/business.html", context)
 
