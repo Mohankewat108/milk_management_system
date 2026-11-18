@@ -95,7 +95,7 @@ def branches(request, organization_slug):
         messages.success(request, "Branch created.")
         return redirect("business:branches", organization_slug=organization_slug)
     return render(request, "organizations/branches.html", {
-        "organization": organization, "branches": organization.branches.order_by("name"), "form": form,
+        "organization": organization, "branches": organization.branches.filter(deleted_at__isnull=True).order_by("name"), "form": form,
     })
 
 
