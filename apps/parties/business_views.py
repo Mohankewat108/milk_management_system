@@ -124,6 +124,7 @@ def _party_profile_context(*, party, kind, request):
         "date_from": start,
         "date_to": end,
         "date_error": date_error,
+        "date_calendar": "BS" if (getattr(request, "LANGUAGE_CODE", "en") == "ne") else "AD",
         "history": history,
         "payments": payment_history,
         "completed_payment_total": completed_sum,
