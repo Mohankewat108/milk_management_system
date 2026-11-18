@@ -9,6 +9,19 @@ class Migration(migrations.Migration):
         ("data_exports", "0001_initial"),
         ("organizations", "0004_branch_soft_delete"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+
+        migrations.AlterField(
+            model_name="exportjob", name="module",
+            field=models.CharField(choices=[("farmers", "Farmers"), ("customers", "Customers"), ("collections", "Milk collections"), ("payments", "Payments"), ("expenses", "Expenses"), ("inventory", "Inventory"), ("suppliers", "Suppliers")], db_index=True, max_length=24),
+        ),
+        migrations.AlterField(
+            model_name="savedexporttemplate", name="module",
+            field=models.CharField(choices=[("farmers", "Farmers"), ("customers", "Customers"), ("collections", "Milk collections"), ("payments", "Payments"), ("expenses", "Expenses"), ("inventory", "Inventory"), ("suppliers", "Suppliers")], max_length=24),
+        ),
+        migrations.AlterField(
+            model_name="scheduledexport", name="module",
+            field=models.CharField(choices=[("farmers", "Farmers"), ("customers", "Customers"), ("collections", "Milk collections"), ("payments", "Payments"), ("expenses", "Expenses"), ("inventory", "Inventory"), ("suppliers", "Suppliers")], max_length=24),
+        ),
     ]
 
     operations = [
