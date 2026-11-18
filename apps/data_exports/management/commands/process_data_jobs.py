@@ -11,7 +11,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.data_exports.models import ExportJob, ImportBatch, ScheduledExport
-from apps.data_exports.queue import process_export_job, queue_export
+from apps.data_exports.queue import process_export_job, queue_export, _notify_export_ready
 from apps.organizations.models import Membership
 from apps.parties.models import Customer, Farmer
 
@@ -96,6 +96,11 @@ class Command(BaseCommand):
         for batch in ImportBatch.objects.filter(status=ImportBatch.Status.UPLOADED).order_by("created_at")[:remaining]:
             process_import_batch(batch)
             self.stdout.write(f"Import {batch.pk}: {batch.status} ({batch.imported_rows} imported, {batch.failed_rows} failed)")
+        for pending_notice in ExportJob.objects.filter(
+            status__in=[ExportJob.Status.COMPLETED, ExportJob.Status.FAILED],
+            notification_sent_at__isnull=True,
+        ).select_related("requested_by")[:limit]:
+            _notify_export_ready(pending_notice)
         now = timezone.now()
         for expired in ExportJob.objects.filter(expires_at__lte=now).exclude(status=ExportJob.Status.EXPIRED):
             if expired.file:
