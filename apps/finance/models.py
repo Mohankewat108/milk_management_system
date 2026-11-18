@@ -124,7 +124,7 @@ class Account(UUIDModel, TimeStampedModel):
         constraints = [
             models.UniqueConstraint(fields=["organization", "code"], name="uniq_account_code_org"),
         ]
-        indexes = [models.Index(fields=["organization", "account_type", "is_active"])]
+        indexes = [models.Index(fields=["organization", "account_type", "is_active"], name="fin_acc_org_type_active")]
 
     def __str__(self):
         return f"{self.code} · {self.name}"
@@ -145,8 +145,8 @@ class AccountingPeriod(UUIDModel, TimeStampedModel):
     class Meta:
         ordering = ["-starts_on"]
         constraints = [
-            models.UniqueConstraint(fields=["organization", "code"], name="uniq_accounting_period_code_org"),
-            models.CheckConstraint(condition=Q(ends_on__gte=models.F("starts_on")), name="accounting_period_valid_dates"),
+            models.UniqueConstraint(fields=["organization", "code"], name="uniq_acct_period_org_code"),
+            models.CheckConstraint(condition=Q(ends_on__gte=models.F("starts_on")), name="acct_period_valid_dates"),
         ]
 
     def __str__(self):
@@ -176,12 +176,12 @@ class JournalEntry(UUIDModel, TimeStampedModel):
     class Meta:
         ordering = ["-entry_date", "-created_at"]
         constraints = [
-            models.UniqueConstraint(fields=["organization", "reference"], name="uniq_journal_reference_org"),
-            models.UniqueConstraint(fields=["organization", "idempotency_key"], condition=~Q(idempotency_key=""), name="uniq_journal_idempotency_org"),
+            models.UniqueConstraint(fields=["organization", "reference"], name="uniq_journal_ref_org"),
+            models.UniqueConstraint(fields=["organization", "idempotency_key"], condition=~Q(idempotency_key=""), name="uniq_journal_idem_org"),
         ]
         indexes = [
-            models.Index(fields=["organization", "entry_date", "status"]),
-            models.Index(fields=["organization", "source_type", "source_id"]),
+            models.Index(fields=["organization", "entry_date", "status"], name="fin_jrn_org_date_status"),
+            models.Index(fields=["organization", "source_type", "source_id"], name="fin_jrn_org_source"),
         ]
 
     def save(self, *args, **kwargs):
@@ -209,9 +209,9 @@ class JournalLine(UUIDModel, TimeStampedModel):
     class Meta:
         ordering = ["line_number"]
         constraints = [
-            models.UniqueConstraint(fields=["entry", "line_number"], name="uniq_journal_line_number"),
-            models.CheckConstraint(condition=Q(debit__gte=0) & Q(credit__gte=0), name="journal_line_nonnegative"),
-            models.CheckConstraint(condition=(Q(debit__gt=0, credit=0) | Q(debit=0, credit__gt=0)), name="journal_line_one_side_only"),
+            models.UniqueConstraint(fields=["entry", "line_number"], name="uniq_journal_line_no"),
+            models.CheckConstraint(condition=Q(debit__gte=0) & Q(credit__gte=0), name="jline_nonnegative"),
+            models.CheckConstraint(condition=(Q(debit__gt=0, credit=0) | Q(debit=0, credit__gt=0)), name="jline_one_side_only"),
         ]
 
     def save(self, *args, **kwargs):
