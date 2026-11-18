@@ -4,7 +4,6 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db.models import Avg, Sum
 from django.utils import timezone
 
 from apps.collections.models import MilkCollection
