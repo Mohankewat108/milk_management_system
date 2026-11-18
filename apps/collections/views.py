@@ -101,9 +101,11 @@ def collection_create(request, organization_slug):
 @require_POST
 def approve_collection(request, organization_slug, collection_id):
     with transaction.atomic():
-        entry = MilkCollection.objects.select_for_update().get(
-            pk=collection_id, organization=request.organization
-        )
+        records = MilkCollection.objects.filter(organization=request.organization)
+        branch_ids = accessible_branch_ids(request.membership)
+        if branch_ids is not None:
+            records = records.filter(branch_id__in=branch_ids)
+        entry = get_object_or_404(records.select_for_update(), pk=collection_id)
         if entry.status != MilkCollection.Status.SUBMITTED:
             messages.error(request, "Only submitted collections can be approved.")
         else:
