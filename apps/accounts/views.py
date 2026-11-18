@@ -5,6 +5,7 @@ from django.contrib.auth.views import LoginView
 from django.core.cache import cache
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_http_methods, require_POST
 
 from .forms import EmailAuthenticationForm, UserRegistrationForm
@@ -16,6 +17,15 @@ class AccountLoginView(LoginView):
     redirect_authenticated_user = True
     max_attempts = 10
     lockout_seconds = 900
+
+    def get_default_redirect_url(self):
+        """
+        Send platform administrators to the central control centre.
+        Django's get_success_url() still honours a safe ?next= URL first.
+        """
+        if self.request.user.is_superuser:
+            return reverse("platform:dashboard")
+        return super().get_default_redirect_url()
 
     def rate_key(self):
         ip = self.request.META.get("REMOTE_ADDR", "unknown")
