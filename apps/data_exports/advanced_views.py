@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.files.base import ContentFile
 from django.db.models import Avg, Count, Sum
+from django.db.models.functions import TruncMonth
 from django.shortcuts import get_object_or_404, redirect, render
 from django.http import HttpResponse
 from django.utils import timezone
@@ -202,6 +203,7 @@ def reports_dashboard(request, organization_slug):
         "expenses_total": expenses.filter(status=Expense.Status.APPROVED).aggregate(v=Sum("amount"))["v"] or 0,
         "low_stock_count": inventory.filter(current_stock__lte=models_field("reorder_level")).count(),
         "collection_statuses": collections.values("status").annotate(total=Count("id")).order_by("status"),
+        "monthly_collections": approved.annotate(month=TruncMonth("collected_at")).values("month").annotate(litres=Sum("quantity_litres"), value=Sum("total_amount"), records=Count("id")).order_by("month"),
     }
     return render(request, "data_exports/reports.html", context)
 
