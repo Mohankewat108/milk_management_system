@@ -78,3 +78,34 @@ class PlatformMultiFarmTests(TestCase):
         self.assertEqual(first.customers.count(), 2)
         self.assertEqual(second.customers.count(), 1)
         self.assertNotEqual(first.pk, second.pk)
+
+
+    def test_platform_owner_can_suspend_farm_with_reason_and_audit(self):
+        organization = Organization.objects.create(
+            owner=self.farm_owner, name="Audit Dairy", slug="audit-dairy"
+        )
+        self.client.force_login(self.platform_owner)
+        response = self.client.post(
+            reverse("platform:organization_set_status", kwargs={"organization_id": organization.pk}),
+            {"status": Organization.Status.SUSPENDED, "reason": "Outstanding subscription invoice"},
+        )
+        self.assertRedirects(response, reverse("platform:dashboard"))
+        organization.refresh_from_db()
+        self.assertEqual(organization.status, Organization.Status.SUSPENDED)
+        from apps.audit.models import AuditEvent
+        self.assertTrue(AuditEvent.objects.filter(
+            organization=organization,
+            action="platform.organization.status_changed",
+        ).exists())
+
+    def test_platform_owner_status_change_requires_a_reason(self):
+        organization = Organization.objects.create(
+            owner=self.farm_owner, name="Reason Dairy", slug="reason-dairy"
+        )
+        self.client.force_login(self.platform_owner)
+        self.client.post(
+            reverse("platform:organization_set_status", kwargs={"organization_id": organization.pk}),
+            {"status": Organization.Status.SUSPENDED, "reason": ""},
+        )
+        organization.refresh_from_db()
+        self.assertEqual(organization.status, Organization.Status.TRIAL)
