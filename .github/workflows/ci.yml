@@ -7,7 +7,7 @@ on:
     branches: ["main"]
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: dairynexus-${{ github.workflow }}-${{ github.ref }}
@@ -73,3 +73,17 @@ jobs:
         run: coverage report
       - name: Dependency vulnerability audit
         run: pip-audit
+      - name: Commit generated initial migrations to this PR branch
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GITHUB_HEAD_REF: ${{ github.head_ref }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          find apps -path '*/migrations/0*.py' -print0 | xargs -0 -r git add
+          if ! git diff --cached --quiet; then
+            git commit -m 'Add generated initial Django migrations'
+            git push origin HEAD:"$GITHUB_HEAD_REF"
+          else
+            echo 'No generated migrations to commit.'
+          fi
