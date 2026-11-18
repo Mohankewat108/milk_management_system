@@ -25,7 +25,7 @@ def item_list(request, organization_slug):
     branch_ids = accessible_branch_ids(request.membership)
     if branch_ids is not None:
         items = items.filter(branch_id__in=branch_ids)
-    items = items.annotate(is_low=LessThanOrEqual(F("current_stock"), F("reorder_level")).order_by("name")
+    items = items.annotate(is_low=LessThanOrEqual(F("current_stock"), F("reorder_level"))).order_by("name")
     return render(request, "inventory/items.html", {"organization": organization, "items": items})
 
 
