@@ -3,7 +3,7 @@ from urllib.parse import urlparse
 
 from django.contrib.auth import get_user_model
 from django.core import mail
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from apps.organizations.models import Branch, Membership, Organization
@@ -260,3 +260,42 @@ class PlatformMultiFarmTests(TestCase):
         self.client.logout()
         self.assertEqual(self.client.get(second_path).status_code, 200)
         self.assertIsNone(second_invitation.revoked_at)
+
+
+    @override_settings(DJANGO_SITE_URL="https://dairynexus-test.app.github.dev")
+    def test_new_owner_invitation_uses_configured_canonical_site_url(self):
+        self.client.force_login(self.platform_owner)
+        response = self.client.post(
+            reverse("platform:organization_create"),
+            self.farm_form_data("Canonical URL Dairy", "canonical.owner@example.test"),
+        )
+        self.assertRedirects(response, reverse("platform:dashboard"))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn(
+            "https://dairynexus-test.app.github.dev/platform/invitations/",
+            mail.outbox[0].body,
+        )
+        self.assertNotIn("http://testserver/", mail.outbox[0].body)
+
+    @override_settings(DJANGO_SITE_URL="https://dairynexus-test.app.github.dev")
+    def test_resent_owner_invitation_uses_configured_canonical_site_url(self):
+        self.client.force_login(self.platform_owner)
+        self.client.post(
+            reverse("platform:organization_create"),
+            self.farm_form_data("Canonical Resend Dairy", "canonical.resend@example.test"),
+        )
+        organization = Organization.objects.get(name="Canonical Resend Dairy")
+        mail.outbox.clear()
+
+        response = self.client.post(reverse(
+            "platform:organization_resend_invitation",
+            kwargs={"organization_id": organization.pk},
+        ))
+
+        self.assertRedirects(response, reverse("platform:dashboard"))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn(
+            "https://dairynexus-test.app.github.dev/platform/invitations/",
+            mail.outbox[0].body,
+        )
+        self.assertNotIn("http://testserver/", mail.outbox[0].body)
