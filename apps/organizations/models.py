@@ -1,6 +1,5 @@
 from django.conf import settings
 from django.db import models
-import uuid
 
 from apps.core.models import TimeStampedModel, UUIDModel
 
