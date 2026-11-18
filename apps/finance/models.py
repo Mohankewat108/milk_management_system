@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 from django.db.models import Q
+from django.core.exceptions import ValidationError
 
 from apps.core.models import TimeStampedModel, UUIDModel
 from apps.organizations.models import Branch, Organization
@@ -183,6 +184,16 @@ class JournalEntry(UUIDModel, TimeStampedModel):
             models.Index(fields=["organization", "source_type", "source_id"]),
         ]
 
+    def save(self, *args, **kwargs):
+        if self.pk and JournalEntry.objects.filter(pk=self.pk, status=self.Status.POSTED).exists():
+            raise ValidationError("Posted journal entries are immutable; create a reversal instead.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        if self.status == self.Status.POSTED:
+            raise ValidationError("Posted journal entries cannot be deleted; create a reversal instead.")
+        return super().delete(*args, **kwargs)
+
     def __str__(self):
         return self.reference
 
@@ -202,6 +213,16 @@ class JournalLine(UUIDModel, TimeStampedModel):
             models.CheckConstraint(condition=Q(debit__gte=0) & Q(credit__gte=0), name="journal_line_nonnegative"),
             models.CheckConstraint(condition=(Q(debit__gt=0, credit=0) | Q(debit=0, credit__gt=0)), name="journal_line_one_side_only"),
         ]
+
+    def save(self, *args, **kwargs):
+        if self.entry.status == JournalEntry.Status.POSTED:
+            raise ValidationError("Lines on a posted journal are immutable.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        if self.entry.status == JournalEntry.Status.POSTED:
+            raise ValidationError("Lines on a posted journal cannot be deleted.")
+        return super().delete(*args, **kwargs)
 
     def __str__(self):
         return f"{self.entry.reference} · {self.line_number}"
