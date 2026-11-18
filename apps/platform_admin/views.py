@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import secrets
+from datetime import timedelta
 
 from django.conf import settings
 from django.contrib import messages
@@ -273,7 +274,7 @@ def organization_resend_invitation(request, organization_id):
             invited_by=request.user,
             email=email,
             token_hash=hashlib.sha256(raw_token.encode("utf-8")).hexdigest(),
-            expires_at=timezone.now() + timezone.timedelta(hours=48),
+            expires_at=timezone.now() + timedelta(hours=48),
         )
     invite_path = reverse(
         "platform:owner_invitation_accept",
