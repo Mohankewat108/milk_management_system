@@ -75,6 +75,7 @@
  function apply(value){const dark=value==='dark'||(value==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);root.dataset.theme=dark?'dark':'light';if(theme)theme.value=value;try{localStorage.setItem('dairynexus-theme',value);}catch(e){}}
  const saved=(()=>{try{return localStorage.getItem('dairynexus-theme')||'system';}catch(e){return 'system';}})();apply(saved);
  if(theme)theme.addEventListener('change',()=>apply(theme.value));
+ if(toggle&&!sidebar)toggle.hidden=true;
  if(toggle&&sidebar){
    const backdrop=document.createElement('button');
    backdrop.type='button';backdrop.className='mobile-nav-backdrop';backdrop.setAttribute('aria-label','Close navigation');backdrop.setAttribute('tabindex','-1');
