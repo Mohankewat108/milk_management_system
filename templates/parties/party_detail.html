@@ -1,107 +1,125 @@
 {% extends "base.html" %}
-{% load locale_dates %}
+{% load i18n locale_dates %}
 {% block title %}{{ party.full_name }} · {{ organization.name }}{% endblock %}
 {% block content %}
-<div class="page-heading">
-  <div>
-    <div class="eyebrow">{{ organization.name }} · {{ kind|title }} profile</div>
-    <h1>{{ party.full_name }}</h1>
-    <p class="muted">{{ party.code }} · {{ party.branch.name|default:"No branch assigned" }} · {{ party.is_active|yesno:"Active,Inactive" }}</p>
-  </div>
-  {% if can_manage_parties %}
-  <div class="actions">
-    <a class="button" href="{% if kind == 'customer' %}{% url 'parties:customer_edit' organization.slug party.pk %}{% else %}{% url 'parties:farmer_edit' organization.slug party.pk %}{% endif %}">Edit profile</a>
-    <form method="post" action="{% if kind == 'customer' %}{% url 'parties:customer_trash' organization.slug party.pk %}{% else %}{% url 'parties:farmer_trash' organization.slug party.pk %}{% endif %}">
-      {% csrf_token %}<button class="button button-danger" type="submit" onclick="return confirm('Move this record to Trash? Its milk and payment history will be retained.')">Move to Trash</button>
-    </form>
-  </div>
-  {% endif %}
-  <a class="button button-secondary" href="{% if kind == 'customer' %}{% url 'parties:customers' organization.slug %}{% else %}{% url 'parties:farmers' organization.slug %}{% endif %}">Back to directory</a>
-</div>
-
-<section class="panel">
-  <h2>Profile information</h2>
-  <div class="kpi-grid">
-    <div><span class="muted">Phone</span><strong>{{ party.phone|default:"—" }}</strong></div>
-    <div><span class="muted">Email</span><strong>{{ party.email|default:"—" }}</strong></div>
-    <div><span class="muted">Address</span><strong>{{ party.address|default:"—" }}</strong></div>
-    <div><span class="muted">Registered</span><strong>{{ party.created_at|local_date }}</strong></div>
-    <div><span class="muted">Portal account</span><strong>{% if party.user %}Linked{% else %}Not linked{% endif %}</strong></div>
-  </div>
-</section>
-
-<section class="panel">
-  <h2>Approved milk performance</h2>
-  <p class="muted">{% if kind == "customer" %}Milk recorded against this customer.{% else %}Milk supplied by this farmer.{% endif %} Only approved collections count in confirmed quantity and value totals.</p>
-  <div class="kpi-grid">
-    <div><span class="muted">Today</span><strong>{{ metrics.today_litres|floatformat:3 }} L</strong></div>
-    <div><span class="muted">This week</span><strong>{{ metrics.week_litres|floatformat:3 }} L</strong></div>
-    <div><span class="muted">This month</span><strong>{{ metrics.month_litres|floatformat:3 }} L</strong></div>
-    <div><span class="muted">Previous month</span><strong>{{ metrics.previous_month_litres|floatformat:3 }} L</strong></div>
-    <div><span class="muted">Lifetime total</span><strong>{{ metrics.lifetime_litres|floatformat:3 }} L</strong></div>
-    <div><span class="muted">Average / collection day</span><strong>{{ metrics.average_per_collection_day|floatformat:3 }} L</strong></div>
-    <div><span class="muted">Active collection days</span><strong>{{ metrics.active_collection_days }}</strong></div>
-    <div><span class="muted">Collection average</span><strong>{{ metrics.average_litres|floatformat:3 }} L</strong></div>
-  </div>
-</section>
-
-<section class="panel">
-  <h2>Milk quality averages</h2>
-  <div class="kpi-grid">
-    <div><span class="muted">Average FAT</span><strong>{{ metrics.average_fat|default:"—"|floatformat:3 }}</strong></div>
-    <div><span class="muted">Average SNF</span><strong>{{ metrics.average_snf|default:"—"|floatformat:3 }}</strong></div>
-    <div><span class="muted">Average lactose</span><strong>{{ metrics.average_lactose|default:"—"|floatformat:3 }}</strong></div>
-  </div>
-</section>
-
-{% if can_view_finance %}
-<section class="panel">
-  <h2>Financial overview</h2>
-  <p class="muted">Collection value and completed payments are shown separately. A reconciled outstanding balance is not available from the current finance schema.</p>
-  <div class="kpi-grid">
-    <div><span class="muted">Approved collection value</span><strong>{{ currency }} {{ metrics.lifetime_value|floatformat:2 }}</strong></div>
-    <div><span class="muted">{{ payment_direction_label }}</span><strong>{{ currency }} {{ completed_payment_total|floatformat:2 }}</strong></div>
-  </div>
-</section>
-{% endif %}
-
-<section class="panel">
-  <h2>Collection history</h2>
-  {% if date_error %}<p class="alert error">{{ date_error }}</p>{% endif %}
-  <form class="search-form" method="get">
-    <label>From ({{ date_calendar }}) {% if date_calendar == "BS" %}<input type="text" inputmode="numeric" data-calendar-date data-calendar="bs" name="from" value="{{ date_from|local_date }}" placeholder="वर्ष-महिना-दिन">{% else %}<input type="date" name="from" value="{{ date_from|date:'Y-m-d' }}">{% endif %}</label>
-    <label>To ({{ date_calendar }}) {% if date_calendar == "BS" %}<input type="text" inputmode="numeric" data-calendar-date data-calendar="bs" name="to" value="{{ date_to|local_date }}" placeholder="वर्ष-महिना-दिन">{% else %}<input type="date" name="to" value="{{ date_to|date:'Y-m-d' }}">{% endif %}</label>
-    <button class="button button-secondary" type="submit">Apply dates</button>
-  </form>
-  <p class="muted">Selected period: {{ selected_metrics.litres|default:0|floatformat:3 }} L · {{ currency }} {{ selected_metrics.value|default:0|floatformat:2 }} approved collection value</p>
-  <div class="table-wrap"><table>
-    <thead><tr><th>Date</th><th>Reference</th><th>Branch</th><th>Quantity</th><th>FAT</th><th>SNF</th><th>Rate</th><th>Value</th><th>Status</th><th>Recorded by</th></tr></thead>
-    <tbody>
-    {% for item in history %}
-      <tr><td>{{ item.collected_at|local_date }}</td><td>{{ item.reference }}</td><td>{{ item.branch.name }}</td><td>{{ item.quantity_litres|floatformat:3 }} L</td><td>{{ item.fat }}</td><td>{{ item.snf }}</td><td>{{ item.milk_rate }}</td><td>{{ currency }} {{ item.total_amount }}</td><td>{{ item.get_status_display }}</td><td>{{ item.recorded_by.get_full_name|default:item.recorded_by.username }}</td></tr>
-    {% empty %}<tr><td colspan="10">No collection records match this date range.</td></tr>{% endfor %}
-    </tbody>
-  </table></div>
-  {% if history.has_other_pages %}
-  <nav class="pagination" aria-label="Collection pages">
-    {% if history.has_previous %}<a href="?from={{ date_from|local_date }}&to={{ date_to|local_date }}&page={{ history.previous_page_number }}">Previous</a>{% endif %}
-    <span>Page {{ history.number }} of {{ history.paginator.num_pages }}</span>
-    {% if history.has_next %}<a href="?from={{ date_from|local_date }}&to={{ date_to|local_date }}&page={{ history.next_page_number }}">Next</a>{% endif %}
+<div class="profile-page">
+  <nav class="breadcrumbs profile-breadcrumbs" aria-label="{% translate 'Breadcrumb' %}">
+    <a href="{% url 'business:workspace' %}">{% translate "Workspaces" %}</a>
+    <span aria-hidden="true">/</span>
+    <a href="{% url 'business:dashboard' organization.slug %}">{{ organization.name }}</a>
+    <span aria-hidden="true">/</span>
+    <a href="{% if kind == 'customer' %}{% url 'parties:customers' organization.slug %}{% else %}{% url 'parties:farmers' organization.slug %}{% endif %}">{% if kind == "customer" %}{% translate "Customers" %}{% else %}{% translate "Farmers" %}{% endif %}</a>
+    <span aria-hidden="true">/</span>
+    <span aria-current="page">{{ party.full_name }}</span>
   </nav>
-  {% endif %}
-</section>
 
-{% if can_view_finance %}
-<section class="panel">
-  <h2>Payment history</h2>
-  <div class="table-wrap"><table>
-    <thead><tr><th>Date</th><th>Reference</th><th>Direction</th><th>Method</th><th>Amount</th><th>Status</th></tr></thead>
-    <tbody>
-    {% for item in payments %}
-      <tr><td>{{ item.paid_at|local_date|default:"—" }}</td><td>{{ item.reference }}</td><td>{{ item.get_direction_display }}</td><td>{{ item.get_method_display }}</td><td>{{ item.currency }} {{ item.amount }}</td><td>{{ item.get_status_display }}</td></tr>
-    {% empty %}<tr><td colspan="6">No payments recorded.</td></tr>{% endfor %}
-    </tbody>
-  </table></div>
-</section>
-{% endif %}
+  <header class="profile-hero">
+    <div class="profile-identity">
+      <div class="profile-avatar" aria-hidden="true">{{ party.full_name|slice:":1"|upper }}</div>
+      <div class="profile-title-block">
+        <div class="eyebrow">{{ organization.name }} · {% if kind == "customer" %}{% translate "CUSTOMER PROFILE" %}{% else %}{% translate "FARMER PROFILE" %}{% endif %}</div>
+        <h1>{{ party.full_name }}</h1>
+        <div class="profile-meta">
+          <span class="profile-code">{{ party.code }}</span>
+          <span class="profile-meta-dot" aria-hidden="true"></span>
+          <span>{{ party.branch.name|default:_("No branch assigned") }}</span>
+          <span class="status {% if party.is_active %}active{% else %}inactive{% endif %}">{% if party.is_active %}{% translate "Active" %}{% else %}{% translate "Inactive" %}{% endif %}</span>
+        </div>
+      </div>
+    </div>
+    <div class="profile-actions">
+      {% if can_manage_parties %}
+      <a class="button" href="{% if kind == 'customer' %}{% url 'parties:customer_edit' organization.slug party.pk %}{% else %}{% url 'parties:farmer_edit' organization.slug party.pk %}{% endif %}">{% translate "Edit profile" %}</a>
+      <form method="post" action="{% if kind == 'customer' %}{% url 'parties:customer_trash' organization.slug party.pk %}{% else %}{% url 'parties:farmer_trash' organization.slug party.pk %}{% endif %}" onsubmit="return confirm('{% translate "Move this record to Trash? Its milk and payment history will be retained." %}')">
+        {% csrf_token %}<button class="button button-danger" type="submit">{% translate "Move to Trash" %}</button>
+      </form>
+      {% endif %}
+      <a class="button button-secondary" href="{% if kind == 'customer' %}{% url 'parties:customers' organization.slug %}{% else %}{% url 'parties:farmers' organization.slug %}{% endif %}">{% translate "Back to directory" %}</a>
+    </div>
+  </header>
+
+  <section class="profile-section panel" aria-labelledby="profile-contact-title">
+    <div class="profile-section-heading">
+      <div><span class="profile-section-kicker">{% translate "OVERVIEW" %}</span><h2 id="profile-contact-title">{% translate "Contact information" %}</h2></div>
+      <span class="profile-section-icon" aria-hidden="true">⌁</span>
+    </div>
+    <div class="profile-contact-grid">
+      <div class="profile-contact-item"><span class="profile-contact-icon" aria-hidden="true">☎</span><div><span class="profile-field-label">{% translate "Phone number" %}</span><strong>{{ party.phone|default:"—" }}</strong></div></div>
+      <div class="profile-contact-item"><span class="profile-contact-icon" aria-hidden="true">✉</span><div><span class="profile-field-label">{% translate "Email address" %}</span><strong class="profile-break">{{ party.email|default:"—" }}</strong></div></div>
+      <div class="profile-contact-item"><span class="profile-contact-icon" aria-hidden="true">⌖</span><div><span class="profile-field-label">{% translate "Address" %}</span><strong>{{ party.address|default:"—" }}</strong></div></div>
+      <div class="profile-contact-item"><span class="profile-contact-icon" aria-hidden="true">▦</span><div><span class="profile-field-label">{% translate "Registered on" %}</span><strong>{{ party.created_at|local_date }}</strong></div></div>
+      <div class="profile-contact-item"><span class="profile-contact-icon" aria-hidden="true">◎</span><div><span class="profile-field-label">{% translate "Customer portal" %}</span><strong>{% if party.user %}<span class="profile-inline-status linked">{% translate "Account linked" %}</span>{% else %}<span class="profile-inline-status unlinked">{% translate "Not linked" %}</span>{% endif %}</strong></div></div>
+    </div>
+  </section>
+
+  <section class="profile-section" aria-labelledby="profile-performance-title">
+    <div class="profile-section-heading profile-section-heading-outside">
+      <div><span class="profile-section-kicker">{% translate "PERFORMANCE" %}</span><h2 id="profile-performance-title">{% translate "Milk performance" %}</h2><p>{% if kind == "customer" %}{% translate "Approved milk collections recorded for this customer." %}{% else %}{% translate "Approved milk supplied by this farmer." %}{% endif %}</p></div>
+      <span class="profile-period-note">{% translate "Verified collections only" %}</span>
+    </div>
+    <div class="profile-metric-grid">
+      <article class="profile-metric-card metric-today"><span class="profile-metric-label">{% translate "Today" %}</span><strong>{{ metrics.today_litres|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">{% translate "Approved volume" %}</span></article>
+      <article class="profile-metric-card"><span class="profile-metric-label">{% translate "This week" %}</span><strong>{{ metrics.week_litres|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">{% translate "Since Monday" %}</span></article>
+      <article class="profile-metric-card"><span class="profile-metric-label">{% translate "This month" %}</span><strong>{{ metrics.month_litres|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">{% translate "Current month" %}</span></article>
+      <article class="profile-metric-card"><span class="profile-metric-label">{% translate "Previous month" %}</span><strong>{{ metrics.previous_month_litres|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">{% translate "Last month" %}</span></article>
+      <article class="profile-metric-card metric-highlight"><span class="profile-metric-label">{% translate "Lifetime volume" %}</span><strong>{{ metrics.lifetime_litres|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">{% translate "All approved collections" %}</span></article>
+      <article class="profile-metric-card"><span class="profile-metric-label">{% translate "Average per collection" %}</span><strong>{{ metrics.average_litres|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">{% translate "Average quantity" %}</span></article>
+      <article class="profile-metric-card"><span class="profile-metric-label">{% translate "Collection days" %}</span><strong>{{ metrics.active_collection_days }}</strong><span class="profile-metric-foot">{% translate "Days with approved milk" %}</span></article>
+      <article class="profile-metric-card"><span class="profile-metric-label">{% translate "Daily average" %}</span><strong>{{ metrics.average_per_collection_day|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">{% translate "Per active day" %}</span></article>
+    </div>
+  </section>
+
+  <section class="profile-section panel" aria-labelledby="profile-quality-title">
+    <div class="profile-section-heading"><div><span class="profile-section-kicker">{% translate "QUALITY MONITORING" %}</span><h2 id="profile-quality-title">{% translate "Milk quality averages" %}</h2><p>{% translate "Average readings from approved collections." %}</p></div></div>
+    <div class="profile-quality-grid">
+      <div class="profile-quality-item"><span class="quality-symbol">FAT</span><div><strong>{{ metrics.average_fat|default_if_none:"—"|floatformat:3 }}</strong><span>{% translate "Average fat content" %}</span></div></div>
+      <div class="profile-quality-item"><span class="quality-symbol">SNF</span><div><strong>{{ metrics.average_snf|default_if_none:"—"|floatformat:3 }}</strong><span>{% translate "Average solids-not-fat" %}</span></div></div>
+      <div class="profile-quality-item"><span class="quality-symbol">LAC</span><div><strong>{{ metrics.average_lactose|default_if_none:"—"|floatformat:3 }}</strong><span>{% translate "Average lactose" %}</span></div></div>
+    </div>
+  </section>
+
+  {% if can_view_finance %}
+  <section class="profile-section panel" aria-labelledby="profile-finance-title">
+    <div class="profile-section-heading"><div><span class="profile-section-kicker">{% translate "FINANCIAL SUMMARY" %}</span><h2 id="profile-finance-title">{% translate "Financial overview" %}</h2><p>{% translate "Collection value and completed payments are presented separately." %}</p></div></div>
+    <div class="profile-finance-grid">
+      <div><span>{% translate "Approved collection value" %}</span><strong>{{ currency }} {{ metrics.lifetime_value|floatformat:2 }}</strong></div>
+      <div><span>{{ payment_direction_label }}</span><strong>{{ currency }} {{ completed_payment_total|floatformat:2 }}</strong></div>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="profile-section panel" aria-labelledby="profile-history-title">
+    <div class="profile-section-heading"><div><span class="profile-section-kicker">{% translate "ACTIVITY" %}</span><h2 id="profile-history-title">{% translate "Collection history" %}</h2><p>{% translate "Review milk records for a selected date range." %}</p></div></div>
+    {% if date_error %}<p class="alert error" role="alert">{{ date_error }}</p>{% endif %}
+    <form class="profile-date-filter" method="get">
+      <label>{% translate "From" %} ({{ date_calendar }}) {% if date_calendar == "BS" %}<input type="text" inputmode="numeric" data-calendar-date data-calendar="bs" name="from" value="{{ date_from|local_date }}" placeholder="वर्ष-महिना-दिन">{% else %}<input type="date" name="from" value="{{ date_from|date:'Y-m-d' }}">{% endif %}</label>
+      <label>{% translate "To" %} ({{ date_calendar }}) {% if date_calendar == "BS" %}<input type="text" inputmode="numeric" data-calendar-date data-calendar="bs" name="to" value="{{ date_to|local_date }}" placeholder="वर्ष-महिना-दिन">{% else %}<input type="date" name="to" value="{{ date_to|date:'Y-m-d' }}">{% endif %}</label>
+      <button class="button button-secondary" type="submit">{% translate "Apply dates" %}</button>
+    </form>
+    <div class="profile-summary-strip"><span>{% translate "Selected period" %}</span><strong>{{ selected_metrics.litres|default:0|floatformat:3 }} L</strong><span>{% translate "Approved collection value" %}</span><strong>{{ currency }} {{ selected_metrics.value|default:0|floatformat:2 }}</strong></div>
+    <div class="table-wrap profile-table-wrap"><table>
+      <thead><tr><th>{% translate "Date" %}</th><th>{% translate "Reference" %}</th><th>{% translate "Branch" %}</th><th>{% translate "Quantity" %}</th><th>{% translate "FAT" %}</th><th>{% translate "SNF" %}</th><th>{% translate "Rate" %}</th><th>{% translate "Value" %}</th><th>{% translate "Status" %}</th><th>{% translate "Recorded by" %}</th></tr></thead>
+      <tbody>{% for item in history %}
+        <tr><td>{{ item.collected_at|local_date }}</td><td>{{ item.reference }}</td><td>{{ item.branch.name }}</td><td>{{ item.quantity_litres|floatformat:3 }} L</td><td>{{ item.fat|default:"—" }}</td><td>{{ item.snf|default:"—" }}</td><td>{{ item.milk_rate }}</td><td>{{ currency }} {{ item.total_amount }}</td><td><span class="tag {{ item.status }}">{{ item.get_status_display }}</span></td><td>{{ item.recorded_by.get_full_name|default:item.recorded_by.username }}</td></tr>
+      {% empty %}<tr><td colspan="10" class="profile-empty-cell">{% translate "No collection records match this date range." %}</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% if history.has_other_pages %}<nav class="pagination" aria-label="{% translate 'Collection pages' %}">
+      {% if history.has_previous %}<a href="?from={{ date_from|local_date|urlencode }}&to={{ date_to|local_date|urlencode }}&page={{ history.previous_page_number }}">{% translate "Previous" %}</a>{% endif %}
+      <span>{% translate "Page" %} {{ history.number }} {% translate "of" %} {{ history.paginator.num_pages }}</span>
+      {% if history.has_next %}<a href="?from={{ date_from|local_date|urlencode }}&to={{ date_to|local_date|urlencode }}&page={{ history.next_page_number }}">{% translate "Next" %}</a>{% endif %}
+    </nav>{% endif %}
+  </section>
+
+  {% if can_view_finance %}
+  <section class="profile-section panel" aria-labelledby="profile-payment-title">
+    <div class="profile-section-heading"><div><span class="profile-section-kicker">{% translate "ACCOUNT ACTIVITY" %}</span><h2 id="profile-payment-title">{% translate "Payment history" %}</h2><p>{% translate "Completed and pending transactions associated with this profile." %}</p></div></div>
+    <div class="table-wrap profile-table-wrap"><table>
+      <thead><tr><th>{% translate "Date" %}</th><th>{% translate "Reference" %}</th><th>{% translate "Direction" %}</th><th>{% translate "Method" %}</th><th>{% translate "Amount" %}</th><th>{% translate "Status" %}</th></tr></thead>
+      <tbody>{% for item in payments %}
+        <tr><td>{{ item.paid_at|local_date|default:"—" }}</td><td>{{ item.reference }}</td><td>{{ item.get_direction_display }}</td><td>{{ item.get_method_display }}</td><td>{{ item.currency }} {{ item.amount }}</td><td><span class="tag {{ item.status }}">{{ item.get_status_display }}</span></td></tr>
+      {% empty %}<tr><td colspan="6" class="profile-empty-cell">{% translate "No payments recorded." %}</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </section>
+  {% endif %}
+</div>
 {% endblock %}
