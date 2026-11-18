@@ -1,1 +1,69 @@
-{% extends "base.html" %}{% block title %}Platform overview | DairyNexus{% endblock %}{% block content %}<div class="page-heading"><div><div class="eyebrow">PLATFORM ADMINISTRATION</div><h1>Platform overview</h1><p class="muted">Visible only to platform superusers.</p></div></div><div class="kpi-grid"><div class="kpi"><span>Organisations</span><strong>{{ organization_count }}</strong></div><div class="kpi"><span>Active businesses</span><strong>{{ active_organizations }}</strong></div><div class="kpi"><span>Suspended</span><strong>{{ suspended_organizations }}</strong></div><div class="kpi"><span>Users</span><strong>{{ user_count }}</strong></div><div class="kpi"><span>Subscriptions</span><strong>{{ subscription_count }}</strong></div></div><section class="panel table-wrap"><h2>Recently registered organisations</h2><table><thead><tr><th>Business</th><th>Owner</th><th>Status</th><th>Members</th><th>Created</th></tr></thead><tbody>{% for org in organizations %}<tr><td>{{ org.name }}</td><td>{{ org.owner.email }}</td><td>{{ org.get_status_display }}</td><td>{{ org.member_count }}</td><td>{{ org.created_at|date:"Y-m-d" }}</td></tr>{% empty %}<tr><td colspan="5">No organisations registered.</td></tr>{% endfor %}</tbody></table></section>{% endblock %}
+{% extends "base.html" %}
+{% block title %}Platform control centre | DairyNexus{% endblock %}
+{% block content %}
+<section class="page-heading">
+  <div>
+    <div class="eyebrow">SAAS PLATFORM CONTROL</div>
+    <h1>Platform control centre</h1>
+    <p class="muted">Monitor every registered dairy business from one central administration workspace.</p>
+  </div>
+  <a class="button" href="{% url 'platform:organization_create' %}">Create dairy farm</a>
+</section>
+<div class="kpi-grid">
+  <div class="kpi"><span>Total dairy farms</span><strong>{{ organization_count }}</strong></div>
+  <div class="kpi"><span>Active farms</span><strong>{{ active_organizations }}</strong></div>
+  <div class="kpi"><span>Trial farms</span><strong>{{ trial_organizations }}</strong></div>
+  <div class="kpi"><span>Suspended farms</span><strong>{{ suspended_organizations }}</strong></div>
+  <div class="kpi"><span>Platform accounts</span><strong>{{ user_count }}</strong></div>
+  <div class="kpi"><span>Customers across farms</span><strong>{{ customer_count }}</strong></div>
+  <div class="kpi"><span>Subscriptions</span><strong>{{ subscription_count }}</strong></div>
+</div>
+<section class="panel table-wrap">
+  <div class="row-between">
+    <div><h2>Dairy farms</h2><p class="muted">Each row represents an independent tenant workspace.</p></div>
+    <a class="button button-secondary" href="{% url 'platform:organization_create' %}">Add a farm</a>
+  </div>
+  <div class="table-responsive">
+    <table>
+      <thead><tr><th>Farm / business</th><th>Owner</th><th>Status</th><th>Customers</th><th>Farmers</th><th>Team members</th><th>Registered</th><th>Farm controls</th></tr></thead>
+      <tbody>
+        {% for org in organizations %}
+        <tr>
+          <td><strong>{{ org.name }}</strong><br><span class="muted">{{ org.country }} · {{ org.currency }}</span></td>
+          <td>{{ org.owner.email }}{% if org.owner_invitation_pending %}<br><span class="tag">Invitation pending</span>{% endif %}</td>
+          <td><span class="status">{{ org.get_status_display }}</span></td>
+          <td>{{ org.customer_count }}</td>
+          <td>{{ org.farmer_count }}</td>
+          <td>{{ org.member_count }}</td>
+          <td>{{ org.created_at|date:"Y-m-d" }}</td>
+          <td>
+            {% if org.owner_invitation_pending %}
+            <form method="post" action="{% url 'platform:organization_resend_invitation' org.id %}" class="stack-sm">
+              {% csrf_token %}
+              <button class="button button-secondary" type="submit">Resend invitation</button>
+            </form>
+            {% endif %}
+            {% if org.status != "closed" %}
+            <form method="post" action="{% url 'platform:organization_set_status' org.id %}" class="stack-sm">
+              {% csrf_token %}
+              {% if org.status == "suspended" %}
+              <input type="hidden" name="status" value="active">
+              <input type="text" name="reason" aria-label="Reason for reactivation" placeholder="Reason for reactivation" required>
+              <button class="button button-secondary" type="submit">Reactivate</button>
+              {% else %}
+              <input type="hidden" name="status" value="suspended">
+              <input type="text" name="reason" aria-label="Reason for suspension" placeholder="Reason for suspension" required>
+              <button class="button button-secondary" type="submit">Suspend</button>
+              {% endif %}
+            </form>
+            {% else %}<span class="muted">Closed</span>{% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8">No dairy farms have been registered yet. Create the first farm to get started.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
