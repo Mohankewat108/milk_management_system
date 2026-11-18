@@ -24,3 +24,11 @@ class StaffMembershipForm(forms.Form):
         self.fields["branches"].queryset = Branch.objects.filter(
             organization=organization, is_active=True
         )
+
+    def clean(self):
+        cleaned = super().clean()
+        role = cleaned.get("role")
+        branches = cleaned.get("branches")
+        if role not in {Membership.Role.OWNER, Membership.Role.ADMIN} and not branches:
+            self.add_error("branches", "Assign at least one branch to this staff role.")
+        return cleaned

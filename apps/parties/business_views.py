@@ -21,7 +21,7 @@ def customer_list(request, organization_slug):
     records = Customer.objects.filter(organization=org).select_related("branch").order_by("full_name")
     branch_ids = accessible_branch_ids(request.membership)
     if branch_ids is not None:
-        records = records.filter(Q(branch_id__in=branch_ids) | Q(branch__isnull=True))
+        records = records.filter(branch_id__in=branch_ids)
     term = request.GET.get("q", "").strip()
     if term:
         records = records.filter(Q(full_name__icontains=term) | Q(code__icontains=term) | Q(phone__icontains=term))
@@ -59,7 +59,7 @@ def farmer_list(request, organization_slug):
     records = Farmer.objects.filter(organization=org).select_related("branch").order_by("full_name")
     branch_ids = accessible_branch_ids(request.membership)
     if branch_ids is not None:
-        records = records.filter(Q(branch_id__in=branch_ids) | Q(branch__isnull=True))
+        records = records.filter(branch_id__in=branch_ids)
     term = request.GET.get("q", "").strip()
     if term:
         records = records.filter(Q(full_name__icontains=term) | Q(code__icontains=term) | Q(phone__icontains=term))

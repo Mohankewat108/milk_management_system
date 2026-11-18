@@ -1,8 +1,17 @@
+from .models import Membership
+
+
+ORGANISATION_WIDE_ROLES = {
+    Membership.Role.OWNER,
+    Membership.Role.ADMIN,
+}
+
+
 def accessible_branch_ids(membership):
-    """Return the member's branch scope, or None when the member has org-wide access."""
-    assigned = membership.branch_assignments.values_list("branch_id", flat=True)
-    values = list(assigned)
-    return values or None
+    """Return restricted branch IDs; organisation-wide roles get None."""
+    if membership.role in ORGANISATION_WIDE_ROLES:
+        return None
+    return list(membership.branch_assignments.values_list("branch_id", flat=True))
 
 
 def can_access_branch(membership, branch):
