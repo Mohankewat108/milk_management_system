@@ -29,6 +29,6 @@ class Migration(migrations.Migration):
                 ("organization", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="export_jobs", to="organizations.organization")),
                 ("requested_by", models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name="export_jobs", to=settings.AUTH_USER_MODEL)),
             ],
-            options={"ordering": ["-created_at"], "indexes": [models.Index(fields=["organization", "created_at"], name="data_exports_organiz_0d9c9f_idx"), models.Index(fields=["organization", "status"], name="data_exports_organiz_8d31b0_idx")]},
+            options={"ordering": ["-created_at"], "indexes": [models.Index(fields=["organization", "created_at"], name="dex_exp_org_created_idx"), models.Index(fields=["organization", "status"], name="dex_exp_org_status_idx")]},
         ),
     ]
