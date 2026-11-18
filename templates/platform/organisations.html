@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Organisations{% endblock %}
+{% block content %}
+<h1>Organisations</h1>
+<form method="get"><input name="q" value="{{ query }}" placeholder="Search organisation"><button type="submit">Search</button></form>
+<table>
+    <thead><tr><th>Name</th><th>Slug</th><th>Status</th><th>Action</th></tr></thead>
+    <tbody>
+    {% for organisation in organisations %}
+    <tr>
+        <td>{{ organisation.name }}</td><td>{{ organisation.slug }}</td><td>{{ organisation.get_status_display }}</td>
+        <td>
+            <form method="post" action="{% url 'platform_org_status' organisation.id %}">{% csrf_token %}
+                <select name="status">
+                    <option value="trial">Trial</option><option value="active">Active</option>
+                    <option value="suspended">Suspended</option><option value="deactivated">Deactivated</option>
+                </select>
+                <button type="submit">Update</button>
+            </form>
+        </td>
+    </tr>
+    {% empty %}<tr><td colspan="4">No organisations found.</td></tr>{% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,7 @@
+{% extends 'base.html' %}{% block content %}
+<h1>Support requests</h1><form method="post" class="form-card">{% csrf_token %}
+<label>Subject<input name="subject" required></label><label>Description<textarea name="description" required></textarea></label>
+<button type="submit">Submit request</button></form>
+<table><thead><tr><th>Subject</th><th>Status</th></tr></thead><tbody>
+{% for ticket in tickets %}<tr><td>{{ ticket.subject }}</td><td>{{ ticket.get_status_display }}</td></tr>
+{% empty %}<tr><td colspan="2">No support requests.</td></tr>{% endfor %}</tbody></table>{% endblock %}

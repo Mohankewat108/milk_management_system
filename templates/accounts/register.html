@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}Register — DairyNexus{% endblock %}
+{% block content %}
+<section class="auth-card">
+    <h1>Register a dairy business</h1>
+    <form method="post">{% csrf_token %}
+        {{ form.as_p }}
+        <label>Organisation name<input name="organisation_name" required></label>
+        <label>Organisation slug<input name="organisation_slug" pattern="[a-z0-9-]+" required></label>
+        <button type="submit">Create workspace</button>
+    </form>
+</section>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Record milk collection{% endblock %}
+{% block content %}
+<h1>Record milk collection</h1>
+<form method="post" class="form-card">{% csrf_token %}
+    <label>Branch<select name="branch" required><option value="">Select branch</option>{% for branch in branches %}<option value="{{ branch.id }}">{{ branch.name }}</option>{% endfor %}</select></label>
+    <label>Customer<select name="customer" required><option value="">Select customer</option>{% for customer in customers %}<option value="{{ customer.id }}">{{ customer.name }}</option>{% endfor %}</select></label>
+    <label>Milk litres<input type="number" name="milk_liters" step="0.001" min="0.001" required></label>
+    <label>SNF<input type="number" name="snf" step="0.001" min="0" value="0" required></label>
+    <label>FAT<input type="number" name="fat" step="0.001" min="0" value="0" required></label>
+    <label>Lacto<input type="number" name="lacto" step="0.001" min="0" value="0" required></label>
+    <label>Collection date<input type="date" name="collection_date" value="{{ today }}" required></label>
+    <button type="submit">Save collection</button>
+</form>
+{% endblock %}

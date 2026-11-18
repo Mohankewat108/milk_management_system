@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}Platform administration{% endblock %}
+{% block content %}
+<h1>Platform administration</h1>
+<section class="kpi-grid">
+    <article><span>Organisations</span><strong>{{ organisation_count }}</strong></article>
+    <article><span>Active</span><strong>{{ active_count }}</strong></article>
+    <article><span>Suspended</span><strong>{{ suspended_count }}</strong></article>
+    <article><span>Trial</span><strong>{{ trial_count }}</strong></article>
+</section>
+<p><a href="{% url 'platform_organisations' %}">Manage organisations</a></p>
+{% endblock %}

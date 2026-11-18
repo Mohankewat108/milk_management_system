@@ -1,0 +1,8 @@
+{% extends 'base.html' %}
+{% block title %}Milk collections{% endblock %}
+{% block content %}
+<div class="heading-row"><h1>Milk collections</h1><a href="{% url 'collection_create' %}">Record collection</a></div>
+<table><thead><tr><th>Date</th><th>Customer</th><th>Branch</th><th>Litres</th><th>SNF</th><th>FAT</th><th>Lacto</th><th>Rate</th><th>Total</th></tr></thead>
+<tbody>{% for collection in collections %}<tr><td>{{ collection.collection_date }}</td><td>{{ collection.customer.name }}</td><td>{{ collection.branch.name }}</td><td>{{ collection.milk_liters }}</td><td>{{ collection.snf }}</td><td>{{ collection.fat }}</td><td>{{ collection.lacto }}</td><td>{{ collection.milk_rate }}</td><td>{{ collection.total_amount }}</td></tr>
+{% empty %}<tr><td colspan="9">No collections.</td></tr>{% endfor %}</tbody></table>
+{% endblock %}

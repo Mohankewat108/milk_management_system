@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Pricing configuration</h1>
+<form method="post" class="form-card">{% csrf_token %}
+<label>Branch<select name="branch" required>{% for branch in branches %}<option value="{{ branch.id }}">{{ branch.name }}</option>{% endfor %}</select></label>
+<label>Effective from<input type="date" name="effective_from" value="{{ today }}" required></label>
+<label>SNF rate<input type="number" name="snf_rate" step="0.0001" min="0" required></label>
+<label>FAT rate<input type="number" name="fat_rate" step="0.0001" min="0" required></label>
+<label>Lacto rate<input type="number" name="lacto_rate" step="0.0001" min="0" required></label>
+<button type="submit">Save pricing</button></form>
+{% endblock %}

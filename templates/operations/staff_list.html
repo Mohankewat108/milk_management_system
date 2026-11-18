@@ -1,0 +1,5 @@
+{% extends 'base.html' %}{% block content %}
+<div class="heading-row"><h1>Staff</h1><a href="{% url 'staff_create' %}">Add staff</a></div>
+<table><thead><tr><th>Username</th><th>Employee code</th><th>Branch</th></tr></thead><tbody>
+{% for person in staff %}<tr><td>{{ person.user.username }}</td><td>{{ person.employee_code }}</td><td>{{ person.branch.name }}</td></tr>
+{% empty %}<tr><td colspan="3">No staff.</td></tr>{% endfor %}</tbody></table>{% endblock %}

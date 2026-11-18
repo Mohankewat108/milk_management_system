@@ -1,4 +1,43 @@
-Milk Management System
+# DairyNexus Django SaaS platform
+
+The original PHP application is preserved in this repository. DairyNexus is a separate Python/Django implementation with tenant-aware organisations, memberships, branches, customers, pricing, milk collections, platform organisation management, and audit records.
+
+## Windows local setup
+
+```powershell
+py -3.12 -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+Copy-Item .env.example .env
+python manage.py migrate
+python manage.py seed_demo
+python manage.py runserver
+```
+
+Open http://127.0.0.1:8000/login/
+
+Demo login: `demo-owner` / `DemoPass123!`
+
+## Tests
+
+```powershell
+python manage.py test
+python manage.py check
+```
+
+## Docker
+
+Set `POSTGRES_PASSWORD` and create `.env`, then:
+
+```powershell
+docker compose up --build
+```
+
+## Legacy migration
+
+The original `milk.sql` file is not present. Do not perform an import until the MySQL schema is supplied and reviewed. See `docs/legacy_audit.md`.
+
+## Legacy PHP application
 
 A full-stack web application for managing daily milk collection, customer records, and pricing calculations efficiently.
 

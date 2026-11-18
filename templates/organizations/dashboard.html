@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}{{ organisation.name }} — DairyNexus{% endblock %}
+{% block content %}
+<h1>{{ organisation.name }}</h1>
+<p class="muted">{{ membership.get_role_display }} workspace</p>
+<section class="kpi-grid">
+    <article><span>Active customers</span><strong>{{ customer_count }}</strong></article>
+    <article><span>Collections today</span><strong>{{ collection_count }}</strong></article>
+    <article><span>Milk today (litres)</span><strong>{{ milk_today }}</strong></article>
+    <article><span>Revenue today</span><strong>{{ revenue_today }}</strong></article>
+</section>
+<section class="actions">
+    <a href="{% url 'customer_create' %}">Add customer</a>
+    <a href="{% url 'collection_create' %}">Record milk collection</a>
+    <a href="{% url 'farmer_create' %}">Add farmer</a>
+    <a href="{% url 'staff_create' %}">Add staff</a>
+    <a href="{% url 'payment_create' %}">Record payment</a>
+    <a href="{% url 'expense_create' %}">Record expense</a>
+    <a href="{% url 'pricing_create' %}">Configure pricing</a>
+    <a href="{% url 'collections_csv' %}">Export CSV</a>
+</section>
+{% endblock %}
