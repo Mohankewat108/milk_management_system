@@ -16,6 +16,11 @@ class LocaleDateTests(SimpleTestCase):
         self.assertEqual(format_local_date(gregorian, "en"), "2024-04-13")
         self.assertEqual(parse_local_date("2024-04-13", "en"), gregorian)
 
+    def test_hindi_uses_gregorian_calendar(self):
+        gregorian = date(2024, 4, 13)
+        self.assertEqual(format_local_date(gregorian, "hi"), "2024-04-13")
+        self.assertEqual(parse_local_date("2024-04-13", "hi"), gregorian)
+
     def test_invalid_nepali_date_is_rejected(self):
         with self.assertRaises(ValueError):
             parse_local_date("2081-99-99", "ne")
