@@ -33,7 +33,7 @@ def _csv_safe(value):
 
 
 @login_required
-def customer_portal(request):
+def customer_portal(request, format=None):
     customer = Customer.objects.filter(user=request.user, is_active=True).select_related(
         "organization", "branch", "user"
     ).first()
@@ -79,7 +79,7 @@ def customer_portal(request):
         paid_at__date__gte=start_date, paid_at__date__lte=end_date
     )
 
-    if request.GET.get("format") == "csv":
+    if format == "csv" or request.GET.get("format") == "csv":
         response = HttpResponse(content_type="text/csv; charset=utf-8")
         response["Content-Disposition"] = (
             f'attachment; filename="customer-statement-{customer.code}-{start_date}-{end_date}.csv"'
