@@ -27,6 +27,16 @@ class MilkCollection(UUIDModel, TimeStampedModel):
     snf = models.DecimalField(max_digits=7, decimal_places=3)
     fat = models.DecimalField(max_digits=7, decimal_places=3)
     lactose = models.DecimalField(max_digits=7, decimal_places=3)
+    # Lactometer/density reading is optional because not every dairy measures it
+    # with every collection. Preserve unit/temperature context when supplied.
+    lactometer_reading = models.DecimalField(max_digits=8, decimal_places=3, null=True, blank=True)
+    milk_temperature_c = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    sample_reference = models.CharField(max_length=64, blank=True)
+    quality_test_method = models.CharField(max_length=80, blank=True)
+    tested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="tested_milk_collections",
+    )
     milk_rate = models.DecimalField(max_digits=12, decimal_places=2)
     total_amount = models.DecimalField(max_digits=14, decimal_places=2)
     pricing = models.ForeignKey(PricingConfiguration, on_delete=models.PROTECT, related_name="collections")
@@ -46,10 +56,15 @@ class MilkCollection(UUIDModel, TimeStampedModel):
                 condition=Q(snf__gte=0) & Q(fat__gte=0) & Q(lactose__gte=0),
                 name="collection_quality_nonnegative",
             ),
+            models.CheckConstraint(
+                condition=Q(lactometer_reading__isnull=True) | Q(lactometer_reading__gte=0),
+                name="collection_lactometer_nonnegative",
+            ),
         ]
         indexes = [
             models.Index(fields=["organization", "collected_at"]),
             models.Index(fields=["organization", "branch", "status"]),
+            models.Index(fields=["customer", "collected_at"]),
         ]
 
     def __str__(self) -> str:
