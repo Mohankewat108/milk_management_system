@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Create dairy farm | Platform | DairyNexus{% endblock %}
+{% block content %}
+<section class="content-card">
+  <div class="eyebrow">PLATFORM OWNER · TENANT ONBOARDING</div>
+  <h1>Create a dairy farm</h1>
+  <p class="muted">Create an independent dairy workspace and assign an existing account as its farm owner. The owner can later manage customers, farmers, employees and operations inside this farm.</p>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="form-grid">
+      {% for field in form %}
+      <div class="form-field">
+        <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span class="required"> *</span>{% endif %}</label>
+        {{ field }}
+        {% if field.help_text %}<small class="field-help">{{ field.help_text }}</small>{% endif %}
+        {% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+    <div class="form-actions">
+      <a class="button button-secondary" href="{% url 'platform:dashboard' %}">Cancel</a>
+      <button class="button" type="submit">Create dairy farm</button>
+    </div>
+  </form>
+</section>
+{% endblock %}
