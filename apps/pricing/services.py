@@ -66,7 +66,7 @@ def validate_quality_measurements(*, snf, fat, lactose, configuration):
 def active_pricing_on(*, organization, pricing_date, branch=None):
     """Return the effective branch rate or common tenant rate for a date."""
     candidates = PricingConfiguration.objects.filter(
-        organization=organization, is_approved=True, effective_from__lte=pricing_date,
+        organization=organization, is_approved=True, deleted_at__isnull=True, effective_from__lte=pricing_date,
     ).filter(Q(effective_to__isnull=True) | Q(effective_to__gte=pricing_date))
     if branch is not None:
         candidates = candidates.filter(Q(branch=branch) | Q(branch__isnull=True))
