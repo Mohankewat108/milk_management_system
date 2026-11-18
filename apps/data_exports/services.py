@@ -207,7 +207,7 @@ def _export_summary_rows(module, headers, totals):
     elif module in {"farmers", "customers", "suppliers"}:
         grand_total[0] = f"TOTAL RECORDS — {count}"
 
-    return [averages, grand_total]
+    return [grand_total, averages]
 
 def build_csv(module, queryset):
     buffer = io.StringIO(newline="")
