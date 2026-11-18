@@ -1,4 +1,4 @@
-{% load static i18n %}<!doctype html>
+{% load static i18n l10n %}<!doctype html>
 <html lang="{{ LANGUAGE_CODE|default:'en' }}">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,53 +10,67 @@
   <link rel="stylesheet" href="{% static 'css/app.css' %}">{% block extra_head %}{% endblock %}
 </head>
 <body>
-<a class="skip-link" href="#main-content">Skip to main content</a>
+<a class="skip-link" href="#main-content">{% translate "Skip to main content" %}</a>
 <header class="site-header">
-  <button class="icon-button mobile-menu-button" type="button" id="sidebar-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
-  <a class="brand" href="{% url 'home' %}" aria-label="DairyNexus home"><span class="brand-mark" aria-hidden="true">D</span><span class="brand-copy"><strong>DairyNexus</strong><small>DAIRY OPERATIONS</small></span></a>
-  <nav class="top-actions" aria-label="Primary navigation">
+  <button class="icon-button mobile-menu-button" type="button" id="sidebar-toggle" aria-label="{% translate 'Toggle navigation' %}" aria-expanded="false">☰</button>
+  <a class="brand" href="{% url 'home' %}" aria-label="{% translate 'DairyNexus home' %}"><span class="brand-mark" aria-hidden="true">D</span><span class="brand-copy"><strong>DairyNexus</strong><small>{% translate "DAIRY OPERATIONS" %}</small></span></a>
+  <nav class="top-actions" aria-label="{% translate 'Primary navigation' %}">
     {% if user.is_authenticated %}
-      <a href="{% url 'business:workspace' %}">Workspaces</a>
-      {% if user.is_superuser %}<a href="{% url 'platform:dashboard' %}">Platform</a>{% endif %}
-      <a href="{% url 'accounts:password_change' %}">Security</a>
-      <label class="toolbar-select"><span class="visually-hidden">Theme</span><select id="theme-select" aria-label="Theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
-      <label class="toolbar-select"><span class="visually-hidden">Language</span><form method="post" action="{% url 'set_language' %}" class="language-form">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><select name="language" aria-label="Language" onchange="this.form.submit()">{% get_current_language as CURRENT_LANGUAGE %}{% get_available_languages as LANGUAGES %}{% for code,name in LANGUAGES %}<option value="{{ code }}" {% if code == CURRENT_LANGUAGE %}selected{% endif %}>{{ name }}</option>{% endfor %}</select></form></label>
-      <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="link-button" type="submit">Sign out</button></form>
-    {% else %}<a href="{% url 'accounts:login' %}">Sign in</a><a class="button button-small" href="{% url 'accounts:register' %}">Create account</a>{% endif %}
+      <a href="{% url 'business:workspace' %}">{% translate "Workspaces" %}</a>
+      {% if user.is_superuser %}<a href="{% url 'platform:dashboard' %}">{% translate "Platform" %}</a>{% endif %}
+      <a href="{% url 'accounts:password_change' %}">{% translate "Security" %}</a>
+      <label class="toolbar-select"><span class="visually-hidden">{% translate "Theme" %}</span><select id="theme-select" aria-label="{% translate 'Theme' %}"><option value="system">{% translate "System" %}</option><option value="light">{% translate "Light" %}</option><option value="dark">{% translate "Dark" %}</option></select></label>
+      <label class="toolbar-select"><span class="visually-hidden">{% translate "Language" %}</span><form method="post" action="{% url 'set_language' %}" class="language-form">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><select name="language" aria-label="{% translate 'Language' %}" onchange="this.form.submit()">{% get_current_language as CURRENT_LANGUAGE %}{% get_available_languages as LANGUAGES %}{% for code,name in LANGUAGES %}<option value="{{ code }}" {% if code == CURRENT_LANGUAGE %}selected{% endif %}>{{ name }}</option>{% endfor %}</select></form></label>
+      <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="link-button" type="submit">{% translate "Sign out" %}</button></form>
+    {% else %}<a href="{% url 'accounts:login' %}">{% translate "Sign in" %}</a><a class="button button-small" href="{% url 'accounts:register' %}">{% translate "Create account" %}</a>{% endif %}
   </nav>
 </header>
 {% if user.is_authenticated %}
 <div class="workspace-shell">
-  <aside class="app-sidebar" id="app-sidebar" aria-label="Application navigation">
-    <div class="sidebar-tenant"><span class="context-dot"></span><span>Workspace navigation</span></div>
-    <div class="sidebar-title">Main menu</div><nav class="sidebar-nav">
-      <a href="{% url 'business:workspace' %}">▦ <span>Workspaces</span></a>
-      {% if request.organization %}<a href="{% url 'business:dashboard' request.organization.slug %}">⌂ <span>Dashboard</span></a>
-      <div class="sidebar-title">Farm management</div>
-      <a href="{% url 'parties:farmers' request.organization.slug %}">♙ <span>Farmers</span></a>
-      <a href="{% url 'parties:customers' request.organization.slug %}">♧ <span>Customers</span></a>
-      <a href="{% url 'collections:list' request.organization.slug %}">◉ <span>Milk collection</span></a>
-      {% if request.membership.role == 'owner' or request.membership.role == 'admin' %}<a href="{% url 'business:staff' request.organization.slug %}">♟ <span>Staff & access</span></a>{% endif %}
-      <div class="sidebar-title">Finance & operations</div>
-      {% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'accountant' %}<a href="{% url 'finance:list' request.organization.slug %}">▤ <span>Payments</span></a><a href="{% url 'finance:expenses' request.organization.slug %}">↗ <span>Expenses</span></a>{% endif %}
-      {% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'inventory_manager' %}<a href="{% url 'inventory:items' request.organization.slug %}">▣ <span>Inventory</span></a>{% endif %}
-      {% if request.membership.role == 'owner' or request.membership.role == 'admin' %}<a href="{% url 'business:trash' request.organization.slug %}">▱ <span>Central Trash</span></a><div class="sidebar-title">Configuration</div><a href="{% url 'business:branches' request.organization.slug %}">⌖ <span>Branches</span></a><a href="{% url 'pricing:settings' request.organization.slug %}">₹ <span>Milk rates</span></a><a href="{% url 'pricing:quality' request.organization.slug %}">◇ <span>Quality settings</span></a>{% endif %}
+  <aside class="app-sidebar" id="app-sidebar" aria-label="{% translate 'Application navigation' %}">
+    <div class="sidebar-tenant"><span class="context-dot"></span><span>{% translate "Workspace navigation" %}</span></div>
+    <div class="sidebar-title">{% translate "Main menu" %}</div><nav class="sidebar-nav">
+      <a href="{% url 'business:workspace' %}">▦ <span>{% translate "Workspaces" %}</span></a>
+      {% if request.organization %}<a href="{% url 'business:dashboard' request.organization.slug %}">⌂ <span>{% translate "Dashboard" %}</span></a>
+      <div class="sidebar-title">{% translate "Farm management" %}</div>
+      <a href="{% url 'parties:farmers' request.organization.slug %}">♙ <span>{% translate "Farmers" %}</span></a>
+      <a href="{% url 'parties:customers' request.organization.slug %}">♧ <span>{% translate "Customers" %}</span></a>
+      <a href="{% url 'collections:list' request.organization.slug %}">◉ <span>{% translate "Milk collection" %}</span></a>
+      {% if request.membership.role == 'owner' or request.membership.role == 'admin' %}<a href="{% url 'business:staff' request.organization.slug %}">♟ <span>{% translate "Staff & access" %}</span></a>{% endif %}
+      <div class="sidebar-title">{% translate "Finance & operations" %}</div>
+      {% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'accountant' %}<a href="{% url 'finance:list' request.organization.slug %}">▤ <span>{% translate "Payments" %}</span></a><a href="{% url 'finance:expenses' request.organization.slug %}">↗ <span>{% translate "Expenses" %}</span></a>{% endif %}
+      {% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'inventory_manager' %}<a href="{% url 'inventory:items' request.organization.slug %}">▣ <span>{% translate "Inventory" %}</span></a>{% endif %}
+      {% if request.membership.role == 'owner' or request.membership.role == 'admin' %}<a href="{% url 'business:trash' request.organization.slug %}">▱ <span>{% translate "Central Trash" %}</span></a><div class="sidebar-title">{% translate "Configuration" %}</div><a href="{% url 'business:branches' request.organization.slug %}">⌖ <span>{% translate "Branches" %}</span></a><a href="{% url 'pricing:settings' request.organization.slug %}">₹ <span>{% translate "Milk rates" %}</span></a><a href="{% url 'pricing:quality' request.organization.slug %}">◇ <span>{% translate "Quality settings" %}</span></a>{% endif %}
       {% endif %}
     </nav>
-    <div class="sidebar-footer"><span class="small muted">Signed in as</span><strong>{{ request.user.get_full_name|default:request.user.username }}</strong></div>
+    <div class="sidebar-footer"><span class="small muted">{% translate "Signed in as" %}</span><strong>{{ request.user.get_full_name|default:request.user.username }}</strong></div>
   </aside>
   <div class="workspace-main">
 {% endif %}
 <main id="main-content" class="page-shell">
-  {% if user.is_authenticated %}<div class="shell-context"><span class="context-dot" aria-hidden="true"></span>Secure dairy workspace</div>{% endif %}
+  {% localize on %}
+  {% if user.is_authenticated %}<div class="shell-context"><span class="context-dot" aria-hidden="true"></span>{% translate "Secure dairy workspace" %}</div>{% endif %}
   {% if messages %}<div class="messages" role="status" aria-live="polite">{% for message in messages %}<div class="alert {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
   {% block content %}{% endblock %}
+  {% endlocalize %}
 </main>
 {% if user.is_authenticated %}</div></div>{% endif %}
-<footer class="footer"><span class="footer-brand">DairyNexus</span><span>Dairy operations, made accountable.</span></footer>
+<footer class="footer"><span class="footer-brand">DairyNexus</span><span>{% translate "Dairy operations, made accountable." %}</span></footer>
 <script>
 (function(){
  const root=document.documentElement, theme=document.getElementById('theme-select'), toggle=document.getElementById('sidebar-toggle'), sidebar=document.getElementById('app-sidebar');
+ // Display native Devanagari digits in Nepali and Hindi without changing form values or stored data.
+ const lang=(root.lang||'en').toLowerCase().split('-')[0];
+ if(lang==='ne'||lang==='hi'){
+   const devanagari='०१२३४५६७८९';
+   const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode(node){
+     const parent=node.parentElement;
+     if(!parent||parent.closest('script,style,textarea,input,select,option,code,pre,[data-no-digit-localize]')) return NodeFilter.FILTER_REJECT;
+     return /[0-9]/.test(node.nodeValue)?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT;
+   }});
+   const nodes=[]; while(walker.nextNode()) nodes.push(walker.currentNode);
+   nodes.forEach(node=>{node.nodeValue=node.nodeValue.replace(/[0-9]/g,d=>devanagari[Number(d)]);});
+ }
  function apply(value){const dark=value==='dark'||(value==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);root.dataset.theme=dark?'dark':'light';if(theme)theme.value=value;try{localStorage.setItem('dairynexus-theme',value);}catch(e){}}
  const saved=(()=>{try{return localStorage.getItem('dairynexus-theme')||'system';}catch(e){return 'system';}})();apply(saved);
  if(theme)theme.addEventListener('change',()=>apply(theme.value));
