@@ -43,11 +43,17 @@ def save_export_template(request, organization_slug):
         messages.error(request, "Enter a name for this export template.")
         return redirect("data_exports:centre", organization_slug=organization_slug)
     filters = {key: request.POST.get(key, "") for key in ("branch", "status", "from", "to")}
-    template, created = SavedExportTemplate.objects.update_or_create(
-        organization=request.organization, name=name,
-        defaults={"created_by": request.user, "module": module, "file_format": file_format,
-                  "filters": filters, "is_shared": request.POST.get("is_shared") == "on"},
-    )
+    template = SavedExportTemplate.objects.filter(organization=request.organization, name=name).first()
+    if template and template.created_by_id != request.user.pk and request.membership.role not in {Membership.Role.OWNER, Membership.Role.ADMIN}:
+        raise PermissionDenied
+    created = template is None
+    if created:
+        template = SavedExportTemplate(organization=request.organization, name=name, created_by=request.user)
+    template.module = module
+    template.file_format = file_format
+    template.filters = filters
+    template.is_shared = request.POST.get("is_shared") == "on"
+    template.save()
     record_event(actor=request.user, organization=request.organization,
                  action="export_template.created" if created else "export_template.updated",
                  target=template, request=request)
