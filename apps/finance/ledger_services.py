@@ -5,6 +5,8 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+from apps.organizations.permissions import require_actor_branch_access
+
 from .models import Account, AccountingPeriod, JournalEntry, JournalLine
 
 
@@ -63,6 +65,7 @@ def post_journal_entry(
     Each line is a mapping with account, debit, credit and optional description.
     Amounts are expressed in the organisation's base currency.
     """
+    require_actor_branch_access(actor=actor, organization=organization, branch=branch)
     if branch.organization_id != organization.id:
         raise ValidationError("The branch must belong to the selected organisation.")
     if not branch.is_active:
