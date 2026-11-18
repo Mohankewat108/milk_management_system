@@ -4,8 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.files.base import ContentFile
-from django.db.models import Count, Sum
-from django.http import FileResponse, Http404, HttpResponse
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -63,7 +62,7 @@ def export_csv(request, organization_slug, module):
         if isinstance(exc, PermissionDenied):
             raise Http404
         messages.error(request, "; ".join(exc.messages) if hasattr(exc, "messages") else str(exc))
-        return redirect("business:exports", organization_slug=organization_slug)
+        return redirect("data_exports:centre", organization_slug=organization_slug)
 
     filename = f"{request.organization.slug}-{module}-{timezone.now():%Y%m%d-%H%M%S}.csv"
     job = ExportJob(organization=request.organization, requested_by=request.user,
