@@ -27,14 +27,23 @@ def export_centre(request, organization_slug):
     jobs = ExportJob.objects.filter(organization=request.organization, requested_by=request.user)
     if membership.role in {Membership.Role.OWNER, Membership.Role.ADMIN}:
         jobs = ExportJob.objects.filter(organization=request.organization)
+    total_exports = jobs.count()
+    completed_exports = jobs.filter(status=ExportJob.Status.COMPLETED).count()
+    failed_exports = jobs.filter(status=ExportJob.Status.FAILED).count()
     jobs = jobs.select_related("requested_by")[:50]
+    branch_ids = accessible_branch_ids(membership)
+    branches = request.organization.branches.filter(is_active=True, deleted_at__isnull=True)
+    if branch_ids is not None:
+        branches = branches.filter(pk__in=branch_ids)
     context = {
         "organization": request.organization,
         "allowed_modules": [(key, ExportJob.Module(key).label) for key in allowed],
         "jobs": jobs,
-        "total_exports": jobs.count(),
-        "completed_exports": jobs.filter(status=ExportJob.Status.COMPLETED).count(),
-        "failed_exports": jobs.filter(status=ExportJob.Status.FAILED).count(),
+        "branches": branches.order_by("name"),
+        "now": timezone.now(),
+        "total_exports": total_exports,
+        "completed_exports": completed_exports,
+        "failed_exports": failed_exports,
         "processing_exports": 0,
         "scheduled_exports": 0,
     }
