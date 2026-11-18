@@ -3,6 +3,7 @@ from django.db import models
 
 from apps.core.models import TimeStampedModel, UUIDModel
 from apps.organizations.models import Organization
+from .storage import private_storage
 
 
 class ExportJob(UUIDModel, TimeStampedModel):
@@ -29,7 +30,7 @@ class ExportJob(UUIDModel, TimeStampedModel):
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.QUEUED, db_index=True)
     record_count = models.PositiveIntegerField(default=0)
     file_size = models.PositiveBigIntegerField(default=0)
-    file = models.FileField(upload_to="private_exports/%Y/%m/", blank=True)
+    file = models.FileField(upload_to="private_exports/%Y/%m/", blank=True, storage=private_storage)
     filters = models.JSONField(default=dict, blank=True)
     expires_at = models.DateTimeField(db_index=True)
     error_message = models.CharField(max_length=500, blank=True)
@@ -94,7 +95,7 @@ class ImportBatch(UUIDModel, TimeStampedModel):
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="import_batches")
     uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="data_imports")
     module = models.CharField(max_length=24, choices=[("farmers", "Farmers"), ("customers", "Customers")])
-    file = models.FileField(upload_to="private_imports/%Y/%m/")
+    file = models.FileField(upload_to="private_imports/%Y/%m/", storage=private_storage)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.UPLOADED, db_index=True)
     total_rows = models.PositiveIntegerField(default=0)
     imported_rows = models.PositiveIntegerField(default=0)
