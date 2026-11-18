@@ -58,8 +58,12 @@ def _scoped_queryset(module, organization, membership, params):
         qs = qs.filter(branch_id__in=branch_ids)
     if branch_id:
         qs = qs.filter(branch_id=branch_id)
-    if params.get("status") and hasattr(qs.model, "status"):
-        qs = qs.filter(status=params["status"])
+    if params.get("status"):
+        if module in {"farmers", "customers"}:
+            if params["status"] in {"active", "inactive"}:
+                qs = qs.filter(is_active=(params["status"] == "active"))
+        elif hasattr(qs.model, "status"):
+            qs = qs.filter(status=params["status"])
     if params.get("from"):
         try:
             date_from = date.fromisoformat(params["from"])
