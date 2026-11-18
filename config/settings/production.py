@@ -6,6 +6,10 @@ if SECRET_KEY.startswith("unsafe-development-key"):
     raise RuntimeError("Set DJANGO_SECRET_KEY to a strong secret in production.")
 if not ALLOWED_HOSTS:
     raise RuntimeError("Set DJANGO_ALLOWED_HOSTS in production.")
+if not DJANGO_SITE_URL:
+    raise RuntimeError("Set DJANGO_SITE_URL to the canonical public HTTPS origin in production.")
+if not DJANGO_SITE_URL.startswith("https://"):
+    raise RuntimeError("Production DJANGO_SITE_URL must use HTTPS.")
 if DATABASES["default"]["ENGINE"] != "django.db.backends.postgresql":
     raise RuntimeError("Production must use PostgreSQL; SQLite is not supported.")
 if EMAIL_BACKEND.endswith("console.EmailBackend"):

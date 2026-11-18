@@ -24,6 +24,7 @@ from apps.organizations.models import Membership, Organization
 from apps.platform_admin.forms import PlatformOrganizationCreateForm
 from apps.platform_admin.models import FarmOwnerInvitation, Subscription
 from apps.platform_admin.services import create_platform_organization_invitation
+from apps.core.site_urls import build_site_absolute_uri
 
 
 User = get_user_model()
@@ -84,7 +85,7 @@ def organization_create(request):
             "platform:owner_invitation_accept",
             kwargs={"invitation_id": invitation.pk, "token": raw_token},
         )
-        invitation_url = request.build_absolute_uri(invite_path)
+        invitation_url = build_site_absolute_uri(request, invite_path)
         context = {
             "owner_name": owner_first_name,
             "farm_name": organization.name,
@@ -285,7 +286,7 @@ def organization_resend_invitation(request, organization_id):
     context = {
         "owner_name": organization.owner.first_name,
         "farm_name": organization.name,
-        "invitation_url": request.build_absolute_uri(invite_path),
+        "invitation_url": build_site_absolute_uri(request, invite_path),
         "expires_at": invitation.expires_at,
     }
     try:

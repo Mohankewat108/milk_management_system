@@ -109,4 +109,5 @@ EMAIL_BACKEND = env(
         else "django.core.mail.backends.console.EmailBackend"
     ),
 )
+DJANGO_SITE_URL = env("DJANGO_SITE_URL", default="").strip().rstrip("/")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="no-reply@dairynexus.local")
