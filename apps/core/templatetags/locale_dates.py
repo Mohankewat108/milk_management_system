@@ -13,7 +13,7 @@ register = template.Library()
 def local_date(value, date_format="Y-m-d"):
     """Render a date as Bikram Sambat in Nepali, Gregorian otherwise."""
     if not value:
-        return "—"
+        return ""
     if isinstance(value, str):
         try:
             value = datetime.fromisoformat(value)
