@@ -1,12 +1,48 @@
-{% extends "base.html" %}{% block title %}Customers | {{ organization.name }}{% endblock %}{% block content %}
-<div class="page-heading"><div><div class="eyebrow">{{ organization.name }}</div><h1>Customers</h1><p class="muted">Customer records are isolated to this business.</p></div><div class="actions"><a class="button button-secondary" href="{% url 'business:trash' organization.slug %}">Trash</a><a class="button" href="{% url 'parties:customer_create' organization.slug %}">Add customer</a></div>
-<form class="search-form" method="get">
-<input name="q" value="{{ query }}" placeholder="Search name, code, phone or email">
-<select name="status"><option value="">All statuses</option><option value="active" {% if status_filter == "active" %}selected{% endif %}>Active</option><option value="inactive" {% if status_filter == "inactive" %}selected{% endif %}>Inactive</option></select>
-<select name="branch"><option value="">All accessible branches</option>{% for branch in branches %}<option value="{{ branch.pk }}" {% if branch_filter == branch.pk|stringformat:"s" %}selected{% endif %}>{{ branch.name }}</option>{% endfor %}</select>
-<label>Registered from <input type="date" name="registered_from" value="{{ registered_from }}"></label>
-<label>to <input type="date" name="registered_to" value="{{ registered_to }}"></label>
-<button class="button button-secondary" type="submit">Filter</button></form>
-<section class="panel table-wrap"><table><thead><tr><th>Code</th><th>Name</th><th>Phone</th><th>Email</th><th>Branch</th><th>Status</th><th>Profile</th></tr></thead><tbody>
-{% for item in page_obj %}<tr><td>{{ item.code }}</td><td>{{ item.full_name }}</td><td>{{ item.phone|default:"—" }}</td><td>{{ item.email|default:"—" }}</td><td>{{ item.branch.name|default:"—" }}</td><td>{{ item.is_active|yesno:"Active,Inactive" }}</td><td><a href="{% url 'parties:customer_detail' organization.slug item.pk %}">Open profile</a></td></tr>{% empty %}<tr><td colspan="7">No customers found.</td></tr>{% endfor %}</tbody></table></section>
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Customers" %} | {{ organization.name }}{% endblock %}
+{% block content %}
+<div class="directory-page">
+  <nav class="breadcrumbs" aria-label="{% translate 'Breadcrumb' %}">
+    <a href="{% url 'business:workspace' %}">{% translate "Workspaces" %}</a>
+    <span class="separator" aria-hidden="true">/</span>
+    <a href="{% url 'business:dashboard' organization.slug %}">{{ organization.name }}</a>
+    <span class="separator" aria-hidden="true">/</span>
+    <span aria-current="page">{% translate "Customers" %}</span>
+  </nav>
+  <header class="directory-heading">
+    <div><div class="eyebrow">{{ organization.name }}</div><h1>{% translate "Customers" %}</h1><p class="muted">{% translate "Manage customer records for this business." %}</p></div>
+    <div class="actions">
+      <a class="button button-secondary" href="{% url 'business:trash' organization.slug %}">{% translate "Trash" %}</a>
+      <a class="button" href="{% url 'parties:customer_create' organization.slug %}">＋ {% translate "Add customer" %}</a>
+    </div>
+  </header>
+  <form class="directory-filters" method="get" role="search">
+    <div class="filter-field"><label for="customer-search">{% translate "Search customers" %}</label><input id="customer-search" name="q" type="search" value="{{ query }}" placeholder="{% translate 'Search name, code, phone or email' %}"></div>
+    <div class="filter-field"><label for="customer-status">{% translate "Status" %}</label><select id="customer-status" name="status"><option value="">{% translate "All statuses" %}</option><option value="active" {% if status_filter == "active" %}selected{% endif %}>{% translate "Active" %}</option><option value="inactive" {% if status_filter == "inactive" %}selected{% endif %}>{% translate "Inactive" %}</option></select></div>
+    <div class="filter-field"><label for="customer-branch">{% translate "Branch" %}</label><select id="customer-branch" name="branch"><option value="">{% translate "All accessible branches" %}</option>{% for branch in branches %}<option value="{{ branch.pk }}" {% if branch_filter == branch.pk|stringformat:"s" %}selected{% endif %}>{{ branch.name }}</option>{% endfor %}</select></div>
+    <div class="directory-filter-dates">
+      <div class="filter-field"><label for="customer-registered-from">{% translate "Registered from" %}</label><input id="customer-registered-from" type="date" name="registered_from" value="{{ registered_from }}"></div>
+      <div class="filter-field"><label for="customer-registered-to">{% translate "Registered to" %}</label><input id="customer-registered-to" type="date" name="registered_to" value="{{ registered_to }}"></div>
+      <button class="button" type="submit">{% translate "Apply filters" %}</button>
+      <a class="button button-secondary" href="{% url 'parties:customers' organization.slug %}">{% translate "Reset" %}</a>
+    </div>
+  </form>
+  <section class="panel directory-table-panel" aria-labelledby="customer-directory-title">
+    <div class="directory-table-heading"><div><h2 id="customer-directory-title">{% translate "Customer directory" %}</h2><p class="muted small">{% translate "Customer records available in your permitted branches." %}</p></div></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th scope="col">{% translate "Code" %}</th><th scope="col">{% translate "Customer name" %}</th><th scope="col">{% translate "Phone" %}</th><th scope="col">{% translate "Email" %}</th><th scope="col">{% translate "Branch" %}</th><th scope="col">{% translate "Status" %}</th><th scope="col">{% translate "Actions" %}</th></tr></thead>
+      <tbody>{% for item in page_obj %}<tr>
+        <td><strong>{{ item.code }}</strong></td><td>{{ item.full_name }}</td><td>{{ item.phone|default:"—" }}</td><td>{{ item.email|default:"—" }}</td><td>{{ item.branch.name|default:"—" }}</td>
+        <td>{% if item.is_active %}<span class="status active">{% translate "Active" %}</span>{% else %}<span class="status inactive">{% translate "Inactive" %}</span>{% endif %}</td>
+        <td><a class="button button-small button-secondary" href="{% url 'parties:customer_detail' organization.slug item.pk %}">{% translate "View profile" %}</a></td>
+      </tr>{% empty %}<tr><td colspan="7"><div class="directory-empty"><strong>{% translate "No customers found" %}</strong><p>{% translate "Try changing your search or filter criteria." %}</p></div></td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% if page_obj.has_other_pages %}<nav class="pagination" aria-label="{% translate 'Pagination' %}">
+      {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">{% translate "Previous" %}</a>{% endif %}
+      <span>{% blocktranslate with number=page_obj.number pages=page_obj.paginator.num_pages %}Page {{ number }} of {{ pages }}{% endblocktranslate %}</span>
+      {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">{% translate "Next" %}</a>{% endif %}
+    </nav>{% endif %}
+  </section>
+</div>
 {% endblock %}
