@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from apps.collections.models import MilkCollection
-from apps.organizations.models import Branch, Membership, Organization
+from apps.organizations.models import Branch, BranchAssignment, Membership, Organization
 from apps.parties.models import Customer, Farmer
 from apps.pricing.models import PricingConfiguration
 
@@ -87,6 +87,38 @@ class PartyProfileTests(TestCase):
         self.client.force_login(self.owner)
         url = reverse("parties:customer_detail", args=[self.organization.slug, foreign.pk])
         self.assertEqual(self.client.get(url).status_code, 404)
+
+
+    def test_branch_restricted_user_cannot_open_other_branch_party(self):
+        other_branch = Branch.objects.create(
+            organization=self.organization, code="REMOTE", name="Remote Branch",
+        )
+        remote_customer = Customer.objects.create(
+            organization=self.organization, branch=other_branch,
+            code="C-REMOTE", full_name="Remote Customer",
+        )
+        staff = User.objects.create_user(
+            username="branch-staff", email="branch-staff@example.test",
+            password="LongDemoPass!123",
+        )
+        membership = Membership.objects.create(
+            user=staff, organization=self.organization,
+            role=Membership.Role.BRANCH_MANAGER,
+            status=Membership.Status.ACTIVE,
+        )
+        BranchAssignment.objects.create(membership=membership, branch=self.branch)
+        self.client.force_login(staff)
+        url = reverse("parties:customer_detail", args=[self.organization.slug, remote_customer.pk])
+        self.assertEqual(self.client.get(url).status_code, 404)
+
+    def test_farmer_list_search_and_owner_directory_profile_link(self):
+        self.client.force_login(self.owner)
+        url = reverse("parties:farmers", args=[self.organization.slug])
+        response = self.client.get(url, {"q": "F001", "status": "active"})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse(
+            "parties:farmer_detail", args=[self.organization.slug, self.farmer.pk]
+        ))
 
     def test_search_supports_email_and_filters_inactive_customers(self):
         self.customer.email = "find-me@example.test"
