@@ -88,39 +88,39 @@ def _party_name(party):
 def _rows(module, qs):
     if module in {"farmers", "customers"}:
         headers = ["ID", "Code", "Name", "Phone", "Email", "Address", "Branch", "Active", "Registered at", "Portal account"]
-        for obj in qs.iterator(chunk_size=1000):
-            yield [str(obj.pk), obj.code, obj.full_name, obj.phone, obj.email, obj.address,
-                   obj.branch.name if obj.branch else "", obj.is_active, obj.created_at, bool(obj.user_id)]
-        return headers
+        rows = ([str(obj.pk), obj.code, obj.full_name, obj.phone, obj.email, obj.address,
+                 obj.branch.name if obj.branch else "", obj.is_active, obj.created_at, bool(obj.user_id)]
+                for obj in qs.iterator(chunk_size=1000))
+        return headers, rows
     if module == "collections":
         headers = ["ID", "Reference", "Farmer", "Customer", "Branch", "Collected at", "Quantity (L)", "FAT", "SNF", "Lactose", "Milk temperature (C)", "Rate", "Total", "Status", "Recorded by", "Tested by"]
-        for obj in qs.iterator(chunk_size=1000):
-            yield [str(obj.pk), obj.reference, _party_name(obj.farmer), _party_name(obj.customer), obj.branch.name,
-                   obj.collected_at, obj.quantity_litres, obj.fat, obj.snf, obj.lactose, obj.milk_temperature_c,
-                   obj.milk_rate, obj.total_amount, obj.get_status_display(), obj.recorded_by.get_username(),
-                   obj.tested_by.get_username() if obj.tested_by else ""]
-        return headers
+        rows = ([str(obj.pk), obj.reference, _party_name(obj.farmer), _party_name(obj.customer), obj.branch.name,
+                 obj.collected_at, obj.quantity_litres, obj.fat, obj.snf, obj.lactose, obj.milk_temperature_c,
+                 obj.milk_rate, obj.total_amount, obj.get_status_display(), obj.recorded_by.get_username(),
+                 obj.tested_by.get_username() if obj.tested_by else ""]
+                for obj in qs.iterator(chunk_size=1000))
+        return headers, rows
     if module == "payments":
         headers = ["ID", "Reference", "Date", "Direction", "Farmer", "Customer", "Branch", "Method", "Currency", "Amount", "Status", "Transaction reference", "Notes", "Recorded by"]
-        for obj in qs.iterator(chunk_size=1000):
-            yield [str(obj.pk), obj.reference, obj.paid_at, obj.get_direction_display(), _party_name(obj.farmer),
-                   _party_name(obj.customer), obj.branch.name, obj.get_method_display(), obj.currency, obj.amount,
-                   obj.get_status_display(), obj.transaction_reference, obj.notes, obj.recorded_by.get_username()]
-        return headers
+        rows = ([str(obj.pk), obj.reference, obj.paid_at, obj.get_direction_display(), _party_name(obj.farmer),
+                 _party_name(obj.customer), obj.branch.name, obj.get_method_display(), obj.currency, obj.amount,
+                 obj.get_status_display(), obj.transaction_reference, obj.notes, obj.recorded_by.get_username()]
+                for obj in qs.iterator(chunk_size=1000))
+        return headers, rows
     if module == "expenses":
         headers = ["ID", "Reference", "Date", "Category", "Description", "Supplier", "Branch", "Currency", "Amount", "Method", "Status", "Recorded by", "Approved by", "Approved at", "Notes"]
-        for obj in qs.iterator(chunk_size=1000):
-            yield [str(obj.pk), obj.reference, obj.expense_date, obj.category, obj.description, obj.supplier_name,
-                   obj.branch.name, obj.currency, obj.amount, obj.get_method_display(), obj.get_status_display(),
-                   obj.recorded_by.get_username(), obj.approved_by.get_username() if obj.approved_by else "",
-                   obj.approved_at, obj.notes]
-        return headers
+        rows = ([str(obj.pk), obj.reference, obj.expense_date, obj.category, obj.description, obj.supplier_name,
+                 obj.branch.name, obj.currency, obj.amount, obj.get_method_display(), obj.get_status_display(),
+                 obj.recorded_by.get_username(), obj.approved_by.get_username() if obj.approved_by else "",
+                 obj.approved_at, obj.notes]
+                for obj in qs.iterator(chunk_size=1000))
+        return headers, rows
     headers = ["ID", "Code", "Name", "Category", "Branch", "Supplier", "Unit", "Current stock", "Reorder level", "Purchase price", "Active", "Updated at"]
-    for obj in qs.iterator(chunk_size=1000):
-        yield [str(obj.pk), obj.code, obj.name, obj.category, obj.branch.name,
-               obj.supplier.name if obj.supplier else "", obj.unit, obj.current_stock,
-               obj.reorder_level, obj.purchase_price, obj.is_active, obj.updated_at]
-    return headers
+    rows = ([str(obj.pk), obj.code, obj.name, obj.category, obj.branch.name,
+             obj.supplier.name if obj.supplier else "", obj.unit, obj.current_stock,
+             obj.reorder_level, obj.purchase_price, obj.is_active, obj.updated_at]
+            for obj in qs.iterator(chunk_size=1000))
+    return headers, rows
 
 
 def _safe_cell(value):
@@ -142,11 +142,10 @@ def _safe_cell(value):
 def build_csv(module, queryset):
     buffer = io.StringIO(newline="")
     writer = csv.writer(buffer, lineterminator="\\r\\n")
-    iterator = iter(_rows(module, queryset))
-    headers = next(iterator)
+    headers, rows = _rows(module, queryset)
     writer.writerow(headers)
     count = 0
-    for row in iterator:
+    for row in rows:
         count += 1
         if count > MAX_SYNC_EXPORT_ROWS:
             raise ValidationError("This export is larger than the safe instant-export limit. Background exports will be available in a later phase.")
