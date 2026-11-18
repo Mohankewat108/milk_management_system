@@ -135,3 +135,20 @@ class DoubleEntryLedgerTests(TestCase):
         self.period.save(update_fields=["status", "updated_at"])
         with self.assertRaises(ValidationError):
             self.post_sale()
+
+    def test_posted_journal_and_lines_are_immutable(self):
+        from django.core.exceptions import ValidationError
+        from apps.finance.models import JournalLine
+
+        entry = self.post_sale()
+        entry.description = "Attempted tampering"
+        with self.assertRaises(ValidationError):
+            entry.save()
+        line = entry.lines.first()
+        line.description = "Attempted line tampering"
+        with self.assertRaises(ValidationError):
+            line.save()
+        with self.assertRaises(ValidationError):
+            line.delete()
+        with self.assertRaises(ValidationError):
+            entry.delete()
