@@ -1,9 +1,14 @@
+import re
+from urllib.parse import urlparse
+
 from django.contrib.auth import get_user_model
+from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
 
 from apps.organizations.models import Branch, Membership, Organization
 from apps.parties.models import Customer
+from apps.platform_admin.models import FarmOwnerInvitation
 
 
 User = get_user_model()
@@ -22,23 +27,28 @@ class PlatformMultiFarmTests(TestCase):
             password="VeryStrongFarmPass!2026",
         )
 
-    def test_platform_owner_can_create_multiple_farms_for_same_owner(self):
+    def farm_form_data(self, farm_name, email=None):
+        return {
+            "owner_first_name": "Farm",
+            "owner_last_name": "Owner",
+            "owner_email": email or self.farm_owner.email,
+            "name": farm_name,
+            "legal_name": "",
+            "registration_number": "",
+            "business_type": "Dairy farm",
+            "email": "",
+            "phone": "",
+            "country": "Nepal",
+            "currency": "NPR",
+            "timezone": "Asia/Kathmandu",
+            "address": "Parasi, Nepal",
+        }
+
+    def test_platform_owner_can_invite_same_existing_user_to_multiple_farms(self):
         self.client.force_login(self.platform_owner)
         url = reverse("platform:organization_create")
         for farm_name in ("Himalayan Dairy", "Green Valley Milk"):
-            response = self.client.post(url, {
-                "owner": str(self.farm_owner.pk),
-                "name": farm_name,
-                "legal_name": "",
-                "registration_number": "",
-                "business_type": "Dairy farm",
-                "email": "",
-                "phone": "",
-                "country": "Nepal",
-                "currency": "NPR",
-                "timezone": "Asia/Kathmandu",
-                "address": "Parasi, Nepal",
-            })
+            response = self.client.post(url, self.farm_form_data(farm_name))
             self.assertRedirects(response, reverse("platform:dashboard"))
 
         farms = Organization.objects.filter(owner=self.farm_owner)
@@ -48,11 +58,91 @@ class PlatformMultiFarmTests(TestCase):
                 user=self.farm_owner,
                 organization__in=farms,
                 role=Membership.Role.OWNER,
-                status=Membership.Status.ACTIVE,
+                status=Membership.Status.INVITED,
             ).count(),
             2,
         )
         self.assertEqual(Branch.objects.filter(organization__in=farms, code="MAIN").count(), 2)
+        self.assertEqual(len(mail.outbox), 2)
+
+    def test_new_owner_accepts_invitation_and_sets_first_password(self):
+        self.client.force_login(self.platform_owner)
+        response = self.client.post(
+            reverse("platform:organization_create"),
+            self.farm_form_data("New Owner Dairy", "new.owner@example.test"),
+        )
+        self.assertRedirects(response, reverse("platform:dashboard"))
+
+        user = User.objects.get(email="new.owner@example.test")
+        organization = Organization.objects.get(name="New Owner Dairy")
+        membership = Membership.objects.get(user=user, organization=organization)
+        invitation = FarmOwnerInvitation.objects.get(user=user, organization=organization)
+        self.assertFalse(user.is_active)
+        self.assertFalse(user.has_usable_password())
+        self.assertEqual(membership.status, Membership.Status.INVITED)
+        self.assertEqual(len(mail.outbox), 1)
+
+        invitation_path = urlparse(re.search(r"http://testserver([^\\s]+)", mail.outbox[0].body).group(0)).path
+        response = self.client.get(invitation_path)
+        self.assertEqual(response.status_code, 200)
+        response = self.client.post(invitation_path, {
+            "new_password1": "A-Strong-Owner-Password-2026!",
+            "new_password2": "A-Strong-Owner-Password-2026!",
+        })
+        self.assertRedirects(response, reverse("business:workspace"))
+
+        user.refresh_from_db()
+        membership.refresh_from_db()
+        invitation.refresh_from_db()
+        self.assertTrue(user.is_active)
+        self.assertTrue(user.email_verified)
+        self.assertTrue(user.has_usable_password())
+        self.assertEqual(membership.status, Membership.Status.ACTIVE)
+        self.assertIsNotNone(invitation.accepted_at)
+        self.assertEqual(self.client.session["_auth_user_id"], str(user.pk))
+
+        replay = self.client.get(invitation_path)
+        self.assertEqual(replay.status_code, 410)
+
+    def test_active_existing_owner_must_sign_in_before_accepting(self):
+        self.client.force_login(self.platform_owner)
+        self.client.post(
+            reverse("platform:organization_create"),
+            self.farm_form_data("Existing Owner Dairy"),
+        )
+        invitation = FarmOwnerInvitation.objects.get(organization__name="Existing Owner Dairy")
+        body = mail.outbox[0].body
+        invitation_path = urlparse(re.search(r"http://testserver([^\\s]+)", body).group(0)).path
+
+        self.client.logout()
+        response = self.client.get(invitation_path)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("accounts:login"), response.url)
+
+        self.client.force_login(self.farm_owner)
+        response = self.client.get(invitation_path)
+        self.assertEqual(response.status_code, 200)
+        response = self.client.post(invitation_path)
+        self.assertRedirects(response, reverse("business:workspace"))
+        self.assertEqual(
+            Membership.objects.get(
+                user=self.farm_owner, organization=invitation.organization
+            ).status,
+            Membership.Status.ACTIVE,
+        )
+
+    def test_other_logged_in_user_cannot_accept_invitation(self):
+        self.client.force_login(self.platform_owner)
+        self.client.post(
+            reverse("platform:organization_create"),
+            self.farm_form_data("Private Invite Dairy", "new.invitee@example.test"),
+        )
+        invitation = FarmOwnerInvitation.objects.get(organization__name="Private Invite Dairy")
+        body = mail.outbox[0].body
+        invitation_path = urlparse(re.search(r"http://testserver([^\\s]+)", body).group(0)).path
+        self.client.force_login(self.farm_owner)
+        response = self.client.get(invitation_path)
+        self.assertEqual(response.status_code, 403)
 
     def test_non_platform_user_cannot_create_farms_from_platform(self):
         self.client.force_login(self.farm_owner)
@@ -66,19 +156,12 @@ class PlatformMultiFarmTests(TestCase):
         second = Organization.objects.create(
             owner=self.farm_owner, name="Second Dairy", slug="second-dairy"
         )
-        Customer.objects.create(
-            organization=first, code="C001", full_name="Customer One"
-        )
-        Customer.objects.create(
-            organization=first, code="C002", full_name="Customer Two"
-        )
-        Customer.objects.create(
-            organization=second, code="C001", full_name="Customer Three"
-        )
+        Customer.objects.create(organization=first, code="C001", full_name="Customer One")
+        Customer.objects.create(organization=first, code="C002", full_name="Customer Two")
+        Customer.objects.create(organization=second, code="C001", full_name="Customer Three")
         self.assertEqual(first.customers.count(), 2)
         self.assertEqual(second.customers.count(), 1)
         self.assertNotEqual(first.pk, second.pk)
-
 
     def test_platform_owner_can_suspend_farm_with_reason_and_audit(self):
         organization = Organization.objects.create(
