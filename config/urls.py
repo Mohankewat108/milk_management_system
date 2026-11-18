@@ -1,11 +1,12 @@
 from django.contrib import admin
 from django.urls import include, path
 
-from apps.core.views import health_check, landing_page, readiness_check
+from apps.core.views import health_check, landing_page, nepali_calendar_month, readiness_check
 
 urlpatterns = [
     path("healthz/", health_check, name="healthz"),
     path("readyz/", readiness_check, name="readyz"),
+    path("api/calendar/nepali/", nepali_calendar_month, name="nepali_calendar_month"),
     path("admin/", admin.site.urls),
     path("i18n/", include("django.conf.urls.i18n")),
     path("accounts/", include("apps.accounts.urls")),
