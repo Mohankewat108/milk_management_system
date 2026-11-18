@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from apps.collections.models import MilkCollection
 from apps.finance.models import Expense, Payment
-from apps.inventory.models import InventoryItem
+from apps.inventory.models import InventoryItem, Supplier
 from apps.organizations.models import Membership
 from apps.organizations.permissions import accessible_branch_ids
 from apps.parties.models import Customer, Farmer
@@ -23,6 +23,7 @@ MODULE_ROLES = {
     "payments": {Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.ACCOUNTANT},
     "expenses": {Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.ACCOUNTANT},
     "inventory": {Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.INVENTORY_MANAGER},
+    "suppliers": {Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.INVENTORY_MANAGER},
 }
 
 
@@ -50,6 +51,9 @@ def _scoped_queryset(module, organization, membership, params):
         date_field = "expense_date"
     elif module == "inventory":
         qs = InventoryItem.objects.filter(organization=organization, deleted_at__isnull=True).select_related("branch", "supplier")
+        date_field = "created_at__date"
+    elif module == "suppliers":
+        qs = Supplier.objects.filter(organization=organization, deleted_at__isnull=True)
         date_field = "created_at__date"
     else:
         raise ValidationError("Unsupported export category.")
@@ -116,6 +120,12 @@ def _rows(module, qs):
                  obj.branch.name, obj.currency, obj.amount, obj.get_method_display(), obj.get_status_display(),
                  obj.recorded_by.get_username(), obj.approved_by.get_username() if obj.approved_by else "",
                  obj.approved_at, obj.notes]
+                for obj in qs.iterator(chunk_size=1000))
+        return headers, rows
+    if module == "suppliers":
+        headers = ["ID", "Code", "Name", "Contact", "Phone", "Email", "Address", "Tax number", "Active", "Created at"]
+        rows = ([str(obj.pk), obj.code, obj.name, obj.contact_name, obj.phone, obj.email,
+                 obj.address, obj.tax_number, obj.is_active, obj.created_at]
                 for obj in qs.iterator(chunk_size=1000))
         return headers, rows
     headers = ["ID", "Code", "Name", "Category", "Branch", "Supplier", "Unit", "Current stock", "Reorder level", "Purchase price", "Active", "Updated at"]
