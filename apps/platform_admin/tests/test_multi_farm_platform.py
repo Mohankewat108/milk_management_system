@@ -82,7 +82,7 @@ class PlatformMultiFarmTests(TestCase):
         self.assertEqual(membership.status, Membership.Status.INVITED)
         self.assertEqual(len(mail.outbox), 1)
 
-        invitation_path = urlparse(re.search(r"http://testserver([^\\s]+)", mail.outbox[0].body).group(0)).path
+        invitation_path = urlparse(re.search(r"http://testserver(\S+)", mail.outbox[0].body).group(0)).path
         response = self.client.get(invitation_path)
         self.assertEqual(response.status_code, 200)
         response = self.client.post(invitation_path, {
@@ -112,7 +112,7 @@ class PlatformMultiFarmTests(TestCase):
         )
         invitation = FarmOwnerInvitation.objects.get(organization__name="Existing Owner Dairy")
         body = mail.outbox[0].body
-        invitation_path = urlparse(re.search(r"http://testserver([^\\s]+)", body).group(0)).path
+        invitation_path = urlparse(re.search(r"http://testserver(\S+)", body).group(0)).path
 
         self.client.logout()
         response = self.client.get(invitation_path)
@@ -139,7 +139,7 @@ class PlatformMultiFarmTests(TestCase):
         )
         invitation = FarmOwnerInvitation.objects.get(organization__name="Private Invite Dairy")
         body = mail.outbox[0].body
-        invitation_path = urlparse(re.search(r"http://testserver([^\\s]+)", body).group(0)).path
+        invitation_path = urlparse(re.search(r"http://testserver(\S+)", body).group(0)).path
         self.client.force_login(self.farm_owner)
         response = self.client.get(invitation_path)
         self.assertEqual(response.status_code, 403)
