@@ -90,3 +90,34 @@ class CollectionServiceTests(TestCase):
             farmer=self.farmer,
         )
         self.assertEqual(entry.pricing_id, self.pricing.id)
+
+
+    def test_collection_edit_page_is_scoped_and_audited(self):
+        from django.urls import reverse
+        from apps.audit.models import AuditEvent
+        from apps.collections.models import MilkCollection
+        entry = create_collection(
+            organization=self.org, branch=self.branch, actor=self.user,
+            collected_at=datetime(2026, 11, 18, 6, 0, tzinfo=dt_timezone.utc),
+            quantity_litres="2.000", snf="8.0", fat="4.0", lactose="4.5",
+            farmer=self.farmer,
+        )
+        from apps.organizations.models import Membership
+        Membership.objects.create(user=self.user, organization=self.org, role=Membership.Role.OWNER)
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("collections:edit", kwargs={
+            "organization_slug": self.org.slug, "collection_id": entry.pk,
+        }))
+        self.assertEqual(response.status_code, 200)
+        response = self.client.post(reverse("collections:edit", kwargs={
+            "organization_slug": self.org.slug, "collection_id": entry.pk,
+        }), {
+            "quantity_litres": "3.000", "snf": "8.0", "fat": "4.0", "lactose": "4.5",
+            "lactometer_reading": "", "milk_temperature_c": "", "sample_reference": "",
+            "quality_test_method": "", "notes": "Corrected quantity",
+        })
+        self.assertEqual(response.status_code, 302)
+        entry.refresh_from_db()
+        self.assertEqual(entry.quantity_litres, Decimal("3.000"))
+        self.assertEqual(entry.total_amount, Decimal("217.50"))
+        self.assertEqual(AuditEvent.objects.filter(action="milk_collection.updated", target_id=str(entry.pk)).count(), 1)
