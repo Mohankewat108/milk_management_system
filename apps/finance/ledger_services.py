@@ -1,5 +1,6 @@
 from decimal import Decimal
 from uuid import uuid4
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -161,6 +162,19 @@ def reverse_journal_entry(*, entry_id, organization, actor, reversal_date, reaso
     )
 
 
+
+def _organization_local_date(organization, value):
+    if value is None:
+        return timezone.now().date()
+    if timezone.is_naive(value):
+        return value.date()
+    try:
+        tenant_timezone = ZoneInfo(organization.timezone or timezone.get_current_timezone_name())
+    except ZoneInfoNotFoundError:
+        tenant_timezone = timezone.get_current_timezone()
+    return timezone.localtime(value, tenant_timezone).date()
+
+
 def _enabled_ledger_configuration(organization):
     from .models import LedgerConfiguration
     try:
@@ -259,7 +273,7 @@ def post_completed_payment(*, payment, actor):
         raise ValidationError("Payment direction and party do not match a supported posting rule.")
     return post_journal_entry(
         organization=payment.organization, branch=payment.branch, actor=actor,
-        entry_date=(payment.paid_at or timezone.now()).date(), description=description,
+        entry_date=_organization_local_date(payment.organization, payment.paid_at), description=description,
         source_type="payment", source_id=payment.pk,
         idempotency_key=f"payment:{payment.pk}:completed", lines=lines,
     )
@@ -276,7 +290,7 @@ def post_approved_farmer_collection(*, collection, actor):
         raise ValidationError("Only approved farmer collections can be posted.")
     return post_journal_entry(
         organization=collection.organization, branch=collection.branch, actor=actor,
-        entry_date=collection.collected_at.date(),
+        entry_date=_organization_local_date(collection.organization, collection.collected_at),
         description=f"Farmer milk procurement {collection.reference}",
         source_type="milk_collection", source_id=collection.pk,
         idempotency_key=f"milk-collection:{collection.pk}:approved",
