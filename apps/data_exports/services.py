@@ -153,37 +153,59 @@ def _safe_cell(value):
 
 
 def _export_totals(module):
-    return {"quantity": Decimal("0"), "amount": Decimal("0"), "stock_value": Decimal("0")}
+    return {"count": 0, "sums": {}, "stock_value": Decimal("0")}
+
+
+def _numeric_columns(module):
+    # Column indexes are based on the export row schema returned by _rows().
+    return {
+        "collections": {
+            6: "Quantity (L)", 7: "FAT", 8: "SNF", 9: "Lactose",
+            10: "Milk temperature (C)", 11: "Rate", 12: "Total amount",
+        },
+        "payments": {9: "Amount"},
+        "expenses": {8: "Amount"},
+        "inventory": {7: "Current stock", 8: "Reorder level", 9: "Purchase price"},
+    }.get(module, {})
 
 
 def _accumulate_export_totals(module, row, totals):
-    if module == "collections":
-        totals["quantity"] += Decimal(str(row[6] or 0))
-        totals["amount"] += Decimal(str(row[12] or 0))
-    elif module == "payments":
-        totals["amount"] += Decimal(str(row[9] or 0))
-    elif module == "expenses":
-        totals["amount"] += Decimal(str(row[8] or 0))
-    elif module == "inventory":
+    totals["count"] += 1
+    for index in _numeric_columns(module):
+        value = row[index]
+        if value in (None, ""):
+            continue
+        totals["sums"][index] = totals["sums"].get(index, Decimal("0")) + Decimal(str(value))
+    if module == "inventory":
         totals["stock_value"] += Decimal(str(row[7] or 0)) * Decimal(str(row[9] or 0))
 
 
-def _export_summary_row(module, headers, count, totals):
-    summary = [""] * len(headers)
-    summary[0] = f"TOTAL ({count} records)"
-    if module == "collections":
-        summary[6] = totals["quantity"]
-        summary[12] = totals["amount"]
-    elif module == "payments":
-        summary[9] = totals["amount"]
-    elif module == "expenses":
-        summary[8] = totals["amount"]
-    elif module == "inventory":
-        summary[7] = "—"
-        summary[9] = totals["stock_value"]
-        summary[0] = f"TOTAL STOCK VALUE ({count} items)"
-    return summary
+def _export_summary_rows(module, headers, totals):
+    count = totals["count"]
+    averages = [""] * len(headers)
+    grand_total = [""] * len(headers)
+    averages[0] = "AVERAGE"
+    grand_total[0] = f"GRAND TOTAL — {count} RECORDS"
 
+    for index in _numeric_columns(module):
+        total = totals["sums"].get(index, Decimal("0"))
+        averages[index] = (total / count).quantize(Decimal("0.01")) if count else Decimal("0.00")
+
+    if module == "collections":
+        grand_total[6] = totals["sums"].get(6, Decimal("0"))
+        grand_total[12] = totals["sums"].get(12, Decimal("0"))
+    elif module == "payments":
+        grand_total[9] = totals["sums"].get(9, Decimal("0"))
+    elif module == "expenses":
+        grand_total[8] = totals["sums"].get(8, Decimal("0"))
+    elif module == "inventory":
+        grand_total[7] = "—"
+        grand_total[9] = totals["stock_value"]
+        grand_total[0] = f"TOTAL STOCK VALUE — {count} ITEMS"
+    elif module in {"farmers", "customers", "suppliers"}:
+        grand_total[0] = f"TOTAL RECORDS — {count}"
+
+    return [averages, grand_total]
 
 def build_csv(module, queryset):
     buffer = io.StringIO(newline="")
@@ -198,7 +220,7 @@ def build_csv(module, queryset):
             raise ValidationError("This export is larger than the safe instant-export limit. Background exports will be available in a later phase.")
         _accumulate_export_totals(module, row, totals)
         writer.writerow([_safe_cell(value) for value in row])
-    writer.writerow([_safe_cell(value) for value in _export_summary_row(module, headers, count, totals)])
+    for summary_row in _export_summary_rows(module, headers, totals):\n        writer.writerow([_safe_cell(value) for value in summary_row])
     return "\ufeff" + buffer.getvalue(), count
 
 
