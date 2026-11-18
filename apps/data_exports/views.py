@@ -34,7 +34,11 @@ def export_centre(request, organization_slug):
     if branch_ids is not None:
         branches = branches.filter(pk__in=branch_ids)
     templates = SavedExportTemplate.objects.filter(organization=request.organization)
-    templates = (templates.filter(is_shared=True) | templates.filter(created_by=request.user)).distinct().order_by("name")
+    if membership.role in {Membership.Role.OWNER, Membership.Role.ADMIN}:
+        templates = templates.filter(is_shared=True) | templates.filter(created_by=request.user)
+    else:
+        templates = templates.filter(created_by=request.user)
+    templates = templates.distinct().order_by("name")
     schedules = ScheduledExport.objects.filter(organization=request.organization)
     if membership.role not in {Membership.Role.OWNER, Membership.Role.ADMIN}:
         schedules = schedules.filter(created_by=request.user)
