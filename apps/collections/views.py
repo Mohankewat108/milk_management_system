@@ -114,7 +114,7 @@ def collection_edit(request, organization_slug, collection_id):
         if request.method == "POST":
             records = records.select_for_update()
         entry = records.get(pk=collection_id)
-        if entry.status == MilkCollection.Status.REVERSED:
+        if entry.status in {MilkCollection.Status.REVERSED, MilkCollection.Status.APPROVED}:
             messages.error(request, "Reversed collections cannot be edited.")
             return redirect("collections:list", organization_slug=organization_slug)
         form = CollectionEditForm(request.POST or None, instance=entry)
@@ -159,3 +159,32 @@ def collection_edit(request, organization_slug, collection_id):
     return render(request, "collections/edit.html", {
         "organization": organization, "entry": entry, "form": form,
     })
+
+
+@login_required
+@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN)
+@require_POST
+def collection_reverse(request, organization_slug, collection_id):
+    reason = request.POST.get("reason", "").strip()
+    if len(reason) < 8:
+        messages.error(request, "Provide a clear reversal reason (at least 8 characters).")
+        return redirect("collections:list", organization_slug=organization_slug)
+    with transaction.atomic():
+        entry = MilkCollection.objects.select_for_update().get(
+            pk=collection_id, organization=request.organization
+        )
+        if entry.status == MilkCollection.Status.REVERSED:
+            messages.info(request, "This collection has already been reversed.")
+        else:
+            old_status = entry.status
+            entry.status = MilkCollection.Status.REVERSED
+            entry.notes = (entry.notes + "\\n" if entry.notes else "") + f"REVERSAL: {reason}"
+            entry.save(update_fields=["status", "notes", "updated_at"])
+            record_event(
+                actor=request.user, organization=request.organization,
+                action="milk_collection.reversed", target=entry,
+                changes={"from_status": old_status, "to_status": entry.status, "reason": reason},
+                request=request,
+            )
+            messages.success(request, f"Collection {entry.reference} reversed. Its audit history remains available.")
+    return redirect("collections:list", organization_slug=organization_slug)
