@@ -97,3 +97,26 @@ def branches(request, organization_slug):
     return render(request, "organizations/branches.html", {
         "organization": organization, "branches": organization.branches.order_by("name"), "form": form,
     })
+
+
+@login_required
+@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN)
+@require_http_methods(["GET", "POST"])
+def branch_edit(request, organization_slug, branch_id):
+    from django.shortcuts import get_object_or_404
+    branch = get_object_or_404(
+        request.organization.branches.filter(deleted_at__isnull=True), pk=branch_id
+    )
+    form = BranchForm(request.POST or None, instance=branch)
+    if request.method == "POST" and form.is_valid():
+        updated = form.save(commit=False)
+        updated.organization = request.organization
+        updated.save()
+        record_event(actor=request.user, organization=request.organization,
+                     action="branch.updated", target=updated,
+                     changes={"updated_fields": list(form.changed_data)}, request=request)
+        messages.success(request, f"Branch {updated.name} updated.")
+        return redirect("business:branches", organization_slug=organization_slug)
+    return render(request, "organizations/branch_form.html", {
+        "organization": request.organization, "form": form, "branch": branch,
+    })
