@@ -40,7 +40,7 @@ Use the sample downloads in Import Centre. CSV uploads are limited to 10 MB. Imp
 - Scheduled exports currently deliver to the schedule creator's email address; arbitrary recipient lists are intentionally not enabled.
 - PDF uses ReportLab's built-in Helvetica fonts. Nepali/Devanagari glyph coverage is not guaranteed in PDF; XLSX and UTF-8 CSV should be used for Nepali text until a licensed Unicode font is bundled.
 - Schedules are enqueued by the worker command; they do not run unless the command is deployed and scheduled.
-- Private export/import files must remain outside any publicly served static/media directory in production. Configure the media volume so private_exports/ and private_imports/ are not directly exposed; use only the authenticated download view.
+- Export and import files are stored under the private_uploads directory, outside MEDIA_ROOT, using a storage backend that refuses public URLs. Persist this directory on a restricted volume in production; use only the authenticated download view.
 
 ## Security checklist before production
 1. Configure SMTP and verify completion/failure notifications.
