@@ -79,3 +79,12 @@ class OrganizationWideRateTests(TestCase):
         from django.core.exceptions import ValidationError
         with self.assertRaises(ValidationError):
             pricing_for_collection(organization=self.organization, branch=self.branch_a, collection_date=date(2026, 2, 2))
+
+    def test_rate_values_are_decimal_and_zero_is_valid(self):
+        pricing = SimpleNamespace(
+            snf_rate=Decimal("0.0000"),
+            fat_rate=Decimal("7.0000"),
+            lactose_rate=Decimal("0.0000"),
+        )
+        result = calculate_milk_rate(snf="8.5", fat="4", lactose="4.5", pricing=pricing)
+        self.assertEqual(result, Decimal("28.00"))
