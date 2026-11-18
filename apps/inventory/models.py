@@ -16,6 +16,9 @@ class Supplier(UUIDModel, TimeStampedModel):
     tax_number = models.CharField(max_length=80, blank=True)
     is_active = models.BooleanField(default=True)
 
+    deleted_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    deleted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=["organization", "code"], name="uniq_supplier_code_org")
@@ -38,6 +41,9 @@ class InventoryItem(UUIDModel, TimeStampedModel):
     reorder_level = models.DecimalField(max_digits=14, decimal_places=3, default=0)
     purchase_price = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     is_active = models.BooleanField(default=True)
+
+    deleted_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    deleted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
 
     class Meta:
         constraints = [

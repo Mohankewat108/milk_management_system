@@ -12,7 +12,7 @@ class CustomerForm(forms.ModelForm):
     def __init__(self, *args, organization, membership=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.organization = organization
-        self.fields["branch"].queryset = Branch.objects.filter(organization=organization, is_active=True)
+        self.fields["branch"].queryset = Branch.objects.filter(organization=organization, is_active=True, deleted_at__isnull=True)
         self.fields["branch"].required = bool(
             membership and membership.role not in {"owner", "admin"}
         )
@@ -36,7 +36,7 @@ class FarmerForm(forms.ModelForm):
     def __init__(self, *args, organization, membership=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.organization = organization
-        self.fields["branch"].queryset = Branch.objects.filter(organization=organization, is_active=True)
+        self.fields["branch"].queryset = Branch.objects.filter(organization=organization, is_active=True, deleted_at__isnull=True)
         self.fields["branch"].required = bool(
             membership and membership.role not in {"owner", "admin"}
         )

@@ -31,12 +31,12 @@ class InventoryItemForm(forms.ModelForm):
     def __init__(self, *args, organization, membership, **kwargs):
         super().__init__(*args, **kwargs)
         self.organization = organization
-        branches = Branch.objects.filter(organization=organization, is_active=True)
+        branches = Branch.objects.filter(organization=organization, is_active=True, deleted_at__isnull=True)
         assignments = membership.branch_assignments.values_list("branch_id", flat=True)
         if membership.role not in {"owner", "admin"}:
             branches = branches.filter(pk__in=assignments)
         self.fields["branch"].queryset = branches
-        self.fields["supplier"].queryset = Supplier.objects.filter(organization=organization, is_active=True)
+        self.fields["supplier"].queryset = Supplier.objects.filter(organization=organization, is_active=True, deleted_at__isnull=True)
         self.fields["supplier"].required = False
 
     def clean_code(self):
@@ -61,7 +61,7 @@ class StockMovementForm(forms.Form):
 
     def __init__(self, *args, organization, membership, **kwargs):
         super().__init__(*args, **kwargs)
-        items = InventoryItem.objects.filter(organization=organization, is_active=True).select_related("branch")
+        items = InventoryItem.objects.filter(organization=organization, is_active=True, deleted_at__isnull=True).select_related("branch")
         assignments = membership.branch_assignments.values_list("branch_id", flat=True)
         if membership.role not in {"owner", "admin"}:
             items = items.filter(branch_id__in=assignments)

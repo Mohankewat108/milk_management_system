@@ -37,7 +37,7 @@ def settings_view(request, organization_slug):
                 # Lock the tenant row to serialize concurrent edits to the same rate schedule.
                 type(organization).objects.select_for_update().get(pk=organization.pk)
                 overlaps = PricingConfiguration.objects.filter(
-                    organization=organization, branch=branch,
+                    organization=organization, branch=branch, deleted_at__isnull=True,
                     effective_from__lte=_effective_end(end),
                 ).filter(Q(effective_to__isnull=True) | Q(effective_to__gte=start))
                 if overlaps.exists():
@@ -73,7 +73,7 @@ def settings_view(request, organization_slug):
                 )
                 return redirect("pricing:settings", organization_slug=organization_slug)
     history = PricingConfiguration.objects.filter(
-        organization=organization
+        organization=organization, deleted_at__isnull=True
     ).select_related("branch", "created_by", "approved_by")
     lookup_date = request.GET.get("date")
     try:
@@ -94,7 +94,7 @@ def settings_view(request, organization_slug):
 def approve_pricing(request, organization_slug, pricing_id):
     with transaction.atomic():
         pricing = PricingConfiguration.objects.select_for_update().get(
-            pk=pricing_id, organization=request.organization
+            pk=pricing_id, organization=request.organization, deleted_at__isnull=True
         )
         if pricing.is_approved:
             messages.info(request, "This rate schedule is already approved.")
@@ -140,4 +140,40 @@ def quality_settings(request, organization_slug):
     history = QualityConfiguration.objects.filter(organization=organization).select_related("branch")
     return render(request, "pricing/quality.html", {
         "organization": organization, "form": form, "history": history,
+    })
+
+
+@login_required
+@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN)
+@require_http_methods(["GET", "POST"])
+def pricing_edit(request, organization_slug, pricing_id):
+    organization = request.organization
+    pricing = PricingConfiguration.objects.get(
+        pk=pricing_id, organization=organization,
+        is_approved=False, deleted_at__isnull=True,
+    )
+    if pricing.collections.exists():
+        messages.error(request, "This rate schedule is already referenced by collections and is immutable.")
+        return redirect("pricing:settings", organization_slug=organization_slug)
+    form = PricingConfigurationForm(request.POST or None, instance=pricing, organization=organization)
+    if request.method == "POST" and form.is_valid():
+        data = form.cleaned_data
+        branch, start, end = data["branch"], data["effective_from"], data["effective_to"]
+        overlaps = PricingConfiguration.objects.filter(
+            organization=organization, branch=branch, deleted_at__isnull=True,
+            effective_from__lte=_effective_end(end),
+        ).filter(Q(effective_to__isnull=True) | Q(effective_to__gte=start)).exclude(pk=pricing.pk)
+        if overlaps.exists():
+            form.add_error(None, "This rate schedule overlaps another schedule for the same scope.")
+        else:
+            updated = form.save()
+            record_event(
+                actor=request.user, organization=organization,
+                action="pricing.updated", target=updated,
+                changes={"updated_fields": list(form.changed_data)}, request=request,
+            )
+            messages.success(request, "Pending rate schedule updated. Owner approval is still required.")
+            return redirect("pricing:settings", organization_slug=organization_slug)
+    return render(request, "pricing/edit.html", {
+        "organization": organization, "form": form, "pricing": pricing,
     })

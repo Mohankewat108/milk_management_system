@@ -43,6 +43,9 @@ class Branch(UUIDModel, TimeStampedModel):
     manager = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="managed_branches")
     is_active = models.BooleanField(default=True)
 
+    deleted_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    deleted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+
     class Meta:
         constraints = [models.UniqueConstraint(fields=["organization", "code"], name="uniq_branch_code_per_org")]
         indexes = [models.Index(fields=["organization", "is_active"])]

@@ -25,7 +25,7 @@ class PricingConfigurationForm(forms.ModelForm):
     def __init__(self, *args, organization, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["branch"].required = False
-        self.fields["branch"].queryset = Branch.objects.filter(organization=organization, is_active=True)
+        self.fields["branch"].queryset = Branch.objects.filter(organization=organization, is_active=True, deleted_at__isnull=True)
         self.fields["branch"].empty_label = "All customers and all branches (recommended)"
         for field in ("snf_rate", "fat_rate", "lactose_rate"):
             self.fields[field].min_value = 0
@@ -53,7 +53,7 @@ class QualityConfigurationForm(forms.ModelForm):
     def __init__(self, *args, organization, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["branch"].required = False
-        self.fields["branch"].queryset = Branch.objects.filter(organization=organization, is_active=True)
+        self.fields["branch"].queryset = Branch.objects.filter(organization=organization, is_active=True, deleted_at__isnull=True)
 
     def clean(self):
         cleaned = super().clean()

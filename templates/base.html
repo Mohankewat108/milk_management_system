@@ -1,4 +1,4 @@
-{% load static %}<!doctype html>
+{% load static i18n %}<!doctype html>
 <html lang="{{ LANGUAGE_CODE|default:'en' }}">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -40,7 +40,7 @@
       <div class="sidebar-title">Finance & operations</div>
       {% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'accountant' %}<a href="{% url 'finance:list' request.organization.slug %}">▤ <span>Payments</span></a><a href="{% url 'finance:expenses' request.organization.slug %}">↗ <span>Expenses</span></a>{% endif %}
       {% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'inventory_manager' %}<a href="{% url 'inventory:items' request.organization.slug %}">▣ <span>Inventory</span></a>{% endif %}
-      {% if request.membership.role == 'owner' or request.membership.role == 'admin' %}<div class="sidebar-title">Configuration</div><a href="{% url 'business:branches' request.organization.slug %}">⌖ <span>Branches</span></a><a href="{% url 'pricing:settings' request.organization.slug %}">₹ <span>Milk rates</span></a><a href="{% url 'pricing:quality' request.organization.slug %}">◇ <span>Quality settings</span></a>{% endif %}
+      {% if request.membership.role == 'owner' or request.membership.role == 'admin' %}<a href="{% url 'business:trash' request.organization.slug %}">▱ <span>Central Trash</span></a><div class="sidebar-title">Configuration</div><a href="{% url 'business:branches' request.organization.slug %}">⌖ <span>Branches</span></a><a href="{% url 'pricing:settings' request.organization.slug %}">₹ <span>Milk rates</span></a><a href="{% url 'pricing:quality' request.organization.slug %}">◇ <span>Quality settings</span></a>{% endif %}
       {% endif %}
     </nav>
     <div class="sidebar-footer"><span class="small muted">Signed in as</span><strong>{{ request.user.get_full_name|default:request.user.username }}</strong></div>

@@ -63,7 +63,7 @@ def _party_profile_context(*, party, kind, request):
 
     relation = "customer" if kind == "customer" else "farmer"
     collections = MilkCollection.objects.filter(
-        organization=request.organization,
+        organization=request.organization, deleted_at__isnull=True,
         **{relation: party},
     ).select_related("branch", "recorded_by", "pricing").order_by("-collected_at")
     collections = _party_scope(collections, request.membership)
@@ -162,7 +162,7 @@ def customer_list(request, organization_slug):
         "organization": org, "page_obj": page, "query": term,
         "status_filter": status, "branch_filter": branch,
         "registered_from": registered_from, "registered_to": registered_to,
-        "branches": org.branches.filter(is_active=True) if accessible_branch_ids(request.membership) is None
+        "branches": org.branches.filter(is_active=True, deleted_at__isnull=True) if accessible_branch_ids(request.membership) is None
         else org.branches.filter(pk__in=accessible_branch_ids(request.membership), is_active=True),
     })
 
@@ -204,7 +204,7 @@ def farmer_list(request, organization_slug):
     if registered_to:
         records = records.filter(created_at__date__lte=registered_to)
     branch_ids = accessible_branch_ids(request.membership)
-    branches = org.branches.filter(is_active=True) if branch_ids is None else org.branches.filter(pk__in=branch_ids, is_active=True)
+    branches = org.branches.filter(is_active=True, deleted_at__isnull=True) if branch_ids is None else org.branches.filter(pk__in=branch_ids, is_active=True)
     page = Paginator(records, 25).get_page(request.GET.get("page"))
     return render(request, "parties/farmers.html", {
         "organization": org, "page_obj": page, "query": term,

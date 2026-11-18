@@ -9,7 +9,7 @@ from apps.organizations.permissions import accessible_branch_ids
 from apps.pricing.services import active_pricing_on
 
 from .decorators import organization_access
-from .forms import BranchForm, OrganizationRegistrationForm
+from .forms import BranchForm, OrganizationProfileForm, OrganizationRegistrationForm
 from .models import Membership
 from .selectors import memberships_for_user
 from .services import register_organization
@@ -47,10 +47,10 @@ def dashboard(request, organization_slug):
     organization = request.organization
     membership = request.membership
     branch_ids = accessible_branch_ids(membership)
-    branches = organization.branches.filter(is_active=True)
-    customers = organization.customers.filter(is_active=True)
-    farmers = organization.farmers.filter(is_active=True)
-    collections = organization.milk_collections.all()
+    branches = organization.branches.filter(is_active=True, deleted_at__isnull=True)
+    customers = organization.customers.filter(is_active=True, deleted_at__isnull=True)
+    farmers = organization.farmers.filter(is_active=True, deleted_at__isnull=True)
+    collections = organization.milk_collections.exclude(status='reversed')
     if branch_ids is not None:
         branches = branches.filter(pk__in=branch_ids)
         customers = customers.filter(branch_id__in=branch_ids)
@@ -95,5 +95,48 @@ def branches(request, organization_slug):
         messages.success(request, "Branch created.")
         return redirect("business:branches", organization_slug=organization_slug)
     return render(request, "organizations/branches.html", {
-        "organization": organization, "branches": organization.branches.order_by("name"), "form": form,
+        "organization": organization, "branches": organization.branches.filter(deleted_at__isnull=True).order_by("name"), "form": form,
+    })
+
+
+@login_required
+@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN)
+@require_http_methods(["GET", "POST"])
+def branch_edit(request, organization_slug, branch_id):
+    from django.shortcuts import get_object_or_404
+    branch = get_object_or_404(
+        request.organization.branches.filter(deleted_at__isnull=True), pk=branch_id
+    )
+    form = BranchForm(request.POST or None, instance=branch)
+    if request.method == "POST" and form.is_valid():
+        updated = form.save(commit=False)
+        updated.organization = request.organization
+        updated.save()
+        record_event(actor=request.user, organization=request.organization,
+                     action="branch.updated", target=updated,
+                     changes={"updated_fields": list(form.changed_data)}, request=request)
+        messages.success(request, f"Branch {updated.name} updated.")
+        return redirect("business:branches", organization_slug=organization_slug)
+    return render(request, "organizations/branch_form.html", {
+        "organization": request.organization, "form": form, "branch": branch,
+    })
+
+
+@login_required
+@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN)
+@require_http_methods(["GET", "POST"])
+def organization_edit(request, organization_slug):
+    organization = request.organization
+    if request.membership.role != Membership.Role.OWNER:
+        messages.error(request, "Only the dairy owner can change legal and billing profile details.")
+        return redirect("business:dashboard", organization_slug=organization_slug)
+    form = OrganizationProfileForm(request.POST or None, instance=organization)
+    if request.method == "POST" and form.is_valid():
+        updated = form.save()
+        record_event(actor=request.user, organization=updated, action="organization.updated",
+                     target=updated, changes={"updated_fields": list(form.changed_data)}, request=request)
+        messages.success(request, "Dairy workspace profile updated.")
+        return redirect("business:dashboard", organization_slug=organization_slug)
+    return render(request, "organizations/profile_form.html", {
+        "organization": organization, "form": form,
     })
