@@ -73,7 +73,7 @@ To clear only organisations already explicitly marked as demo and their dependen
 | /business/<slug>/quality/ | Quality profiles |
 | /business/<slug>/payments/ | Payments |
 | /portal/ | Customer portal |
-| /platform/ | Superuser platform overview |
+| /platform/ | Superuser platform control centre and multi-farm onboarding |
 | /healthz/ | Database health check |
 
 ## Docker
@@ -90,7 +90,7 @@ The old README references milk.sql, but that SQL dump is absent from the reposit
 
 ## Current limitations
 
-Advanced supplier purchasing/payables, double-entry accounting, invoice/statement generation, subscription charging and plan-limit enforcement, farmer portal, notification delivery, exports, richer reporting, background jobs, MFA, email verification, production email delivery, database-level RLS and committed reviewed migrations remain outstanding. See docs/architecture.md, docs/security.md and docs/operations.md.
+Advanced supplier purchasing/payables, double-entry accounting, invoice/statement generation, subscription charging and plan-limit enforcement, farmer portal, notification delivery, exports, richer reporting, background jobs, MFA, email verification, production SMTP credentials/provider setup, invitation resend/revocation UI, database-level RLS and committed reviewed migrations remain outstanding. See docs/architecture.md, docs/security.md and docs/operations.md.
 
 ## Original source
 
@@ -113,3 +113,20 @@ Use `.button`, `.button-secondary`, `.panel`, `.content-card`, `.auth-card`, `.p
 The shared shell includes a skip link and visible keyboard focus. Respect reduced-motion preferences. Layout breakpoints are designed for compact mobile, tablet and desktop widths. Tables scroll horizontally inside `.table-wrap`; print styles remove navigation and interactive controls.
 
 Avoid styling `body`, `main`, bare `table` or bare headings in legacy feature stylesheets. Scope any remaining legacy page styles under a page-specific class. Keep Django template tags and server field contracts unchanged.
+## Farm-owner email invitations
+
+The platform owner can create a dairy tenant by entering the farm owner's name and email address. DairyNexus creates the tenant, initial branch, inactive account (when the email is new), pending OWNER membership and a single-use invitation token in one database transaction. The invitation link expires after 48 hours and only its SHA-256 hash is stored.
+
+A new recipient opens the link and sets their password. An existing account holder must sign in with the invited account before accepting. Acceptance activates the membership and adds the farm to the user's workspace list. Replayed, expired or revoked tokens are rejected.
+
+For local development, Django writes invitation emails to the runserver console by default. For real delivery, configure the SMTP variables in `.env` or the deployment secret manager:
+
+- `EMAIL_HOST`
+- `EMAIL_PORT`
+- `EMAIL_HOST_USER`
+- `EMAIL_HOST_PASSWORD`
+- `EMAIL_USE_TLS`
+- `EMAIL_USE_SSL`
+- `DEFAULT_FROM_EMAIL`
+
+Never commit SMTP passwords. Use a transactional email provider and a sender domain you control in staging/production. The current implementation does not yet include an invitation resend/revoke management screen or background email queue.
