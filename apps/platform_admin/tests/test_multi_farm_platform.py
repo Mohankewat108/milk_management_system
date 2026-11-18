@@ -13,6 +13,16 @@ from apps.platform_admin.models import FarmOwnerInvitation
 
 User = get_user_model()
 
+def get_invitation_path(email_body):
+    """Extract an invitation URL using any configured site domain."""
+    match = re.search(r"https?://\S+", email_body)
+
+    if not match:
+        raise AssertionError("No invitation URL was found in the email body.")
+
+    return urlparse(match.group(0)).path
+
+
 
 class PlatformMultiFarmTests(TestCase):
     def setUp(self):
@@ -82,7 +92,7 @@ class PlatformMultiFarmTests(TestCase):
         self.assertEqual(membership.status, Membership.Status.INVITED)
         self.assertEqual(len(mail.outbox), 1)
 
-        invitation_path = urlparse(re.search(r"http://testserver(\S+)", mail.outbox[0].body).group(0)).path
+        invitation_path = urlparse(get_invitation_path(mail.outbox[0].body)).path
         self.client.logout()
         response = self.client.get(invitation_path)
         self.assertEqual(response.status_code, 200)
@@ -114,7 +124,7 @@ class PlatformMultiFarmTests(TestCase):
         )
         invitation = FarmOwnerInvitation.objects.get(organization__name="Existing Owner Dairy")
         body = mail.outbox[0].body
-        invitation_path = urlparse(re.search(r"http://testserver(\S+)", body).group(0)).path
+        invitation_path = urlparse(get_invitation_path(body)).path
 
         self.client.logout()
         response = self.client.get(invitation_path)
@@ -142,7 +152,7 @@ class PlatformMultiFarmTests(TestCase):
         )
         invitation = FarmOwnerInvitation.objects.get(organization__name="Private Invite Dairy")
         body = mail.outbox[0].body
-        invitation_path = urlparse(re.search(r"http://testserver(\S+)", body).group(0)).path
+        invitation_path = urlparse(get_invitation_path(body)).path
         self.client.force_login(self.farm_owner)
         response = self.client.get(invitation_path)
         self.assertEqual(response.status_code, 403)
@@ -208,7 +218,7 @@ class PlatformMultiFarmTests(TestCase):
         )
         invitation = FarmOwnerInvitation.objects.get(organization__name="Expired Invite Dairy")
         body = mail.outbox[0].body
-        invitation_path = urlparse(re.search(r"http://testserver(\S+)", body).group(0)).path
+        invitation_path = urlparse(get_invitation_path(body)).path
         invitation.expires_at = timezone.now() - timedelta(minutes=1)
         invitation.save(update_fields=["expires_at", "updated_at"])
         response = self.client.get(invitation_path)
@@ -224,7 +234,7 @@ class PlatformMultiFarmTests(TestCase):
             self.farm_form_data("Hashed Token Dairy", "hashed.owner@example.test"),
         )
         invitation = FarmOwnerInvitation.objects.get(organization__name="Hashed Token Dairy")
-        invitation_path = urlparse(re.search(r"http://testserver(\S+)", mail.outbox[0].body).group(0)).path
+        invitation_path = urlparse(get_invitation_path(mail.outbox[0].body)).path
         raw_token = invitation_path.rstrip("/").split("/")[-1]
         self.assertNotEqual(invitation.token_hash, raw_token)
         self.assertEqual(len(invitation.token_hash), 64)
@@ -238,7 +248,7 @@ class PlatformMultiFarmTests(TestCase):
         )
         first_invitation = FarmOwnerInvitation.objects.get(organization__name="Resend Dairy")
         first_path = urlparse(
-            re.search(r"http://testserver(\S+)", mail.outbox[0].body).group(0)
+            get_invitation_path(mail.outbox[0].body)
         ).path
 
         response = self.client.post(reverse(
@@ -254,7 +264,7 @@ class PlatformMultiFarmTests(TestCase):
             organization=first_invitation.organization
         ).exclude(pk=first_invitation.pk).get()
         second_path = urlparse(
-            re.search(r"http://testserver(\S+)", mail.outbox[1].body).group(0)
+            get_invitation_path(mail.outbox[1].body)
         ).path
         self.assertEqual(self.client.get(first_path).status_code, 410)
         self.client.logout()
