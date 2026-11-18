@@ -6,7 +6,7 @@ from django.test import TestCase
 
 from apps.collections.services import approve_collection, create_collection
 from apps.finance.ledger_services import create_accounting_period
-from apps.finance.models import Account, JournalEntry, LedgerConfiguration, Payment
+from apps.finance.models import Account, Expense, JournalEntry, LedgerConfiguration, Payment
 from apps.finance.services import approve_expense, complete_payment, record_expense, record_payment
 from apps.organizations.models import Branch, Membership, Organization
 from apps.parties.models import Customer, Farmer
