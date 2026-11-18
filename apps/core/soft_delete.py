@@ -49,7 +49,7 @@ def soft_delete_record(*, key, record, actor):
             raise ValidationError("This item has stock movement history. Deactivate it instead of deleting its history.")
     if isinstance(record, Branch):
         if (
-            record.milk_collections.exists() or record.payments.exists()
+            record.milk_collections.exists() or record.payments.exists() or record.customers.exists() or record.farmers.exists()
             or record.expenses.exists() or record.inventory_items.exists()
         ):
             raise ValidationError("This branch has operational history. Deactivate it instead of deleting its history.")
