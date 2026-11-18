@@ -171,8 +171,9 @@ def owner_invitation_accept(request, invitation_id, token):
             if not user.is_active:
                 form.save()
                 user.is_active = True
+            if not user.email_verified:
                 user.email_verified = True
-                user.save(update_fields=["is_active", "email_verified"])
+            user.save(update_fields=["is_active", "email_verified"])
             membership = Membership.objects.select_for_update().get(
                 user=user, organization=locked.organization,
                 role=Membership.Role.OWNER,
