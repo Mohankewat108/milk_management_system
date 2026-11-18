@@ -1,4 +1,5 @@
 from io import BytesIO
+from xml.sax.saxutils import escape
 
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
@@ -45,13 +46,13 @@ def build_pdf(module, queryset, organization_name):
     styles = getSampleStyleSheet()
     story = [Paragraph(f"{organization_name} — {module.replace('_', ' ').title()}", styles["Title"]),
              Paragraph("Confidential organisation data export", styles["Normal"]), Spacer(1, 5*mm)]
-    table_data = [[Paragraph(str(value), styles["BodyText"]) for value in headers]]
+    table_data = [[Paragraph(escape(str(value)), styles["BodyText"]) for value in headers]]
     count = 0
     for row in rows:
         count += 1
         if count > 2500:
             raise ValueError("PDF exports are limited to 2,500 rows. Use Excel for larger exports.")
-        table_data.append([Paragraph(str(_safe_cell(value)), styles["BodyText"]) for value in row])
+        table_data.append([Paragraph(escape(str(_safe_cell(value))), styles["BodyText"]) for value in row])
     widths = [doc.width / len(headers)] * len(headers)
     table = Table(table_data, colWidths=widths, repeatRows=1, hAlign="LEFT")
     table.setStyle(TableStyle([
