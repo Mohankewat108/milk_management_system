@@ -41,7 +41,13 @@ def build_xlsx(module, queryset):
         _accumulate_export_totals(module, row, totals)
         sheet.append([_safe_cell(value) for value in row])
 
-    for summary_index, summary_row in enumerate(_export_summary_rows(module, headers, totals)):\n        sheet.append([_safe_cell(value) for value in summary_row])\n        fill = "E8F1F8" if summary_index == 0 else "0F766E"\n        font_color = "17324D" if summary_index == 0 else "FFFFFF"\n        for cell in sheet[sheet.max_row]:\n            cell.font = Font(bold=True, color=font_color)\n            cell.fill = PatternFill("solid", fgColor=fill)
+    for summary_index, summary_row in enumerate(_export_summary_rows(module, headers, totals)):
+        sheet.append([_safe_cell(value) for value in summary_row])
+        fill = "E8F1F8" if summary_index == 0 else "0F766E"
+        font_color = "17324D" if summary_index == 0 else "FFFFFF"
+        for cell in sheet[sheet.max_row]:
+            cell.font = Font(bold=True, color=font_color)
+            cell.fill = PatternFill("solid", fgColor=fill)
 
     sheet.auto_filter.ref = f"A1:{get_column_letter(len(headers))}{max(1, sheet.max_row - 1)}"
     for column in sheet.columns:
@@ -110,7 +116,11 @@ def build_pdf(module, queryset, organization_name):
         _accumulate_export_totals(module, row, totals)
         table_data.append([Paragraph(escape(str(_safe_cell(value))), cell_style) for value in row])
 
-    summary_rows = _export_summary_rows(module, headers, totals)\n    for summary_row in summary_rows:\n        table_data.append([Paragraph(escape(str(_safe_cell(value))), summary_style) for value in summary_row])\n    average_index = len(table_data) - 2\n    total_index = len(table_data) - 1
+    summary_rows = _export_summary_rows(module, headers, totals)
+    for summary_row in summary_rows:
+        table_data.append([Paragraph(escape(str(_safe_cell(value))), summary_style) for value in summary_row])
+    average_index = len(table_data) - 2
+    total_index = len(table_data) - 1
 
     widths = [doc.width / len(headers)] * len(headers)
     table = Table(table_data, colWidths=widths, repeatRows=1, hAlign="LEFT", splitByRow=1)
@@ -120,7 +130,10 @@ def build_pdf(module, queryset, organization_name):
         ("LINEBELOW", (0, 0), (-1, 0), 1.2, teal),
         ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#CBD5E1")),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("ROWBACKGROUNDS", (0, 1), (-1, average_index - 1), [colors.white, colors.HexColor("#F3F7FB")]),\n        ("BACKGROUND", (0, average_index), (-1, average_index), colors.HexColor("#E8F1F8")),\n        ("BACKGROUND", (0, total_index), (-1, total_index), colors.HexColor("#DCEFEA")),\n        ("LINEABOVE", (0, average_index), (-1, total_index), 1, teal),
+        ("ROWBACKGROUNDS", (0, 1), (-1, average_index - 1), [colors.white, colors.HexColor("#F3F7FB")]),
+        ("BACKGROUND", (0, average_index), (-1, average_index), colors.HexColor("#E8F1F8")),
+        ("BACKGROUND", (0, total_index), (-1, total_index), colors.HexColor("#DCEFEA")),
+        ("LINEABOVE", (0, average_index), (-1, total_index), 1, teal),
         ("FONTSIZE", (0, 0), (-1, -1), 7),
         ("LEFTPADDING", (0, 0), (-1, -1), 4),
         ("RIGHTPADDING", (0, 0), (-1, -1), 4),
