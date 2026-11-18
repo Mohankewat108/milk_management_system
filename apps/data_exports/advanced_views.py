@@ -1,15 +1,10 @@
-import csv
-import io
-from datetime import timedelta
-
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.core.files.base import ContentFile
 from django.db.models import Avg, Count, Sum
 from django.db.models.functions import TruncMonth
-from django.shortcuts import get_object_or_404, redirect, render
 from django.http import HttpResponse
+from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -39,6 +34,9 @@ def save_export_template(request, organization_slug):
     file_format = request.POST.get("file_format", "xlsx")
     if module not in MODULE_ROLES or request.membership.role not in MODULE_ROLES[module]:
         raise PermissionDenied
+    if file_format not in {"csv", "xlsx", "pdf"}:
+        messages.error(request, "Choose CSV, Excel or PDF.")
+        return redirect("data_exports:centre", organization_slug=organization_slug)
     name = request.POST.get("name", "").strip()[:100]
     if not name:
         messages.error(request, "Enter a name for this export template.")
