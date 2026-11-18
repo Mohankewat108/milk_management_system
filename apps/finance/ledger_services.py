@@ -180,10 +180,24 @@ def _enabled_ledger_configuration(organization):
         "procurement_expense_account", "sales_revenue_account",
         "default_expense_account",
     )
+    expected_types = {
+        "cash_account": Account.AccountType.ASSET,
+        "bank_account": Account.AccountType.ASSET,
+        "mobile_wallet_account": Account.AccountType.ASSET,
+        "online_clearing_account": Account.AccountType.ASSET,
+        "other_payment_account": Account.AccountType.ASSET,
+        "receivables_account": Account.AccountType.ASSET,
+        "farmer_payable_account": Account.AccountType.LIABILITY,
+        "procurement_expense_account": Account.AccountType.EXPENSE,
+        "sales_revenue_account": Account.AccountType.INCOME,
+        "default_expense_account": Account.AccountType.EXPENSE,
+    }
     for field in account_fields:
         account = getattr(configuration, field)
         if account.organization_id != organization.id or not account.is_active:
             raise ValidationError(f"Ledger mapping {field} must reference an active account in this organisation.")
+        if account.account_type != expected_types[field]:
+            raise ValidationError(f"Ledger mapping {field} must use an {expected_types[field]} account.")
     return configuration
 
 
