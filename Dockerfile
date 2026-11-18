@@ -14,6 +14,7 @@ RUN python -m pip install --upgrade pip \
     && pip install -r requirements/production.txt
 
 COPY --chown=app:app . .
+RUN mkdir -p /app/private_uploads && chown -R app:app /app/private_uploads
 
 USER app
 
