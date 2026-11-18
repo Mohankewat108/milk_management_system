@@ -35,7 +35,7 @@ def collection_list(request, organization_slug):
         records = records.filter(collected_at__date__gte=start)
     if end:
         records = records.filter(collected_at__date__lte=end)
-    total_litres = records.aggregate(value=Sum("quantity_litres"))["value"] or 0
+    total_litres = records.exclude(status=MilkCollection.Status.REVERSED).aggregate(value=Sum("quantity_litres"))["value"] or 0
     page = Paginator(records, 25).get_page(request.GET.get("page"))
     return render(request, "collections/list.html", {
         "organization": organization, "page_obj": page, "total_litres": total_litres,
@@ -136,6 +136,13 @@ def collection_edit(request, organization_slug, collection_id):
             entry.quality_test_method = data.get("quality_test_method", "")
             entry.notes = data.get("notes", "")
             # Do not silently apply a newer tariff: keep this record's rate snapshot.
+            snapshot = entry.pricing_snapshot or {}
+            if all(key in snapshot for key in ("snf_rate", "fat_rate", "lactose_rate")):
+                entry.milk_rate = (
+                    entry.snf * Decimal(snapshot["snf_rate"])
+                    + entry.fat * Decimal(snapshot["fat_rate"])
+                    + entry.lactose * Decimal(snapshot["lactose_rate"])
+                ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
             entry.total_amount = (
                 entry.quantity_litres * entry.milk_rate
             ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
