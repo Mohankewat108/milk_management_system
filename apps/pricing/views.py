@@ -1,9 +1,11 @@
-from datetime import date
+from datetime import date, datetime, time, timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.db.models import Max, Q
 from django.shortcuts import redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_POST
 
 from apps.audit.services import record_event
@@ -11,6 +13,11 @@ from apps.organizations.decorators import organization_access
 from apps.organizations.models import Membership
 from .forms import PricingConfigurationForm, QualityConfigurationForm
 from .models import PricingConfiguration, QualityConfiguration
+from .services import active_pricing_on
+
+
+def _effective_end(value):
+    return value or date.max
 
 
 @login_required
@@ -21,34 +28,59 @@ def settings_view(request, organization_slug):
     form = PricingConfigurationForm(request.POST or None, organization=organization)
     if request.method == "POST" and form.is_valid():
         data = form.cleaned_data
-        end_date = data["effective_to"]
-        if end_date and end_date < data["effective_from"]:
-            form.add_error("effective_to", "End date must be on or after start date.")
+        branch = data["branch"]
+        start, end = data["effective_from"], data["effective_to"]
+        if branch and branch.organization_id != organization.id:
+            form.add_error("branch", "Select a branch belonging to this dairy.")
         else:
-            query_end = end_date or date.max
-            overlap = PricingConfiguration.objects.filter(
-                organization=organization, branch=data["branch"],
-                effective_from__lte=query_end,
-            ).filter(Q(effective_to__isnull=True) | Q(effective_to__gte=data["effective_from"]))
-            if overlap.exists():
-                form.add_error(None, "This branch scope already has an overlapping effective pricing period.")
+            overlaps = PricingConfiguration.objects.select_for_update().filter(
+                organization=organization, branch=branch,
+                effective_from__lte=_effective_end(end),
+            ).filter(Q(effective_to__isnull=True) | Q(effective_to__gte=start))
+            if overlaps.exists():
+                form.add_error(
+                    None,
+                    "This rate schedule overlaps an existing schedule for the same scope. "
+                    "Close the previous date range first, then publish the new rates.",
+                )
             else:
-                version = (PricingConfiguration.objects.filter(organization=organization)
-                           .aggregate(value=Max("version"))["value"] or 0) + 1
-                pricing = form.save(commit=False)
-                pricing.organization = organization
-                pricing.version = version
-                pricing.created_by = request.user
-                pricing.is_approved = request.membership.role == Membership.Role.OWNER
-                pricing.save()
-                record_event(actor=request.user, organization=organization,
-                             action="pricing.created", target=pricing, request=request)
-                messages.success(request, "Pricing configuration saved.")
+                with transaction.atomic():
+                    version = (PricingConfiguration.objects.filter(organization=organization)
+                               .aggregate(value=Max("version"))["value"] or 0) + 1
+                    pricing = form.save(commit=False)
+                    pricing.organization = organization
+                    pricing.version = version
+                    pricing.created_by = request.user
+                    # Owner-created rates are approved immediately; admin rates require owner approval.
+                    pricing.is_approved = request.membership.role == Membership.Role.OWNER
+                    if pricing.is_approved:
+                        pricing.approved_by = request.user
+                        pricing.approved_at = timezone.now()
+                    pricing.save()
+                    record_event(
+                        actor=request.user, organization=organization,
+                        action="pricing.created", target=pricing, request=request,
+                    )
+                messages.success(
+                    request,
+                    "Dairy-wide rate schedule published for all customers."
+                    if pricing.is_approved and pricing.branch_id is None
+                    else "Rate schedule saved. It will apply after owner approval and its start date.",
+                )
                 return redirect("pricing:settings", organization_slug=organization_slug)
-    history = PricingConfiguration.objects.filter(organization=organization).select_related("branch", "created_by")
+    history = PricingConfiguration.objects.filter(
+        organization=organization
+    ).select_related("branch", "created_by", "approved_by")
+    lookup_date = request.GET.get("date")
+    try:
+        selected_date = date.fromisoformat(lookup_date) if lookup_date else timezone.localdate()
+    except ValueError:
+        selected_date = timezone.localdate()
+    active_rate = active_pricing_on(organization=organization, pricing_date=selected_date)
     return render(request, "pricing/settings.html", {
         "organization": organization, "form": form, "history": history,
-        "membership": request.membership,
+        "membership": request.membership, "selected_date": selected_date,
+        "active_rate": active_rate, "schedule_date": selected_date.isoformat(),
     })
 
 
@@ -56,12 +88,20 @@ def settings_view(request, organization_slug):
 @organization_access(Membership.Role.OWNER)
 @require_POST
 def approve_pricing(request, organization_slug, pricing_id):
-    pricing = PricingConfiguration.objects.get(pk=pricing_id, organization=request.organization)
-    pricing.is_approved = True
-    pricing.save(update_fields=["is_approved", "updated_at"])
-    record_event(actor=request.user, organization=request.organization,
-                 action="pricing.approved", target=pricing, request=request)
-    messages.success(request, "Pricing version approved.")
+    with transaction.atomic():
+        pricing = PricingConfiguration.objects.select_for_update().get(
+            pk=pricing_id, organization=request.organization
+        )
+        if pricing.is_approved:
+            messages.info(request, "This rate schedule is already approved.")
+        else:
+            pricing.is_approved = True
+            pricing.approved_by = request.user
+            pricing.approved_at = timezone.now()
+            pricing.save(update_fields=["is_approved", "approved_by", "approved_at", "updated_at"])
+            record_event(actor=request.user, organization=request.organization,
+                         action="pricing.approved", target=pricing, request=request)
+            messages.success(request, "Rate schedule approved.")
     return redirect("pricing:settings", organization_slug=organization_slug)
 
 
