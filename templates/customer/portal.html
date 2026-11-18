@@ -1,41 +1,104 @@
 {% extends "base.html" %}
 {% block title %}My dairy account | {{ organization.name }}{% endblock %}
 {% block content %}
-<div class="page-heading"><div><div class="eyebrow">CUSTOMER SELF-SERVICE PORTAL</div><h1>Welcome, {{ customer.full_name }}</h1><p class="muted">{{ organization.name }}{% if customer.branch %} · {{ customer.branch.name }}{% endif %} · Customer ID {{ customer.code }}</p></div></div>
-<div class="kpi-grid">
-<section class="panel"><div class="eyebrow">THIS MONTH · APPROVED MILK</div><h2>{{ month_summary.litres|default:"0.000" }} L</h2></section>
-<section class="panel"><div class="eyebrow">THIS MONTH · VALUE</div><h2>{{ currency }} {{ month_summary.amount|default:"0.00" }}</h2></section>
-<section class="panel"><div class="eyebrow">LIFETIME · APPROVED MILK</div><h2>{{ lifetime_summary.litres|default:"0.000" }} L</h2></section>
-<section class="panel"><div class="eyebrow">LIFETIME · VALUE</div><h2>{{ currency }} {{ lifetime_summary.amount|default:"0.00" }}</h2></section>
+<div class="page-heading">
+  <div><div class="eyebrow">CUSTOMER SELF-SERVICE PORTAL</div><h1>Welcome, {{ customer.full_name }}</h1>
+  <p class="muted">{{ organization.name }}{% if customer.branch %} · {{ customer.branch.name }}{% endif %} · Customer ID {{ customer.code }}</p></div>
 </div>
-<section class="panel"><h2>My customer profile</h2><div class="table-wrap"><table><tbody>
-<tr><th>Full name</th><td>{{ customer.full_name }}</td><th>Customer ID</th><td>{{ customer.code }}</td></tr>
-<tr><th>Registered dairy</th><td>{{ organization.name }}</td><th>Branch</th><td>{{ customer.branch.name|default:"Not assigned" }}</td></tr>
-<tr><th>Email</th><td>{{ customer.email|default:"Not provided" }}</td><th>Phone</th><td>{{ customer.phone|default:"Not provided" }}</td></tr>
-<tr><th>Address</th><td>{{ customer.address|default:"Not provided" }}</td><th>City / Village</th><td>{{ customer.city }} {{ customer.village }}</td></tr>
-<tr><th>Ward</th><td>{{ customer.ward|default:"Not provided" }}</td><th>Login email</th><td>{{ request.user.email }}</td></tr>
-</tbody></table></div><p class="small muted">Contact the dairy office to correct identity/contact information so transaction and payment records remain auditable.</p></section>
-<section class="panel"><h2>Published milk rate schedule</h2>
-{% if active_rate %}<p class="muted">Approved schedule for your branch on {{ rate_date }}. This is shared by all customers in your dairy unless a branch-specific override applies.</p>
-<div class="kpi-grid"><div class="kpi"><span>SNF coefficient</span><strong>{{ active_rate.snf_rate }}</strong></div><div class="kpi"><span>Fat coefficient</span><strong>{{ active_rate.fat_rate }}</strong></div><div class="kpi"><span>Lactose coefficient</span><strong>{{ active_rate.lactose_rate }}</strong></div><div class="kpi"><span>Version</span><strong>v{{ active_rate.version }}</strong></div></div>
-<p><strong>Effective:</strong> {{ active_rate.effective_from }} to {{ active_rate.effective_to|default:"Until replaced" }} · <strong>Scope:</strong> {{ active_rate.scope_label }}</p>
-{% else %}<p class="alert warning">No approved milk rate is published for today. Contact the dairy office.</p>{% endif %}
+
+<div class="kpi-grid">
+  <section class="panel"><div class="eyebrow">THIS MONTH · APPROVED MILK</div><h2>{{ month_summary.litres|default:"0.000" }} L</h2></section>
+  <section class="panel"><div class="eyebrow">THIS MONTH · MILK VALUE</div><h2>{{ currency }} {{ month_summary.amount|default:"0.00" }}</h2></section>
+  <section class="panel"><div class="eyebrow">LIFETIME · APPROVED MILK</div><h2>{{ lifetime_summary.litres|default:"0.000" }} L</h2></section>
+  <section class="panel"><div class="eyebrow">LIFETIME · MILK VALUE</div><h2>{{ currency }} {{ lifetime_summary.amount|default:"0.00" }}</h2></section>
+</div>
+
+<section class="panel">
+  <h2>My customer profile</h2>
+  <div class="table-wrap"><table><tbody>
+    <tr><th>Full name</th><td>{{ customer.full_name }}</td><th>Customer ID</th><td>{{ customer.code }}</td></tr>
+    <tr><th>Registered dairy</th><td>{{ organization.name }}</td><th>Branch</th><td>{{ customer.branch.name|default:"Not assigned" }}</td></tr>
+    <tr><th>Email</th><td>{{ customer.email|default:"Not provided" }}</td><th>Phone</th><td>{{ customer.phone|default:"Not provided" }}</td></tr>
+    <tr><th>Address</th><td>{{ customer.address|default:"Not provided" }}</td><th>City / Village</th><td>{{ customer.city }} {{ customer.village }}</td></tr>
+    <tr><th>Ward</th><td>{{ customer.ward|default:"Not provided" }}</td><th>Login email</th><td>{{ request.user.email }}</td></tr>
+  </tbody></table></div>
+  <p class="small muted">For corrections to identity or contact information, contact your dairy office. Transactional records are retained for audit purposes.</p>
 </section>
-<section class="panel"><h2>My milk collection history</h2><p class="muted">Only approved collections belonging to your account are shown.</p><div class="table-wrap"><table><thead><tr><th>Date / time</th><th>Reference</th><th>Quantity</th><th>SNF</th><th>Fat</th><th>Lactose</th><th>Lactometer</th><th>Rate / L</th><th>Total</th></tr></thead><tbody>
-{% for item in collections %}<tr><td>{{ item.collected_at|date:"Y-m-d H:i" }}</td><td>{{ item.reference }}</td><td>{{ item.quantity_litres }} L</td><td>{{ item.snf }}</td><td>{{ item.fat }}</td><td>{{ item.lactose }}</td><td>{{ item.lactometer_reading|default:"—" }}</td><td>{{ currency }} {{ item.milk_rate }}</td><td>{{ currency }} {{ item.total_amount }}</td></tr>
-<tr><td colspan="9"><details><summary>View quality test and price calculation</summary>
-<p><strong>Pricing version:</strong> v{{ item.pricing_snapshot.version }} · {{ item.pricing_snapshot.effective_from|default:"Historical rate" }}</p>
-<p>SNF: {{ item.snf }} × {{ item.pricing_snapshot.snf_rate }} = {{ item.pricing_snapshot.snf_component|default:"—" }}</p>
-<p>Fat: {{ item.fat }} × {{ item.pricing_snapshot.fat_rate }} = {{ item.pricing_snapshot.fat_component|default:"—" }}</p>
-<p>Lactose: {{ item.lactose }} × {{ item.pricing_snapshot.lactose_rate }} = {{ item.pricing_snapshot.lactose_component|default:"—" }}</p>
-<p><strong>Formula:</strong> {{ item.pricing_snapshot.formula }}</p>
-<p><strong>Test:</strong> {{ item.quality_test_method|default:"Not recorded" }} · <strong>Sample:</strong> {{ item.sample_reference|default:"—" }} · <strong>Temperature:</strong> {{ item.milk_temperature_c|default:"—" }} °C</p>
-<p><strong>Amount:</strong> {{ item.quantity_litres }} L × {{ item.milk_rate }} = {{ currency }} {{ item.total_amount }}</p>
-{% if item.notes %}<p><strong>Notes:</strong> {{ item.notes }}</p>{% endif %}</details></td></tr>
-{% empty %}<tr><td colspan="9">No approved milk collections are available yet.</td></tr>{% endfor %}
-</tbody></table></div></section>
-<section class="panel"><h2>Completed payment history</h2><div class="table-wrap"><table><thead><tr><th>Payment date</th><th>Reference</th><th>Method</th><th>Transaction reference</th><th>Amount</th><th>Status</th></tr></thead><tbody>
-{% for item in payments %}<tr><td>{{ item.paid_at|date:"Y-m-d H:i" }}</td><td>{{ item.reference }}</td><td>{{ item.get_method_display }}</td><td>{{ item.transaction_reference|default:"—" }}</td><td>{{ item.currency }} {{ item.amount }}</td><td>{{ item.get_status_display }}</td></tr>
-{% empty %}<tr><td colspan="6">No completed payments are available yet.</td></tr>{% endfor %}
-</tbody></table></div></section>
+
+<section class="panel">
+  <h2>Published milk rate schedule</h2>
+  {% if active_rate %}
+    <p class="muted">Approved rate schedule effective on {{ rate_date }}. The common dairy rate applies to all customers unless your branch has an approved override.</p>
+    <div class="kpi-grid">
+      <div class="kpi"><span>SNF coefficient</span><strong>{{ active_rate.snf_rate }}</strong></div>
+      <div class="kpi"><span>Fat coefficient</span><strong>{{ active_rate.fat_rate }}</strong></div>
+      <div class="kpi"><span>Lactose coefficient</span><strong>{{ active_rate.lactose_rate }}</strong></div>
+      <div class="kpi"><span>Schedule version</span><strong>v{{ active_rate.version }}</strong></div>
+    </div>
+    <p><strong>Effective:</strong> {{ active_rate.effective_from }} to {{ active_rate.effective_to|default:"Until replaced" }} · <strong>Scope:</strong> {{ active_rate.scope_label }}</p>
+  {% else %}
+    <p class="alert warning">No approved milk rate is published for today. Contact the dairy office.</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <div class="page-heading"><div><h2>My milk statement</h2><p class="muted">Only approved milk collections and completed payments belonging to your customer account are included.</p></div>
+    <a class="button" href="{% url 'customer_portal:statement_csv' %}?from={{ start_date|date:'Y-m-d' }}&amp;to={{ end_date|date:'Y-m-d' }}">Download CSV statement</a>
+  </div>
+  {% if date_error %}<p class="alert warning">{{ date_error }}</p>{% endif %}
+  <form method="get" class="form-grid">
+    <div><label for="from-date">From date</label><input id="from-date" type="date" name="from" value="{{ start_date|date:'Y-m-d' }}"></div>
+    <div><label for="to-date">To date</label><input id="to-date" type="date" name="to" value="{{ end_date|date:'Y-m-d' }}"></div>
+    <div><button class="button" type="submit">Apply date range</button></div>
+  </form>
+  <div class="kpi-grid">
+    <div class="kpi"><span>Selected period · milk</span><strong>{{ statement_litres|default:"0.000" }} L</strong></div>
+    <div class="kpi"><span>Selected period · milk value</span><strong>{{ currency }} {{ statement_amount|default:"0.00" }}</strong></div>
+    <div class="kpi"><span>Selected period · completed payments</span><strong>{{ currency }} {{ statement_payment_total|default:"0.00" }}</strong></div>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Milk collection history</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Date / time</th><th>Reference</th><th>Branch</th><th>Quantity</th><th>SNF</th><th>Fat</th><th>Lactose</th><th>Lactometer</th><th>Rate / L</th><th>Total</th></tr></thead>
+    <tbody>
+    {% for item in collections %}
+      <tr><td>{{ item.collected_at|date:"Y-m-d H:i" }}</td><td>{{ item.reference }}</td><td>{{ item.branch.name }}</td><td>{{ item.quantity_litres }} L</td><td>{{ item.snf }}</td><td>{{ item.fat }}</td><td>{{ item.lactose }}</td><td>{{ item.lactometer_reading|default:"—" }}</td><td>{{ currency }} {{ item.milk_rate }}</td><td>{{ currency }} {{ item.total_amount }}</td></tr>
+      <tr><td colspan="10"><details><summary>View quality test and price calculation</summary>
+        <p><strong>Pricing version:</strong> v{{ item.pricing_snapshot.version }} · {{ item.pricing_snapshot.effective_from|default:"Historical rate" }}</p>
+        <p>SNF: {{ item.snf }} × {{ item.pricing_snapshot.snf_rate }} = {{ item.pricing_snapshot.snf_component|default:"—" }}</p>
+        <p>Fat: {{ item.fat }} × {{ item.pricing_snapshot.fat_rate }} = {{ item.pricing_snapshot.fat_component|default:"—" }}</p>
+        <p>Lactose: {{ item.lactose }} × {{ item.pricing_snapshot.lactose_rate }} = {{ item.pricing_snapshot.lactose_component|default:"—" }}</p>
+        <p><strong>Formula:</strong> {{ item.pricing_snapshot.formula }}</p>
+        <p><strong>Test:</strong> {{ item.quality_test_method|default:"Not recorded" }} · <strong>Sample:</strong> {{ item.sample_reference|default:"—" }} · <strong>Temperature:</strong> {{ item.milk_temperature_c|default:"—" }} °C</p>
+        <p><strong>Amount:</strong> {{ item.quantity_litres }} L × {{ item.milk_rate }} = {{ currency }} {{ item.total_amount }}</p>
+        {% if item.notes %}<p><strong>Notes:</strong> {{ item.notes }}</p>{% endif %}
+      </details></td></tr>
+    {% empty %}<tr><td colspan="10">No approved milk collections were found for this period.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+  {% if collections.has_other_pages %}
+    <div class="pagination">
+      {% if collections.has_previous %}<a href="?from={{ start_date|date:'Y-m-d' }}&amp;to={{ end_date|date:'Y-m-d' }}&amp;page={{ collections.previous_page_number }}">Previous</a>{% endif %}
+      <span>Page {{ collections.number }} of {{ collections.paginator.num_pages }}</span>
+      {% if collections.has_next %}<a href="?from={{ start_date|date:'Y-m-d' }}&amp;to={{ end_date|date:'Y-m-d' }}&amp;page={{ collections.next_page_number }}">Next</a>{% endif %}
+    </div>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>Completed payment history</h2>
+  <div class="table-wrap"><table><thead><tr><th>Payment date</th><th>Reference</th><th>Method</th><th>Transaction reference</th><th>Amount</th><th>Status</th></tr></thead><tbody>
+    {% for item in payments %}<tr><td>{{ item.paid_at|date:"Y-m-d H:i" }}</td><td>{{ item.reference }}</td><td>{{ item.get_method_display }}</td><td>{{ item.transaction_reference|default:"—" }}</td><td>{{ item.currency }} {{ item.amount }}</td><td>{{ item.get_status_display }}</td></tr>
+    {% empty %}<tr><td colspan="6">No completed payments were found for this period.</td></tr>{% endfor %}
+  </tbody></table></div>
+  {% if payments.has_other_pages %}
+    <div class="pagination">
+      {% if payments.has_previous %}<a href="?from={{ start_date|date:'Y-m-d' }}&amp;to={{ end_date|date:'Y-m-d' }}&amp;payment_page={{ payments.previous_page_number }}">Previous</a>{% endif %}
+      <span>Page {{ payments.number }} of {{ payments.paginator.num_pages }}</span>
+      {% if payments.has_next %}<a href="?from={{ start_date|date:'Y-m-d' }}&amp;to={{ end_date|date:'Y-m-d' }}&amp;payment_page={{ payments.next_page_number }}">Next</a>{% endif %}
+    </div>
+  {% endif %}
+</section>
 {% endblock %}
