@@ -192,3 +192,36 @@ class PlatformMultiFarmTests(TestCase):
         )
         organization.refresh_from_db()
         self.assertEqual(organization.status, Organization.Status.TRIAL)
+
+
+    def test_expired_invitation_cannot_be_accepted(self):
+        from datetime import timedelta
+        from django.utils import timezone
+
+        self.client.force_login(self.platform_owner)
+        self.client.post(
+            reverse("platform:organization_create"),
+            self.farm_form_data("Expired Invite Dairy", "expired.owner@example.test"),
+        )
+        invitation = FarmOwnerInvitation.objects.get(organization__name="Expired Invite Dairy")
+        body = mail.outbox[0].body
+        invitation_path = urlparse(re.search(r"http://testserver(\\S+)", body).group(0)).path
+        invitation.expires_at = timezone.now() - timedelta(minutes=1)
+        invitation.save(update_fields=["expires_at", "updated_at"])
+        response = self.client.get(invitation_path)
+        self.assertEqual(response.status_code, 410)
+
+    def test_invitation_token_is_stored_as_a_hash_not_plaintext(self):
+        import re
+        from urllib.parse import urlparse
+
+        self.client.force_login(self.platform_owner)
+        self.client.post(
+            reverse("platform:organization_create"),
+            self.farm_form_data("Hashed Token Dairy", "hashed.owner@example.test"),
+        )
+        invitation = FarmOwnerInvitation.objects.get(organization__name="Hashed Token Dairy")
+        invitation_path = urlparse(re.search(r"http://testserver(\\S+)", mail.outbox[0].body).group(0)).path
+        raw_token = invitation_path.rstrip("/").split("/")[-1]
+        self.assertNotEqual(invitation.token_hash, raw_token)
+        self.assertEqual(len(invitation.token_hash), 64)
