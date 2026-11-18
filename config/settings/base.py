@@ -110,3 +110,4 @@ EMAIL_BACKEND = env(
     ),
 )
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="no-reply@dairynexus.local")
+DJANGO_SITE_URL = env("DJANGO_SITE_URL", default="")
