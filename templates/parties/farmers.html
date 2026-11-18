@@ -1,5 +1,5 @@
 {% extends "base.html" %}{% block title %}Farmers | {{ organization.name }}{% endblock %}{% block content %}
-<div class="page-heading"><div><div class="eyebrow">{{ organization.name }}</div><h1>Farmers</h1><p class="muted">Milk suppliers and their business profiles.</p></div><div class="actions"><a class="button button-secondary" href="{% url 'parties:trash' organization.slug %}">Trash</a><a class="button" href="{% url 'parties:farmer_create' organization.slug %}">Add farmer</a></div>
+<div class="page-heading"><div><div class="eyebrow">{{ organization.name }}</div><h1>Farmers</h1><p class="muted">Milk suppliers and their business profiles.</p></div><div class="actions"><a class="button button-secondary" href="{% url 'business:trash' organization.slug %}">Trash</a><a class="button" href="{% url 'parties:farmer_create' organization.slug %}">Add farmer</a></div>
 <form class="search-form" method="get">
 <input name="q" value="{{ query }}" placeholder="Search name, code, phone or email">
 <select name="status"><option value="">All statuses</option><option value="active" {% if status_filter == "active" %}selected{% endif %}>Active</option><option value="inactive" {% if status_filter == "inactive" %}selected{% endif %}>Inactive</option></select>
