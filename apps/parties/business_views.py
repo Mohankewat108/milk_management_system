@@ -63,7 +63,7 @@ def _party_profile_context(*, party, kind, request):
 
     relation = "customer" if kind == "customer" else "farmer"
     collections = MilkCollection.objects.filter(
-        organization=request.organization,
+        organization=request.organization, deleted_at__isnull=True,
         **{relation: party},
     ).select_related("branch", "recorded_by", "pricing").order_by("-collected_at")
     collections = _party_scope(collections, request.membership)
