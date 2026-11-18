@@ -22,7 +22,7 @@ INSTALLED_APPS = [
     "apps.organizations.apps.OrganizationsConfig", "apps.parties.apps.PartiesConfig",
     "apps.pricing.apps.PricingConfig", "apps.collections.apps.CollectionsConfig",
     "apps.finance.apps.FinanceConfig", "apps.inventory.apps.InventoryConfig",
-    "apps.audit.apps.AuditConfig", "apps.platform_admin.apps.PlatformAdminConfig",
+    "apps.audit.apps.AuditConfig", "apps.data_exports.apps.DataExportsConfig", "apps.platform_admin.apps.PlatformAdminConfig",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
