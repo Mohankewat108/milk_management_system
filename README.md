@@ -130,3 +130,18 @@ For local development, Django writes invitation emails to the runserver console 
 - `DEFAULT_FROM_EMAIL`
 
 Never commit SMTP passwords. Use a transactional email provider and a sender domain you control in staging/production. The current implementation does not yet include an invitation resend/revoke management screen or background email queue.
+
+
+## SaaS workspace UI update
+
+A feature branch named `feature/saas-dashboard-collections-ui` contains an in-progress UI upgrade:
+
+- Shared authenticated workspace shell with permission-aware sidebar navigation and mobile drawer.
+- Light, dark and system theme selection persisted in browser local storage.
+- Django language middleware and language selector for configured English, Nepali, Danish and Hindi locales.
+- Milk collection edit route and form, with tenant/branch permission scoping and audit event capture.
+- Collection listing now exposes an Edit action.
+
+The collection edit operation intentionally retains the original effective-dated milk rate snapshot and recalculates the amount using that saved rate. It does not automatically revise already-generated farmer payment entries. Review reconciliation requirements before enabling edits on financially settled/approved records.
+
+This is a development change set, not a verified production release. Run the Django checks and automated tests locally/CI before merging. Existing feature modules are not all upgraded to full CRUD by this change set.

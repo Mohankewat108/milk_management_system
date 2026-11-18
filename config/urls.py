@@ -7,6 +7,7 @@ urlpatterns = [
     path("healthz/", health_check, name="healthz"),
     path("readyz/", readiness_check, name="readyz"),
     path("admin/", admin.site.urls),
+    path("i18n/", include("django.conf.urls.i18n")),
     path("accounts/", include("apps.accounts.urls")),
     path("business/", include("apps.organizations.urls")),
     path("business/", include("apps.parties.urls")),

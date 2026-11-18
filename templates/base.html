@@ -1,45 +1,68 @@
 {% load static %}<!doctype html>
-<html lang="en">
+<html lang="{{ LANGUAGE_CODE|default:'en' }}">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#eff6ff">
-  <meta name="color-scheme" content="light">
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#eff6ff"><meta name="color-scheme" content="light dark">
   <title>{% block title %}DairyNexus{% endblock %}</title>
-  <link rel="stylesheet" href="{% static 'css/app.css' %}">
-  {% block extra_head %}{% endblock %}
+  <script>
+    (function(){try{var t=localStorage.getItem('dairynexus-theme')||'system';var d=t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';}catch(e){document.documentElement.dataset.theme='light';}}());
+  </script>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">{% block extra_head %}{% endblock %}
 </head>
 <body>
-  <a class="skip-link" href="#main-content">Skip to main content</a>
-  <header class="site-header">
-    <a class="brand" href="{% url 'home' %}" aria-label="DairyNexus home">
-      <span class="brand-mark" aria-hidden="true">D</span>
-      <span class="brand-copy"><strong>DairyNexus</strong><small>DAIRY OPERATIONS</small></span>
-    </a>
-    <nav class="top-actions" aria-label="Primary navigation">
-      {% if user.is_authenticated %}
-        <a href="{% url 'business:workspace' %}">Workspaces</a>
-        {% if user.is_superuser %}<a href="{% url 'platform:dashboard' %}">Platform</a>{% endif %}
-        <a href="{% url 'accounts:password_change' %}">Security</a>
-        <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="link-button" type="submit">Sign out</button></form>
-      {% else %}
-        <a href="{% url 'accounts:login' %}">Sign in</a>
-        <a class="button button-small" href="{% url 'accounts:register' %}">Create account</a>
+<a class="skip-link" href="#main-content">Skip to main content</a>
+<header class="site-header">
+  <button class="icon-button mobile-menu-button" type="button" id="sidebar-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+  <a class="brand" href="{% url 'home' %}" aria-label="DairyNexus home"><span class="brand-mark" aria-hidden="true">D</span><span class="brand-copy"><strong>DairyNexus</strong><small>DAIRY OPERATIONS</small></span></a>
+  <nav class="top-actions" aria-label="Primary navigation">
+    {% if user.is_authenticated %}
+      <a href="{% url 'business:workspace' %}">Workspaces</a>
+      {% if user.is_superuser %}<a href="{% url 'platform:dashboard' %}">Platform</a>{% endif %}
+      <a href="{% url 'accounts:password_change' %}">Security</a>
+      <label class="toolbar-select"><span class="visually-hidden">Theme</span><select id="theme-select" aria-label="Theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+      <label class="toolbar-select"><span class="visually-hidden">Language</span><form method="post" action="{% url 'set_language' %}" class="language-form">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><select name="language" aria-label="Language" onchange="this.form.submit()">{% get_current_language as CURRENT_LANGUAGE %}{% get_available_languages as LANGUAGES %}{% for code,name in LANGUAGES %}<option value="{{ code }}" {% if code == CURRENT_LANGUAGE %}selected{% endif %}>{{ name }}</option>{% endfor %}</select></form></label>
+      <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="link-button" type="submit">Sign out</button></form>
+    {% else %}<a href="{% url 'accounts:login' %}">Sign in</a><a class="button button-small" href="{% url 'accounts:register' %}">Create account</a>{% endif %}
+  </nav>
+</header>
+{% if user.is_authenticated %}
+<div class="workspace-shell">
+  <aside class="app-sidebar" id="app-sidebar" aria-label="Application navigation">
+    <div class="sidebar-tenant"><span class="context-dot"></span><span>Workspace navigation</span></div>
+    <div class="sidebar-title">Main menu</div><nav class="sidebar-nav">
+      <a href="{% url 'business:workspace' %}">▦ <span>Workspaces</span></a>
+      {% if request.organization %}<a href="{% url 'business:dashboard' request.organization.slug %}">⌂ <span>Dashboard</span></a>
+      <div class="sidebar-title">Farm management</div>
+      <a href="{% url 'parties:farmers' request.organization.slug %}">♙ <span>Farmers</span></a>
+      <a href="{% url 'parties:customers' request.organization.slug %}">♧ <span>Customers</span></a>
+      <a href="{% url 'collections:list' request.organization.slug %}">◉ <span>Milk collection</span></a>
+      {% if request.membership.role == 'owner' or request.membership.role == 'admin' %}<a href="{% url 'business:staff' request.organization.slug %}">♟ <span>Staff & access</span></a>{% endif %}
+      <div class="sidebar-title">Finance & operations</div>
+      {% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'accountant' %}<a href="{% url 'finance:list' request.organization.slug %}">▤ <span>Payments</span></a><a href="{% url 'finance:expenses' request.organization.slug %}">↗ <span>Expenses</span></a>{% endif %}
+      {% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'inventory_manager' %}<a href="{% url 'inventory:items' request.organization.slug %}">▣ <span>Inventory</span></a>{% endif %}
+      {% if request.membership.role == 'owner' or request.membership.role == 'admin' %}<div class="sidebar-title">Configuration</div><a href="{% url 'business:branches' request.organization.slug %}">⌖ <span>Branches</span></a><a href="{% url 'pricing:settings' request.organization.slug %}">₹ <span>Milk rates</span></a><a href="{% url 'pricing:quality' request.organization.slug %}">◇ <span>Quality settings</span></a>{% endif %}
       {% endif %}
     </nav>
-  </header>
-  <main id="main-content" class="page-shell">
-    {% if user.is_authenticated %}
-      <div class="shell-context"><span class="context-dot" aria-hidden="true"></span>Secure dairy workspace</div>
-    {% endif %}
-    {% if messages %}
-      <div class="messages" role="status" aria-live="polite">
-        {% for message in messages %}<div class="alert {{ message.tags }}">{{ message }}</div>{% endfor %}
-      </div>
-    {% endif %}
-    {% block content %}{% endblock %}
-  </main>
-  <footer class="footer"><span class="footer-brand">DairyNexus</span><span>Dairy operations, made accountable.</span></footer>
-  {% block scripts %}{% endblock %}
-</body>
-</html>
+    <div class="sidebar-footer"><span class="small muted">Signed in as</span><strong>{{ request.user.get_full_name|default:request.user.username }}</strong></div>
+  </aside>
+  <div class="workspace-main">
+{% endif %}
+<main id="main-content" class="page-shell">
+  {% if user.is_authenticated %}<div class="shell-context"><span class="context-dot" aria-hidden="true"></span>Secure dairy workspace</div>{% endif %}
+  {% if messages %}<div class="messages" role="status" aria-live="polite">{% for message in messages %}<div class="alert {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+  {% block content %}{% endblock %}
+</main>
+{% if user.is_authenticated %}</div></div>{% endif %}
+<footer class="footer"><span class="footer-brand">DairyNexus</span><span>Dairy operations, made accountable.</span></footer>
+<script>
+(function(){
+ const root=document.documentElement, theme=document.getElementById('theme-select'), toggle=document.getElementById('sidebar-toggle'), sidebar=document.getElementById('app-sidebar');
+ function apply(value){const dark=value==='dark'||(value==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);root.dataset.theme=dark?'dark':'light';if(theme)theme.value=value;try{localStorage.setItem('dairynexus-theme',value);}catch(e){}}
+ const saved=(()=>{try{return localStorage.getItem('dairynexus-theme')||'system';}catch(e){return 'system';}})();apply(saved);
+ if(theme)theme.addEventListener('change',()=>apply(theme.value));
+ if(toggle&&sidebar){toggle.addEventListener('click',()=>{const open=sidebar.classList.toggle('is-open');toggle.setAttribute('aria-expanded',String(open));});}
+ if(window.matchMedia){window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{const v=(()=>{try{return localStorage.getItem('dairynexus-theme')||'system';}catch(e){return 'system';}})();if(v==='system')apply(v);});}
+}());
+</script>
+{% block scripts %}{% endblock %}
+</body></html>
