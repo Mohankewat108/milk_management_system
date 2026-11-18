@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Accept farm invitation | DairyNexus{% endblock %}
+{% block content %}
+<section class="content-card">
+  <div class="eyebrow">DAIRYNEXUS · FARM OWNER INVITATION</div>
+  <h1>Join {{ invitation.organization.name }}</h1>
+  <p class="muted">You have been invited to become the owner of this dairy workspace.</p>
+  <dl class="detail-list">
+    <dt>Farm</dt><dd>{{ invitation.organization.name }}</dd>
+    <dt>Invited email</dt><dd>{{ invitation.email }}</dd>
+    <dt>Invitation expires</dt><dd>{{ invitation.expires_at|date:"d M Y, H:i" }}</dd>
+  </dl>
+  {% if requires_password %}
+    <h2>Activate your account</h2>
+    <p class="muted">Create a strong password to finish setting up your account.</p>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      {% for field in form %}
+      <div class="form-field">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+        {% if field.help_text %}<small class="field-help">{{ field.help_text }}</small>{% endif %}
+      </div>
+      {% endfor %}
+      <button class="button" type="submit">Set password and accept invitation</button>
+    </form>
+  {% else %}
+    <p>Your account is signed in. Accept this invitation to add the farm to your workspaces.</p>
+    <form method="post">
+      {% csrf_token %}
+      <button class="button" type="submit">Accept invitation</button>
+    </form>
+  {% endif %}
+</section>
+{% endblock %}
