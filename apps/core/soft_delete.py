@@ -61,11 +61,7 @@ def soft_delete_record(*, key, record, actor):
 
     record.deleted_at = timezone.now()
     record.deleted_by = actor
-    update_fields = ["deleted_at", "deleted_by", "updated_at"]
-    if hasattr(record, "is_active"):
-        record.is_active = False
-        update_fields.append("is_active")
-    record.save(update_fields=update_fields)
+    record.save(update_fields=["deleted_at", "deleted_by", "updated_at"])
 
 
 def restore_record(*, record):
@@ -73,11 +69,7 @@ def restore_record(*, record):
         raise ValidationError("This record is not in Trash.")
     record.deleted_at = None
     record.deleted_by = None
-    update_fields = ["deleted_at", "deleted_by", "updated_at"]
-    if hasattr(record, "is_active"):
-        record.is_active = True
-        update_fields.append("is_active")
-    record.save(update_fields=update_fields)
+    record.save(update_fields=["deleted_at", "deleted_by", "updated_at"])
 
 
 def display_record(record):
