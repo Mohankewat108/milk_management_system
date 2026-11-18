@@ -204,7 +204,7 @@ def farmer_list(request, organization_slug):
     if registered_to:
         records = records.filter(created_at__date__lte=registered_to)
     branch_ids = accessible_branch_ids(request.membership)
-    branches = org.branches.filter(is_active=True) if branch_ids is None else org.branches.filter(pk__in=branch_ids, is_active=True)
+    branches = org.branches.filter(is_active=True, deleted_at__isnull=True) if branch_ids is None else org.branches.filter(pk__in=branch_ids, is_active=True)
     page = Paginator(records, 25).get_page(request.GET.get("page"))
     return render(request, "parties/farmers.html", {
         "organization": org, "page_obj": page, "query": term,
