@@ -7,7 +7,6 @@ existing reversal/adjustment workflows rather than being hidden or erased.
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
-from apps.collections.models import MilkCollection
 from apps.finance.models import Expense, Payment
 from apps.inventory.models import InventoryItem, Supplier
 from apps.organizations.models import Branch
