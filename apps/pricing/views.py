@@ -1,4 +1,4 @@
-from datetime import date, datetime, time, timedelta
+from datetime import date
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -33,25 +33,27 @@ def settings_view(request, organization_slug):
         if branch and branch.organization_id != organization.id:
             form.add_error("branch", "Select a branch belonging to this dairy.")
         else:
-            overlaps = PricingConfiguration.objects.select_for_update().filter(
-                organization=organization, branch=branch,
-                effective_from__lte=_effective_end(end),
-            ).filter(Q(effective_to__isnull=True) | Q(effective_to__gte=start))
-            if overlaps.exists():
-                form.add_error(
-                    None,
-                    "This rate schedule overlaps an existing schedule for the same scope. "
-                    "Close the previous date range first, then publish the new rates.",
-                )
-            else:
-                with transaction.atomic():
+            with transaction.atomic():
+                # Lock the tenant row to serialize concurrent edits to the same rate schedule.
+                type(organization).objects.select_for_update().get(pk=organization.pk)
+                overlaps = PricingConfiguration.objects.filter(
+                    organization=organization, branch=branch,
+                    effective_from__lte=_effective_end(end),
+                ).filter(Q(effective_to__isnull=True) | Q(effective_to__gte=start))
+                if overlaps.exists():
+                    form.add_error(
+                        None,
+                        "This rate schedule overlaps an existing schedule for the same scope. "
+                        "Close the previous date range first, then publish the new rates.",
+                    )
+                else:
                     version = (PricingConfiguration.objects.filter(organization=organization)
                                .aggregate(value=Max("version"))["value"] or 0) + 1
                     pricing = form.save(commit=False)
                     pricing.organization = organization
                     pricing.version = version
                     pricing.created_by = request.user
-                    # Owner-created rates are approved immediately; admin rates require owner approval.
+                    # Owner-created rates are approved immediately; admin-created rates require owner approval.
                     pricing.is_approved = request.membership.role == Membership.Role.OWNER
                     if pricing.is_approved:
                         pricing.approved_by = request.user
@@ -61,6 +63,7 @@ def settings_view(request, organization_slug):
                         actor=request.user, organization=organization,
                         action="pricing.created", target=pricing, request=request,
                     )
+            if not form.errors:
                 messages.success(
                     request,
                     "Dairy-wide rate schedule published for all customers."
