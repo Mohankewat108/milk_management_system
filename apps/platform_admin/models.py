@@ -37,3 +37,38 @@ class Subscription(UUIDModel, TimeStampedModel):
 
     class Meta:
         indexes = [models.Index(fields=["organization", "status"]), models.Index(fields=["status", "ends_at"])]
+
+
+class FarmOwnerInvitation(UUIDModel, TimeStampedModel):
+    """One-time invitation allowing a person to activate farm-owner access."""
+
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="owner_invitations"
+    )
+    user = models.ForeignKey(
+        "accounts.User", on_delete=models.CASCADE, related_name="farm_owner_invitations"
+    )
+    invited_by = models.ForeignKey(
+        "accounts.User", on_delete=models.PROTECT, related_name="sent_farm_owner_invitations"
+    )
+    email = models.EmailField(db_index=True)
+    token_hash = models.CharField(max_length=64, unique=True)
+    expires_at = models.DateTimeField(db_index=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["organization", "email", "created_at"]),
+            models.Index(fields=["expires_at", "accepted_at", "revoked_at"]),
+        ]
+
+    @property
+    def is_pending(self):
+        from django.utils import timezone
+        return (
+            self.accepted_at is None
+            and self.revoked_at is None
+            and self.expires_at > timezone.now()
+        )
