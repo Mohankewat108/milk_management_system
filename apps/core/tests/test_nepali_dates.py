@@ -24,3 +24,24 @@ class LocaleDateTests(SimpleTestCase):
     def test_invalid_nepali_date_is_rejected(self):
         with self.assertRaises(ValueError):
             parse_local_date("2081-99-99", "ne")
+
+
+class NepaliCalendarEndpointTests(SimpleTestCase):
+    def test_current_month_endpoint_returns_calendar_grid_metadata(self):
+        from django.urls import reverse
+
+        response = self.client.get(reverse("nepali_calendar_month"))
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("month_name", payload)
+        self.assertGreaterEqual(payload["days_in_month"], 29)
+        self.assertLessEqual(payload["days_in_month"], 32)
+        self.assertEqual(len(payload["days"]), payload["days_in_month"])
+        self.assertGreaterEqual(payload["first_weekday"], 0)
+        self.assertLessEqual(payload["first_weekday"], 6)
+
+    def test_invalid_month_is_rejected(self):
+        from django.urls import reverse
+
+        response = self.client.get(reverse("nepali_calendar_month"), {"year": 2081, "month": 13})
+        self.assertEqual(response.status_code, 400)
