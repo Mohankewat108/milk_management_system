@@ -8,8 +8,8 @@
     <a class="button" href="{% url 'collections:create' organization.slug %}">Record collection</a>
   </div>
   <form class="search-form" method="get">
-    <label>From <input type="text" inputmode="numeric" data-calendar-date name="from" value="{{ date_from }}"></label>
-    <label>To <input type="text" inputmode="numeric" data-calendar-date name="to" value="{{ date_to }}"></label>
+    <label>From ({{ date_calendar }}) <input type="text" inputmode="numeric" data-calendar-date name="from" value="{{ date_from }}"></label>
+    <label>To ({{ date_calendar }}) <input type="text" inputmode="numeric" data-calendar-date name="to" value="{{ date_to }}"></label>
     <button class="button button-secondary" type="submit">Filter</button>
   </form>
   {% if date_error %}<p class="alert error" role="alert">{{ date_error }}</p>{% endif %}
@@ -37,6 +37,6 @@
     </tr>{% empty %}<tr><td colspan="12">No collection records found.</td></tr>{% endfor %}
     </tbody>
   </table></section>
-  <div class="pagination">{% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}<span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">Next</a>{% endif %}</div>
+  <div class="pagination">{% if page_obj.has_previous %}<a href="?{% if date_from %}from={{ date_from|urlencode }}&{% endif %}{% if date_to %}to={{ date_to|urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}<span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a href="?{% if date_from %}from={{ date_from|urlencode }}&{% endif %}{% if date_to %}to={{ date_to|urlencode }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>{% endif %}</div>
 </div>
 {% endblock %}
