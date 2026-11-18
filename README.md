@@ -2,96 +2,75 @@
 
 DairyNexus is the Python/Django replacement being developed for the original PHP Milk Management System.
 
-> Migration status: active foundation branch, not yet a production-ready commercial release. The original PHP files remain on main and have not been overwritten.
+> **Release status: development only.** Do not onboard real dairy businesses or production personal/financial data until every P0 item in [the production release gate](docs/production-release-gate.md) has evidence and approval.
 
 ## Implemented foundation
 
-- Django 5.2-compatible project structure and custom UUID user model.
-- Username/email login, Django sessions, password reset/change and login throttling.
-- Tenant organisations, branch memberships, roles and explicit branch assignments.
-- Separate Customer and Farmer domain models and customer portal.
+- Django project and custom UUID user model.
+- Username/email login, Django sessions, password reset/change and basic login throttling.
+- Tenant organisations, branches, memberships, roles and explicit branch assignments.
+- Customer and Farmer records plus a basic customer portal.
 - Effective-dated SNF/FAT/Lactose pricing and configurable quality ranges.
-- Server-side Decimal pricing and collection calculations with historical snapshots.
-- Collection submission and approval workflow.
-- Pending/completed payment workflow with transactional verification.
-- Inventory items, supplier directory and transactional stock movement workflow.
-- Pending/approved expense recording alongside payment management.
-- Subscription plan/subscription models and superuser platform overview.
-- Audit events, demo seeding, responsive templates, security/operations documentation.
+- Decimal milk calculation with pricing/quality snapshots and collection approval workflow.
+- Pending/completed payment workflow and approval-based expense recording.
+- Supplier directory, inventory items and transactional stock movement service.
+- Subscription plan/subscription data models and superuser platform overview.
+- Audit events, fictional demo seeding, responsive Django templates.
+- Docker development environment and GitHub Actions CI.
 
 ## Stack
 
-Python 3.12+, Django 5.2, PostgreSQL (production), SQLite (local), Django ORM, Django templates, WhiteNoise, Gunicorn and Redis (production cache).
+Python 3.12+, Django 5.2, PostgreSQL (CI/production), SQLite (quick local development), Redis, WhiteNoise and Gunicorn.
 
-## Windows PowerShell setup
+## Windows PowerShell quick start
 
-1. Create and activate a Python virtual environment:
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements/development.txt
+Copy-Item .env.example .env
+```
 
-    py -3.12 -m venv .venv
-    .\.venv\Scripts\Activate.ps1
-    python -m pip install --upgrade pip
-    pip install -r requirements/development.txt
-    Copy-Item .env.example .env
+Set a unique local `DJANGO_SECRET_KEY` in `.env`. Generate and review initial migrations before applying them:
 
-2. Set a unique DJANGO_SECRET_KEY in .env. Optionally set DJANGO_DEMO_PASSWORD for local demo logins.
-
-3. Generate and review initial migrations. This project uses a custom user model:
-
-    python manage.py makemigrations accounts core organizations parties pricing collections finance inventory audit platform_admin
-    python manage.py migrate
-    python manage.py check
-    python manage.py createsuperuser
-
-Commit reviewed migration files before any production deployment. CI generates migrations in its runner for model validation, but production must use reviewed, committed migration files.
-
-4. Seed fictional demo data and start the server:
-
-    python manage.py seed_demo_data
-    python manage.py runserver
+```powershell
+python manage.py makemigrations accounts core organizations parties pricing collections finance inventory audit platform_admin
+python manage.py migrate
+python manage.py check
+python manage.py createsuperuser
+python manage.py seed_demo_data
+python manage.py runserver
+```
 
 Open http://127.0.0.1:8000/.
 
-## Demo accounts
+## Demo users
 
-Set DJANGO_DEMO_PASSWORD before seeding. Usernames are demo-platform-admin, demo-owner-1 through demo-owner-3, demo-staff-1-1 through demo-staff-3-3, and demo-customer-1 through demo-customer-3. Demo identities are fictional and must not be used in production.
+Set `DJANGO_DEMO_PASSWORD` before seeding if you need to sign in as demo users. Demo accounts and data are fictional and must never be used in production. The seed command's `--clear` option only removes organisations explicitly marked as demo.
 
-To clear only organisations already explicitly marked as demo and their dependent business records, run python manage.py seed_demo_data --clear. The command does not clear ordinary organisations or user accounts.
+## Core routes
 
-## Main routes
+- `/accounts/login/` — login
+- `/business/register/` — create a dairy workspace
+- `/business/<slug>/` — dairy workspace
+- `/portal/` — customer portal
+- `/platform/` — platform superuser overview
+- `/healthz/` — liveness check
+- `/readyz/` — readiness check (fails while migrations are missing or pending)
 
-| Route | Purpose |
-|---|---|
-| / | Public landing page |
-| /accounts/register/ | Account registration |
-| /accounts/login/ | Login |
-| /business/register/ | Dairy workspace onboarding |
-| /business/<slug>/ | Business dashboard |
-| /business/<slug>/staff/ | Staff and branch assignments |
-| /business/<slug>/customers/ and /farmers/ | Party directories |
-| /business/<slug>/collections/ | Milk collection list |
-| /business/<slug>/pricing/ | Pricing configuration |
-| /business/<slug>/quality/ | Quality profiles |
-| /business/<slug>/payments/ | Payments |
-| /portal/ | Customer portal |
-| /platform/ | Superuser platform overview |
-| /healthz/ | Database health check |
+## CI
 
-## Docker
+GitHub Actions runs Django checks and tests using PostgreSQL and Redis services, generates migration files only inside its ephemeral runner for test execution, reports branch coverage and audits Python dependencies. The CI-generated migration files are not committed and do not satisfy the production migration gate.
 
-Copy .env.example to .env, set local secret values, then run docker compose up --build. The Compose file is for local development and must not be used as a production deployment procedure.
+## Known incomplete scope
 
-## Tests
+Double-entry accounting, invoices/statements, supplier purchasing, farmer portal, real subscription billing and entitlement enforcement, provider payment webhooks, notification delivery, export/reporting suite, MFA, email/phone verification, database RLS, legacy data migration and production deployment remain incomplete. See [architecture](docs/architecture.md), [security](docs/security.md), [operations](docs/operations.md), and [production release gate](docs/production-release-gate.md).
 
-Run python manage.py test and pytest. GitHub Actions runs migration generation, Django checks and the automated test suite on pushes and pull requests.
+## Legacy data
 
-## Legacy migration blocker
+The old README references `milk.sql`, but that SQL dump is absent from the repository. No legacy data has been imported. Obtain and verify the actual MySQL export/schema and confirm the historical milk-price formula before planning cutover.
 
-The old README references milk.sql, but that SQL dump is absent from the repository tree. The exact legacy schema and generated milk_total_price expression cannot be verified. No legacy business data has been migrated. Obtain a current MySQL export and schema before planning cutover. See docs/legacy-audit.md.
+## Commercial use
 
-## Current limitations
-
-Advanced supplier purchasing/payables, double-entry accounting, invoice/statement generation, subscription charging and plan-limit enforcement, farmer portal, notification delivery, exports, richer reporting, background jobs, MFA, email verification, production email delivery, database-level RLS and committed reviewed migrations remain outstanding. See docs/architecture.md, docs/security.md and docs/operations.md.
-
-## Original source
-
-The original PHP implementation remains on main. The original README described the PHP project as educational; confirm licensing before distributing the replacement commercially.
+The old README describes the PHP project as educational. Confirm ownership and licensing of all original assets/code before commercial distribution.

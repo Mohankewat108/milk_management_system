@@ -17,12 +17,20 @@ def health_check(request):
 
 
 def readiness_check(request):
-    """Readiness endpoint: reject traffic when database migrations are pending."""
+    """Readiness endpoint: reject traffic when schema migrations are missing or pending."""
     try:
         executor = MigrationExecutor(connection)
+        if executor.loader.unmigrated_apps:
+            return JsonResponse(
+                {"status": "unready", "reason": "apps_without_migrations"},
+                status=503,
+            )
         pending = executor.migration_plan(executor.loader.graph.leaf_nodes())
     except Exception:
-        return JsonResponse({"status": "unready", "reason": "migration_state_unavailable"}, status=503)
+        return JsonResponse(
+            {"status": "unready", "reason": "migration_state_unavailable"},
+            status=503,
+        )
     if pending:
         return JsonResponse(
             {"status": "unready", "pending_migrations": len(pending)},
