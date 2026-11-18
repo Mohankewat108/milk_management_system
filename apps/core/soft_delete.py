@@ -77,5 +77,5 @@ def display_record(record):
         or getattr(record, "name", None)
         or getattr(record, "reference", None)
         or getattr(record, "code", None)
-        or str(record.pk)
+        or str(record)
     )
