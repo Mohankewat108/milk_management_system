@@ -1,31 +1,7 @@
-body{
-    background-color: rgb(118, 116, 113);
-    
-    text-align: center;
-   
-}
-
-h1 {
-    background-color: rgb(87, 87, 228);
-    color: rgb(238, 238, 8);
-    text-align: center;
-}
-td,th {
-     
-    text-align: center;
-    border:  1px solid black;
-    padding: 10px;
-}
-
-td{
-    background-color: rgb(145, 145, 128);
-}
-
-th{
-    background-color: bisque;
-}
-
-table {
-    border-collapse: collapse;  
-    margin: 0 auto;
-}
+/* Legacy milk page styles scoped to its historic class names. */
+.milk-page { color:var(--color-ink,#172b45); text-align:initial; }
+.milk-page .page-title { padding:.9rem 1rem; border-radius:var(--radius-md,.75rem); background:var(--color-primary-soft,#eaf3ff); color:var(--color-ink,#172b45); }
+.milk-page table { width:100%; border-collapse:collapse; }
+.milk-page td,.milk-page th { padding:.65rem .8rem; border:1px solid var(--color-border,#dce5ef); text-align:left; }
+.milk-page th { background:#f3f7fc; color:#52677f; }
+.milk-page td { background:#fff; }
