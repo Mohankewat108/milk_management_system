@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 from django.views.decorators.http import require_http_methods
 
 from apps.audit.services import record_event
+from apps.core.nepali_dates import format_local_date, parse_local_date
 from apps.collections.models import MilkCollection
 from apps.finance.models import Payment
 from apps.organizations.decorators import organization_access
@@ -38,11 +39,12 @@ def _date_bounds(request):
     today = timezone.localdate()
     start_text = request.GET.get("from", "").strip()
     end_text = request.GET.get("to", "").strip()
+    language_code = getattr(request, "LANGUAGE_CODE", "en")
     try:
-        start = timezone.datetime.strptime(start_text, "%Y-%m-%d").date() if start_text else today.replace(day=1)
-        end = timezone.datetime.strptime(end_text, "%Y-%m-%d").date() if end_text else today
-    except ValueError:
-        return today.replace(day=1), today, "Enter dates in YYYY-MM-DD format."
+        start = parse_local_date(start_text, language_code) if start_text else today.replace(day=1)
+        end = parse_local_date(end_text, language_code) if end_text else today
+    except ValueError as exc:
+        return today.replace(day=1), today, str(exc)
     if start > end:
         return today.replace(day=1), today, "The start date must be on or before the end date."
     if (end - start).days > 3660:
@@ -155,15 +157,25 @@ def customer_list(request, organization_slug):
         records = records.filter(is_active=(status == "active"))
     if branch:
         records = records.filter(branch_id=branch)
-    if registered_from:
-        records = records.filter(created_at__date__gte=registered_from)
-    if registered_to:
-        records = records.filter(created_at__date__lte=registered_to)
+    language_code = getattr(request, "LANGUAGE_CODE", "en")
+    date_error = ""
+    try:
+        from_date = parse_local_date(registered_from, language_code)
+        to_date = parse_local_date(registered_to, language_code)
+    except ValueError as exc:
+        from_date = to_date = None
+        date_error = str(exc)
+    if from_date:
+        records = records.filter(created_at__date__gte=from_date)
+    if to_date:
+        records = records.filter(created_at__date__lte=to_date)
     page = Paginator(records, 25).get_page(request.GET.get("page"))
     return render(request, "parties/customers.html", {
         "organization": org, "page_obj": page, "query": term,
         "status_filter": status, "branch_filter": branch,
-        "registered_from": registered_from, "registered_to": registered_to,
+        "registered_from": format_local_date(from_date, language_code) if from_date else registered_from,
+        "registered_to": format_local_date(to_date, language_code) if to_date else registered_to,
+        "date_error": date_error, "date_calendar": "BS" if language_code == "ne" else "AD",
         "branches": org.branches.filter(is_active=True, deleted_at__isnull=True) if accessible_branch_ids(request.membership) is None
         else org.branches.filter(pk__in=accessible_branch_ids(request.membership), is_active=True),
     })
@@ -211,7 +223,9 @@ def farmer_list(request, organization_slug):
     return render(request, "parties/farmers.html", {
         "organization": org, "page_obj": page, "query": term,
         "status_filter": status, "branch_filter": branch,
-        "registered_from": registered_from, "registered_to": registered_to,
+        "registered_from": format_local_date(from_date, language_code) if from_date else registered_from,
+        "registered_to": format_local_date(to_date, language_code) if to_date else registered_to,
+        "date_error": date_error, "date_calendar": "BS" if language_code == "ne" else "AD",
         "branches": branches,
     })
 
