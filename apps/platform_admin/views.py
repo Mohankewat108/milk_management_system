@@ -38,7 +38,7 @@ def _build_invitation_url(request, invite_path):
     site_url = settings.DJANGO_SITE_URL.rstrip("/")
     if site_url:
         return f"{site_url}{invite_path}"
-    return _build_invitation_url(request, invite_path)
+    return request.build_absolute_uri(invite_path)
 
 
 @login_required
