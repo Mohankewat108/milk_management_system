@@ -33,6 +33,14 @@ def is_platform_owner(user):
     return user.is_authenticated and user.is_superuser
 
 
+def _build_invitation_url(request, invite_path):
+    """Build invitation links using the configured public application URL."""
+    site_url = settings.DJANGO_SITE_URL.rstrip("/")
+    if site_url:
+        return f"{site_url}{invite_path}"
+    return _build_invitation_url(request, invite_path)
+
+
 @login_required
 @user_passes_test(is_platform_owner)
 def dashboard(request):
@@ -84,7 +92,7 @@ def organization_create(request):
             "platform:owner_invitation_accept",
             kwargs={"invitation_id": invitation.pk, "token": raw_token},
         )
-        invitation_url = request.build_absolute_uri(invite_path)
+        invitation_url = _build_invitation_url(request, invite_path)
         context = {
             "owner_name": owner_first_name,
             "farm_name": organization.name,
@@ -285,7 +293,7 @@ def organization_resend_invitation(request, organization_id):
     context = {
         "owner_name": organization.owner.first_name,
         "farm_name": organization.name,
-        "invitation_url": request.build_absolute_uri(invite_path),
+        "invitation_url": _build_invitation_url(request, invite_path),
         "expires_at": invitation.expires_at,
     }
     try:
