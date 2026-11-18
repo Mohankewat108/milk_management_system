@@ -74,19 +74,5 @@ jobs:
         run: coverage run --branch manage.py test --verbosity 2
       - name: Publish coverage report
         run: coverage report
-      - name: Commit generated migrations to same-repository pull request branch
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        env:
-          HEAD_BRANCH: ${{ github.head_ref }}
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          find apps -path '*/migrations/0*.py' -print0 | xargs -0 -r git add
-          if ! git diff --cached --quiet; then
-            git commit -m "Add reviewed initial Django migration files"
-            git push origin "HEAD:$HEAD_BRANCH"
-          else
-            echo "No generated migration files to commit."
-          fi
       - name: Dependency vulnerability audit
         run: pip-audit
