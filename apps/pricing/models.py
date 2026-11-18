@@ -7,12 +7,7 @@ from apps.organizations.models import Branch, Organization
 
 
 class PricingConfiguration(UUIDModel, TimeStampedModel):
-    class Scope(models.TextChoices):
-        ORGANIZATION = "organization", "All customers and branches"
-        BRANCH = "branch", "One branch only"
-
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="pricing_configurations")
-    # Null branch is the canonical dairy-wide rate chart shared by every customer.
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, null=True, blank=True, related_name="pricing_configurations")
     version = models.PositiveIntegerField()
     snf_rate = models.DecimalField(max_digits=12, decimal_places=4)
