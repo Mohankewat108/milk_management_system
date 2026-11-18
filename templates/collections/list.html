@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load locale_dates %}
 {% block title %}Milk collections | {{ organization.name }}{% endblock %}
 {% block content %}
 <div class="collection-page">
@@ -7,15 +8,16 @@
     <a class="button" href="{% url 'collections:create' organization.slug %}">Record collection</a>
   </div>
   <form class="search-form" method="get">
-    <label>From <input type="date" name="from" value="{{ request.GET.from }}"></label>
-    <label>To <input type="date" name="to" value="{{ request.GET.to }}"></label>
+    <label>From <input type="text" inputmode="numeric" data-calendar-date name="from" value="{{ date_from }}"></label>
+    <label>To <input type="text" inputmode="numeric" data-calendar-date name="to" value="{{ date_to }}"></label>
     <button class="button button-secondary" type="submit">Filter</button>
   </form>
+  {% if date_error %}<p class="alert error" role="alert">{{ date_error }}</p>{% endif %}
   <section class="panel table-wrap"><table>
     <thead><tr><th>Reference</th><th>Date</th><th>Branch</th><th>Farmer / Customer</th><th>Litres</th><th>SNF</th><th>FAT</th><th>Lactose</th><th>Rate</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
     <tbody>
     {% for item in page_obj %}<tr>
-      <td>{{ item.reference }}</td><td>{{ item.collected_at|date:"Y-m-d H:i" }}</td><td>{{ item.branch.name }}</td>
+      <td>{{ item.reference }}</td><td>{{ item.collected_at|local_date }}</td><td>{{ item.branch.name }}</td>
       <td>{% if item.farmer %}{{ item.farmer.full_name }}{% else %}{{ item.customer.full_name }}{% endif %}</td>
       <td>{{ item.quantity_litres }}</td><td>{{ item.snf }}</td><td>{{ item.fat }}</td><td>{{ item.lactose }}</td>
       <td>{{ item.milk_rate }}</td><td>{{ item.total_amount }}</td><td><span class="tag">{{ item.get_status_display }}</span></td>
