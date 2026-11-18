@@ -45,3 +45,9 @@ class NepaliCalendarEndpointTests(SimpleTestCase):
 
         response = self.client.get(reverse("nepali_calendar_month"), {"year": 2081, "month": 13})
         self.assertEqual(response.status_code, 400)
+
+    def test_calendar_endpoint_rejects_post(self):
+        from django.urls import reverse
+
+        response = self.client.post(reverse("nepali_calendar_month"))
+        self.assertEqual(response.status_code, 405)
