@@ -1,5 +1,5 @@
 {% load static i18n l10n %}<!doctype html>
-<html lang="{{ LANGUAGE_CODE|default:'en' }}">
+<html lang="{{ LANGUAGE_CODE|default:'en' }}" data-nepali-calendar-api="{% url 'nepali_calendar_month' %}">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#eff6ff"><meta name="color-scheme" content="light dark">
@@ -79,5 +79,6 @@
  if(window.matchMedia){window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{const v=(()=>{try{return localStorage.getItem('dairynexus-theme')||'system';}catch(e){return 'system';}})();if(v==='system')apply(v);});}
 }());
 </script>
+<script src="{% static 'js/nepali-date-picker.js' %}" defer></script>
 {% block scripts %}{% endblock %}
 </body></html>
