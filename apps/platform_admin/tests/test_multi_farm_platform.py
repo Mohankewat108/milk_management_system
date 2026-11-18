@@ -90,7 +90,8 @@ class PlatformMultiFarmTests(TestCase):
             "new_password1": "A-Strong-Owner-Password-2026!",
             "new_password2": "A-Strong-Owner-Password-2026!",
         })
-        self.assertRedirects(response, reverse("business:workspace"))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("business:workspace"))
 
         user.refresh_from_db()
         membership.refresh_from_db()
