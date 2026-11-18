@@ -5,6 +5,8 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+from apps.organizations.permissions import require_actor_branch_access
+
 from .models import Expense, Payment
 
 
@@ -37,6 +39,7 @@ def approve_expense(*, expense_id, organization, actor):
     expense = Expense.objects.select_for_update().get(
         pk=expense_id, organization=organization
     )
+    require_actor_branch_access(actor=actor, organization=organization, branch=expense.branch)
     if expense.status != Expense.Status.PENDING:
         raise ValidationError("Only pending expenses can be approved.")
     expense.status = Expense.Status.APPROVED
