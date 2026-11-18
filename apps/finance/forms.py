@@ -51,3 +51,16 @@ class ExpenseEntryForm(forms.ModelForm):
         if membership.role not in {"owner", "admin"}:
             branches = branches.filter(pk__in=assignments)
         self.fields["branch"].queryset = branches
+
+
+class PaymentEditForm(forms.ModelForm):
+    class Meta:
+        model = Payment
+        fields = ("branch", "amount", "method", "transaction_reference", "notes")
+
+    def __init__(self, *args, organization, membership, **kwargs):
+        super().__init__(*args, **kwargs)
+        branches = Branch.objects.filter(organization=organization, is_active=True, deleted_at__isnull=True)
+        if membership.role not in {"owner", "admin"}:
+            branches = branches.filter(pk__in=membership.branch_assignments.values_list("branch_id", flat=True))
+        self.fields["branch"].queryset = branches
