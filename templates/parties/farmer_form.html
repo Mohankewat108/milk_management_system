@@ -1,0 +1,1 @@
+{% extends "base.html" %}{% block title %}New farmer{% endblock %}{% block content %}<section class="content-card"><h1>Add farmer</h1><form method="post">{% csrf_token %}{{ form.non_field_errors }}{% for field in form %}<label>{{ field.label }}</label>{{ field }}{{ field.errors }}{% endfor %}<button class="button" type="submit">Save farmer</button></form></section>{% endblock %}
