@@ -153,7 +153,7 @@ def _safe_cell(value):
 
 
 def _export_totals(module):
-    return {"count": 0, "sums": {}, "stock_value": Decimal("0")}
+    return {"count": 0, "sums": {}, "value_counts": {}, "stock_value": Decimal("0")}
 
 
 def _numeric_columns(module):
@@ -176,6 +176,7 @@ def _accumulate_export_totals(module, row, totals):
         if value in (None, ""):
             continue
         totals["sums"][index] = totals["sums"].get(index, Decimal("0")) + Decimal(str(value))
+        totals["value_counts"][index] = totals["value_counts"].get(index, 0) + 1
     if module == "inventory":
         totals["stock_value"] += Decimal(str(row[7] or 0)) * Decimal(str(row[9] or 0))
 
@@ -189,7 +190,8 @@ def _export_summary_rows(module, headers, totals):
 
     for index in _numeric_columns(module):
         total = totals["sums"].get(index, Decimal("0"))
-        averages[index] = (total / count).quantize(Decimal("0.01")) if count else Decimal("0.00")
+        field_count = totals["value_counts"].get(index, 0)
+        averages[index] = (total / field_count).quantize(Decimal("0.01")) if field_count else ""
 
     if module == "collections":
         grand_total[6] = totals["sums"].get(6, Decimal("0"))
