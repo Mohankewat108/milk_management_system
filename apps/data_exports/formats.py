@@ -11,7 +11,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from .services import MAX_SYNC_EXPORT_ROWS, _rows, _safe_cell
+from .services import (MAX_SYNC_EXPORT_ROWS, _rows, _safe_cell, _export_totals,\n                      _accumulate_export_totals, _export_summary_row)
 
 
 def build_xlsx(module, queryset):
@@ -25,11 +25,19 @@ def build_xlsx(module, queryset):
         cell.font = Font(bold=True, color="FFFFFF")
         cell.fill = PatternFill("solid", fgColor="17324D")
     count = 0
+    totals = _export_totals(module)
     for row in rows:
         count += 1
         if count > MAX_SYNC_EXPORT_ROWS:
             raise ValueError("Export exceeds the 20,000-row instant export limit.")
+        _accumulate_export_totals(module, row, totals)
         sheet.append([_safe_cell(value) for value in row])
+    summary_row = _export_summary_row(module, headers, count, totals)
+    sheet.append([_safe_cell(value) for value in summary_row])
+    summary_index = sheet.max_row
+    for cell in sheet[summary_index]:
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill("solid", fgColor="0F766E")
     sheet.auto_filter.ref = sheet.dimensions
     for column in sheet.columns:
         width = min(max(max(len(str(cell.value or "")) for cell in column[:200]) + 2, 12), 36)
@@ -106,16 +114,18 @@ def build_pdf(module, queryset, organization_name):
 
     table_data = [[Paragraph(escape(str(value)), header_style) for value in headers]]
     count = 0
+    totals = _export_totals(module)
     for row in rows:
         count += 1
         if count > 2500:
             raise ValueError("PDF exports are limited to 2,500 rows. Use Excel for larger exports.")
+        _accumulate_export_totals(module, row, totals)
         table_data.append([
             Paragraph(escape(str(_safe_cell(value))), cell_style)
             for value in row
         ])
 
-    widths = [doc.width / len(headers)] * len(headers)
+    summary_style = ParagraphStyle(\n        "ExportSummaryCell", parent=cell_style, fontName="Helvetica-Bold",\n        textColor=colors.HexColor("#0F3D3A"),\n    )\n    summary_row = _export_summary_row(module, headers, count, totals)\n    table_data.append([Paragraph(escape(str(_safe_cell(value))), summary_style) for value in summary_row])\n    summary_index = len(table_data) - 1\n\n    widths = [doc.width / len(headers)] * len(headers)
     table = Table(
         table_data,
         colWidths=widths,
@@ -134,7 +144,7 @@ def build_pdf(module, queryset, organization_name):
         ("LEFTPADDING", (0, 0), (-1, -1), 4),
         ("RIGHTPADDING", (0, 0), (-1, -1), 4),
         ("TOPPADDING", (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),\n        ("BACKGROUND", (0, summary_index), (-1, summary_index), colors.HexColor("#DCEFEA")),\n        ("LINEABOVE", (0, summary_index), (-1, summary_index), 1, teal),
     ]))
     story.append(table)
     doc.build(story)
