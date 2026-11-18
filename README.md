@@ -90,7 +90,7 @@ The old README references milk.sql, but that SQL dump is absent from the reposit
 
 ## Current limitations
 
-Advanced supplier purchasing/payables, double-entry accounting, invoice/statement generation, subscription charging and plan-limit enforcement, farmer portal, notification delivery, exports, richer reporting, background jobs, MFA, email verification, production SMTP credentials/provider setup, invitation resend/revocation UI, database-level RLS and committed reviewed migrations remain outstanding. See docs/architecture.md, docs/security.md and docs/operations.md.
+Advanced supplier purchasing/payables, double-entry accounting, invoice/statement generation, subscription charging and plan-limit enforcement, farmer portal, notification delivery, exports, richer reporting, background jobs, MFA, email verification, production SMTP credentials/provider setup, invitation revocation UI, database-level RLS and committed reviewed migrations remain outstanding. See docs/architecture.md, docs/security.md and docs/operations.md.
 
 ## Original source
 
