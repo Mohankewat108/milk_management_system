@@ -10,6 +10,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
+from apps.audit.services import record_event
 from apps.data_exports.models import ExportJob, ImportBatch, ScheduledExport
 from apps.data_exports.queue import process_export_job, queue_export, _notify_export_ready
 from apps.organizations.models import Membership
@@ -72,6 +73,11 @@ def process_import_batch(batch):
         batch.failed_rows = max(total, 1)
     batch.processed_at = timezone.now()
     batch.save(update_fields=["total_rows", "imported_rows", "failed_rows", "row_errors", "status", "processed_at", "updated_at"])
+    record_event(
+        actor=batch.uploaded_by, organization=batch.organization,
+        action="import.completed" if batch.status == ImportBatch.Status.COMPLETED else "import.failed",
+        target=batch, changes={"imported_rows": batch.imported_rows, "failed_rows": batch.failed_rows},
+    )
     if batch.uploaded_by.email:
         send_mail(
             f"DairyNexus import {batch.status}: {batch.get_module_display()}",
@@ -102,6 +108,9 @@ class Command(BaseCommand):
         ).select_related("requested_by")[:limit]:
             _notify_export_ready(pending_notice)
         now = timezone.now()
+        for old_import in ImportBatch.objects.filter(created_at__lte=now - timedelta(days=30)):
+            if old_import.file:
+                old_import.file.delete(save=False)
         for expired in ExportJob.objects.filter(expires_at__lte=now).exclude(status=ExportJob.Status.EXPIRED):
             if expired.file:
                 expired.file.delete(save=False)
