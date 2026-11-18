@@ -96,3 +96,47 @@ def supplier_list(request, organization_slug):
     return render(request, "inventory/suppliers.html", {
         "organization": organization, "form": form, "suppliers": suppliers,
     })
+
+
+@login_required
+@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.INVENTORY_MANAGER)
+@require_http_methods(["GET", "POST"])
+def item_edit(request, organization_slug, item_id):
+    organization = request.organization
+    branch_ids = accessible_branch_ids(request.membership)
+    queryset = InventoryItem.objects.filter(organization=organization, deleted_at__isnull=True)
+    if branch_ids is not None:
+        queryset = queryset.filter(branch_id__in=branch_ids)
+    item = queryset.get(pk=item_id)
+    form = InventoryItemForm(request.POST or None, instance=item, organization=organization, membership=request.membership)
+    if request.method == "POST" and form.is_valid():
+        updated = form.save(commit=False)
+        updated.organization = organization
+        updated.save()
+        record_event(actor=request.user, organization=organization, action="inventory.item_updated",
+                     target=updated, changes={"updated_fields": list(form.changed_data)}, request=request)
+        messages.success(request, f"Inventory item {updated.name} updated.")
+        return redirect("inventory:items", organization_slug=organization_slug)
+    return render(request, "inventory/item_form.html", {
+        "organization": organization, "form": form, "item": item, "is_edit": True,
+    })
+
+
+@login_required
+@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN)
+@require_http_methods(["GET", "POST"])
+def supplier_edit(request, organization_slug, supplier_id):
+    organization = request.organization
+    supplier = Supplier.objects.get(organization=organization, deleted_at__isnull=True, pk=supplier_id)
+    form = SupplierForm(request.POST or None, instance=supplier, organization=organization)
+    if request.method == "POST" and form.is_valid():
+        updated = form.save(commit=False)
+        updated.organization = organization
+        updated.save()
+        record_event(actor=request.user, organization=organization, action="supplier.updated",
+                     target=updated, changes={"updated_fields": list(form.changed_data)}, request=request)
+        messages.success(request, f"Supplier {updated.name} updated.")
+        return redirect("inventory:suppliers", organization_slug=organization_slug)
+    return render(request, "inventory/supplier_form.html", {
+        "organization": organization, "form": form, "supplier": supplier, "is_edit": True,
+    })
