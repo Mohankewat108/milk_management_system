@@ -7,7 +7,7 @@ from django.test import TestCase
 
 from apps.finance.models import Expense
 from apps.finance.services import approve_expense, record_expense
-from apps.organizations.models import Branch, Organization
+from apps.organizations.models import Branch, Membership, Organization
 
 User = get_user_model()
 
@@ -23,6 +23,9 @@ class ExpenseWorkflowTests(TestCase):
         )
         self.branch = Branch.objects.create(
             organization=self.organization, code="MAIN", name="Main"
+        )
+        Membership.objects.create(
+            user=self.user, organization=self.organization, role=Membership.Role.OWNER
         )
 
     def test_expense_requires_explicit_approval(self):
