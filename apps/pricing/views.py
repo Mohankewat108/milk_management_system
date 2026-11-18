@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Max, Q
@@ -23,7 +25,7 @@ def settings_view(request, organization_slug):
         if end_date and end_date < data["effective_from"]:
             form.add_error("effective_to", "End date must be on or after start date.")
         else:
-            query_end = end_date or data["effective_from"].replace(year=9999)
+            query_end = end_date or date.max
             overlap = PricingConfiguration.objects.filter(
                 organization=organization, branch=data["branch"],
                 effective_from__lte=query_end,
@@ -71,7 +73,7 @@ def quality_settings(request, organization_slug):
     form = QualityConfigurationForm(request.POST or None, organization=organization)
     if request.method == "POST" and form.is_valid():
         data = form.cleaned_data
-        query_end = data["effective_to"] or data["effective_from"].replace(year=9999)
+        query_end = data["effective_to"] or date.max
         overlap = QualityConfiguration.objects.filter(
             organization=organization, branch=data["branch"],
             effective_from__lte=query_end,

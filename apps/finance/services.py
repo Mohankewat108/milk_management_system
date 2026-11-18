@@ -12,13 +12,13 @@ from .models import Payment
 def record_payment(*, organization, branch, actor, direction, amount, method,
                    customer=None, farmer=None, status=Payment.Status.PENDING, notes="",
                    transaction_reference=""):
-    if branch.organization_id != organization.id:
-        raise ValidationError("Branch does not belong to this organisation.")
+    if branch.organization_id != organization.id or not branch.is_active:
+        raise ValidationError("Select an active branch belonging to this organisation.")
     if bool(customer) == bool(farmer):
         raise ValidationError("Select exactly one customer or farmer.")
     party = customer or farmer
-    if party.organization_id != organization.id:
-        raise ValidationError("The selected party belongs to another organisation.")
+    if party.organization_id != organization.id or not party.is_active:
+        raise ValidationError("The selected party is not active in this organisation.")
     value = Decimal(str(amount))
     if value <= 0:
         raise ValidationError("Payment amount must be greater than zero.")

@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 
@@ -39,7 +39,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING(
                 "DJANGO_DEMO_PASSWORD is empty; demo users will have unusable passwords."
             ))
-        platform_admin = self.get_user(
+        self.get_user(
             "demo-platform-admin", "demo-platform@example.test", "Platform", "Admin",
             password, superuser=True,
         )
@@ -73,9 +73,13 @@ class Command(BaseCommand):
                     "status": Organization.Status.ACTIVE, "is_demo": True,
                 },
             )
-            org.is_demo = True
+            if not org.is_demo:
+                raise CommandError(
+                    f"Refusing to seed into {org.slug!r}: the slug already belongs to "
+                    "an organisation not explicitly marked as demo data."
+                )
             org.status = Organization.Status.ACTIVE
-            org.save(update_fields=["is_demo", "status", "updated_at"])
+            org.save(update_fields=["status", "updated_at"])
             owner_membership, _ = Membership.objects.get_or_create(
                 user=owner, organization=org,
                 defaults={"role": Membership.Role.OWNER, "status": Membership.Status.ACTIVE,
