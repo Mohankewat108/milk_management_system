@@ -213,10 +213,18 @@ def farmer_list(request, organization_slug):
         records = records.filter(is_active=(status == "active"))
     if branch:
         records = records.filter(branch_id=branch)
-    if registered_from:
-        records = records.filter(created_at__date__gte=registered_from)
-    if registered_to:
-        records = records.filter(created_at__date__lte=registered_to)
+    language_code = getattr(request, "LANGUAGE_CODE", "en")
+    date_error = ""
+    try:
+        from_date = parse_local_date(registered_from, language_code)
+        to_date = parse_local_date(registered_to, language_code)
+    except ValueError as exc:
+        from_date = to_date = None
+        date_error = str(exc)
+    if from_date:
+        records = records.filter(created_at__date__gte=from_date)
+    if to_date:
+        records = records.filter(created_at__date__lte=to_date)
     branch_ids = accessible_branch_ids(request.membership)
     branches = org.branches.filter(is_active=True, deleted_at__isnull=True) if branch_ids is None else org.branches.filter(pk__in=branch_ids, is_active=True)
     page = Paginator(records, 25).get_page(request.GET.get("page"))
