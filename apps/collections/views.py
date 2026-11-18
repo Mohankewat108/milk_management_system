@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Sum
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods, require_POST
 
 from apps.audit.services import record_event
@@ -113,7 +113,7 @@ def collection_edit(request, organization_slug, collection_id):
             records = records.filter(branch_id__in=branch_ids)
         if request.method == "POST":
             records = records.select_for_update()
-        entry = records.get(pk=collection_id)
+        entry = get_object_or_404(records, pk=collection_id)
         if entry.status in {MilkCollection.Status.REVERSED, MilkCollection.Status.APPROVED}:
             messages.error(request, "Approved or reversed collections cannot be edited; reverse an approved record with a reason.")
             return redirect("collections:list", organization_slug=organization_slug)
