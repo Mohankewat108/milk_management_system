@@ -13,7 +13,7 @@
     python manage.py migrate
 
 ## Run the worker
-Run this command continuously from a process supervisor, or on a short recurring schedule:
+The repository's Docker Compose configuration includes a worker service. Starting the stack with docker compose up --build runs the background worker automatically. For a non-Compose deployment, run this command continuously from a process supervisor, or on a short recurring schedule:
 
     python manage.py process_data_jobs --limit 20
 
