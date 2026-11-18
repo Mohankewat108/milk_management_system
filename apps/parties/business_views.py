@@ -162,7 +162,7 @@ def customer_list(request, organization_slug):
         "organization": org, "page_obj": page, "query": term,
         "status_filter": status, "branch_filter": branch,
         "registered_from": registered_from, "registered_to": registered_to,
-        "branches": org.branches.filter(is_active=True) if accessible_branch_ids(request.membership) is None
+        "branches": org.branches.filter(is_active=True, deleted_at__isnull=True) if accessible_branch_ids(request.membership) is None
         else org.branches.filter(pk__in=accessible_branch_ids(request.membership), is_active=True),
     })
 
