@@ -1,3 +1,4 @@
+import uuid
 import django.db.models.deletion
 from django.conf import settings
 from django.db import migrations, models
@@ -13,7 +14,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="ExportJob",
             fields=[
-                ("id", models.UUIDField(primary_key=True, serialize=False, editable=False)),
+                ("id", models.UUIDField(default=uuid.uuid4, primary_key=True, serialize=False, editable=False)),
                 ("created_at", models.DateTimeField(auto_now_add=True, db_index=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
                 ("module", models.CharField(choices=[("farmers", "Farmers"), ("customers", "Customers"), ("collections", "Milk collections"), ("payments", "Payments"), ("expenses", "Expenses"), ("inventory", "Inventory")], max_length=24, db_index=True)),
