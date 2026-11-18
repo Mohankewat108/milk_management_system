@@ -225,3 +225,34 @@ class PlatformMultiFarmTests(TestCase):
         raw_token = invitation_path.rstrip("/").split("/")[-1]
         self.assertNotEqual(invitation.token_hash, raw_token)
         self.assertEqual(len(invitation.token_hash), 64)
+
+
+    def test_platform_owner_can_resend_pending_invitation_and_revoke_old_link(self):
+        self.client.force_login(self.platform_owner)
+        self.client.post(
+            reverse("platform:organization_create"),
+            self.farm_form_data("Resend Dairy", "resend.owner@example.test"),
+        )
+        first_invitation = FarmOwnerInvitation.objects.get(organization__name="Resend Dairy")
+        first_path = urlparse(
+            re.search(r"http://testserver(\\S+)", mail.outbox[0].body).group(0)
+        ).path
+
+        response = self.client.post(reverse(
+            "platform:organization_resend_invitation",
+            kwargs={"organization_id": first_invitation.organization_id},
+        ))
+        self.assertRedirects(response, reverse("platform:dashboard"))
+        self.assertEqual(len(mail.outbox), 2)
+        first_invitation.refresh_from_db()
+        self.assertIsNotNone(first_invitation.revoked_at)
+
+        second_invitation = FarmOwnerInvitation.objects.filter(
+            organization=first_invitation.organization
+        ).exclude(pk=first_invitation.pk).get()
+        second_path = urlparse(
+            re.search(r"http://testserver(\\S+)", mail.outbox[1].body).group(0)
+        ).path
+        self.assertEqual(self.client.get(first_path).status_code, 410)
+        self.assertEqual(self.client.get(second_path).status_code, 200)
+        self.assertIsNone(second_invitation.revoked_at)
