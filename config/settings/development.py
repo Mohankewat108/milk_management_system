@@ -1,6 +1,23 @@
 from .base import *  # noqa: F403
 
 DEBUG = True
+
+# GitHub Codespaces serves forwarded ports from *.app.github.dev.
+# Keep these development-only allowances out of production settings.
+ALLOWED_HOSTS = list(dict.fromkeys([
+    *ALLOWED_HOSTS,
+    "localhost",
+    "127.0.0.1",
+    ".app.github.dev",
+]))
+
+CSRF_TRUSTED_ORIGINS = list(dict.fromkeys([
+    *CSRF_TRUSTED_ORIGINS,
+    "http://localhost:8000",
+    "https://localhost:8000",
+    "https://*.app.github.dev",
+]))
+
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
