@@ -145,3 +145,29 @@ A feature branch named `feature/saas-dashboard-collections-ui` contains an in-pr
 The collection edit operation intentionally retains the original effective-dated milk rate snapshot and recalculates the amount using that saved rate. It does not automatically revise already-generated farmer payment entries. Review reconciliation requirements before enabling edits on financially settled/approved records.
 
 This is a development change set, not a verified production release. Run the Django checks and automated tests locally/CI before merging. Existing feature modules are not all upgraded to full CRUD by this change set.
+
+
+## Full CRUD and central Trash development phase
+
+Branch: `feature/full-crud-soft-delete`
+
+### Editable business records
+- Organisation profile: owner-managed profile updates.
+- Branches: create, list, update, and soft-delete when no operational history is linked.
+- Farmers and customers: existing create/read/update/soft-delete flows retained.
+- Milk collections: create/read/update for editable states; approved entries are locked and corrected through a reasoned reversal workflow. Edits recalculate the rate from the collection's saved historical pricing coefficients.
+- Inventory items and suppliers: create/read/update/soft-delete. Items with non-zero stock or stock-movement history are protected.
+- Payments: create/read/update/soft-delete only while pending or failed. Completed and reversed payments are protected.
+- Expenses: create/read/update/soft-delete while pending or rejected. Approved expenses are protected.
+- Pricing schedules: create/read/approve; only unapproved schedules without linked collections may be edited or moved to Trash. Approved or referenced schedules are immutable.
+- Staff: invitation, membership status and invitation-revocation workflows remain in place.
+- Stock movements and approved quality/rate history remain append-only/versioned rather than being edited or erased.
+
+### Central Trash
+- Tenant-scoped Trash list across customers, farmers, branches, suppliers, inventory items, eligible payments/expenses and unapproved pricing schedules.
+- Restore action and audit events for delete/restore operations.
+- Role-based delete permissions and branch scoping.
+- No permanent-delete action is exposed: retained business records should not be irreversibly removed through the application UI.
+
+### Verification
+This branch includes central soft-delete unit tests and migration files. Run `python manage.py makemigrations --check --dry-run`, `python manage.py migrate`, `python manage.py check`, and `python manage.py test` in the configured environment before production deployment. This development branch has not been approved or merged into `main`.
