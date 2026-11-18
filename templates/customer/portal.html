@@ -1,1 +1,64 @@
-{% extends "base.html" %}{% block title %}My milk account{% endblock %}{% block content %}<div class="page-heading"><div><div class="eyebrow">CUSTOMER PORTAL</div><h1>Hello, {{ customer.full_name }}</h1><p class="muted">Your records for {{ customer.organization.name }}.</p></div></div><section class="panel"><h2>Milk collection history</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Quantity</th><th>Rate</th><th>Total</th><th>Status</th></tr></thead><tbody>{% for item in collections %}<tr><td>{{ item.collected_at|date:"Y-m-d" }}</td><td>{{ item.quantity_litres }}</td><td>{{ item.milk_rate }}</td><td>{{ item.total_amount }}</td><td>{{ item.get_status_display }}</td></tr>{% empty %}<tr><td colspan="5">No records available.</td></tr>{% endfor %}</tbody></table></div></section><section class="panel"><h2>Payment history</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Reference</th><th>Amount</th><th>Status</th></tr></thead><tbody>{% for item in payments %}<tr><td>{{ item.created_at|date:"Y-m-d" }}</td><td>{{ item.reference }}</td><td>{{ item.currency }} {{ item.amount }}</td><td>{{ item.get_status_display }}</td></tr>{% empty %}<tr><td colspan="4">No payments available.</td></tr>{% endfor %}</tbody></table></div></section>{% endblock %}
+{% extends "base.html" %}
+{% block title %}My dairy account | {{ organization.name }}{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <div class="eyebrow">CUSTOMER SELF-SERVICE PORTAL</div>
+    <h1>Welcome, {{ customer.full_name }}</h1>
+    <p class="muted">{{ organization.name }}{% if customer.branch %} · {{ customer.branch.name }}{% endif %} · Customer ID {{ customer.code }}</p>
+  </div>
+</div>
+
+<div class="kpi-grid">
+  <section class="panel"><div class="eyebrow">THIS MONTH · APPROVED MILK</div><h2>{{ month_summary.litres|default:"0.000" }} L</h2><p class="muted">Recorded in the current calendar month</p></section>
+  <section class="panel"><div class="eyebrow">THIS MONTH · VALUE</div><h2>{{ currency }} {{ month_summary.amount|default:"0.00" }}</h2><p class="muted">Based on approved collections</p></section>
+  <section class="panel"><div class="eyebrow">LIFETIME · APPROVED MILK</div><h2>{{ lifetime_summary.litres|default:"0.000" }} L</h2><p class="muted">All approved collection records</p></section>
+  <section class="panel"><div class="eyebrow">LIFETIME · VALUE</div><h2>{{ currency }} {{ lifetime_summary.amount|default:"0.00" }}</h2><p class="muted">Gross approved collection value</p></section>
+</div>
+
+<section class="panel">
+  <div class="page-heading"><div><h2>My profile</h2><p class="muted">Contact details held by your dairy.</p></div></div>
+  <div class="table-wrap"><table><tbody>
+    <tr><th>Full name</th><td>{{ customer.full_name }}</td><th>Customer ID</th><td>{{ customer.code }}</td></tr>
+    <tr><th>Email</th><td>{{ customer.email|default:"Not provided" }}</td><th>Phone</th><td>{{ customer.phone|default:"Not provided" }}</td></tr>
+    <tr><th>Address</th><td>{{ customer.address|default:"Not provided" }}</td><th>Village / City</th><td>{% if customer.village %}{{ customer.village }}{% endif %}{% if customer.city %} {{ customer.city }}{% endif %}{% if not customer.village and not customer.city %}Not provided{% endif %}</td></tr>
+    <tr><th>Ward</th><td>{{ customer.ward|default:"Not provided" }}</td><th>Account email</th><td>{{ request.user.email }}</td></tr>
+  </tbody></table></div>
+  <p class="small muted">To correct your name, phone or address, contact the dairy office. Profile changes are controlled by the dairy to protect transaction records.</p>
+</section>
+
+<section class="panel">
+  <h2>Milk collection history</h2>
+  <p class="muted">Only approved records are published here. Select a collection reference to see its quality and rate breakdown.</p>
+  <div class="table-wrap"><table><thead><tr><th>Date / time</th><th>Reference</th><th>Branch</th><th>Quantity</th><th>SNF</th><th>Fat</th><th>Lactose</th><th>Lactometer</th><th>Rate / L</th><th>Total</th></tr></thead><tbody>
+  {% for item in collections %}
+    <tr>
+      <td>{{ item.collected_at|date:"Y-m-d H:i" }}</td><td>{{ item.reference }}</td><td>{{ item.branch.name }}</td>
+      <td>{{ item.quantity_litres }} L</td><td>{{ item.snf }}</td><td>{{ item.fat }}</td><td>{{ item.lactose }}</td>
+      <td>{{ item.lactometer_reading|default:"—" }}</td><td>{{ currency }} {{ item.milk_rate }}</td><td>{{ currency }} {{ item.total_amount }}</td>
+    </tr>
+    <tr><td colspan="10">
+      <details><summary>Rate calculation and quality details</summary>
+        <p><strong>Pricing version:</strong> v{{ item.pricing_snapshot.version }} · effective from {{ item.pricing_snapshot.effective_from|default:"Not recorded" }}</p>
+        <p><strong>SNF:</strong> {{ item.snf }} × {{ item.pricing_snapshot.snf_rate }} = {{ item.pricing_snapshot.snf_component|default:"—" }}</p>
+        <p><strong>Fat:</strong> {{ item.fat }} × {{ item.pricing_snapshot.fat_rate }} = {{ item.pricing_snapshot.fat_component|default:"—" }}</p>
+        <p><strong>Lactose:</strong> {{ item.lactose }} × {{ item.pricing_snapshot.lactose_rate }} = {{ item.pricing_snapshot.lactose_component|default:"—" }}</p>
+        <p><strong>Method:</strong> {{ item.quality_test_method|default:"Not specified" }} · <strong>Sample:</strong> {{ item.sample_reference|default:"—" }} · <strong>Temperature:</strong> {{ item.milk_temperature_c|default:"—" }} °C</p>
+        <p><strong>Recorded formula:</strong> {{ item.pricing_snapshot.formula }}</p>
+        <p><strong>Amount:</strong> {{ item.quantity_litres }} L × {{ item.milk_rate }} = {{ currency }} {{ item.total_amount }}</p>
+        {% if item.notes %}<p><strong>Notes:</strong> {{ item.notes }}</p>{% endif %}
+      </details>
+    </td></tr>
+  {% empty %}<tr><td colspan="10">No approved milk collections are available yet.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+
+<section class="panel">
+  <h2>Completed payment history</h2>
+  <p class="muted">Only payments verified and marked completed by the dairy are displayed.</p>
+  <div class="table-wrap"><table><thead><tr><th>Payment date</th><th>Reference</th><th>Method</th><th>Transaction reference</th><th>Amount</th><th>Status</th></tr></thead><tbody>
+  {% for item in payments %}<tr><td>{{ item.paid_at|date:"Y-m-d H:i" }}</td><td>{{ item.reference }}</td><td>{{ item.get_method_display }}</td><td>{{ item.transaction_reference|default:"—" }}</td><td>{{ item.currency }} {{ item.amount }}</td><td>{{ item.get_status_display }}</td></tr>
+  {% empty %}<tr><td colspan="6">No completed payments are available yet.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% endblock %}

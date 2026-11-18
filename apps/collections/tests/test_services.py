@@ -61,3 +61,20 @@ class CollectionServiceTests(TestCase):
                 quantity_litres="1", snf="8", fat="4", lactose="4",
                 farmer=foreign_farmer,
             )
+
+    def test_lactometer_and_rate_components_are_saved_in_snapshot(self):
+        entry = create_collection(
+            organization=self.org, branch=self.branch, actor=self.user,
+            collected_at=datetime(2026, 11, 18, 7, 0, tzinfo=dt_timezone.utc),
+            quantity_litres="2.000", snf="8.0", fat="4.0", lactose="4.5",
+            farmer=self.farmer, lactometer_reading="29.5",
+            milk_temperature_c="5.50", sample_reference="SAMPLE-001",
+            quality_test_method="Digital analyser",
+        )
+        self.assertEqual(entry.lactometer_reading, Decimal("29.500"))
+        self.assertEqual(entry.milk_temperature_c, Decimal("5.50"))
+        self.assertEqual(entry.tested_by, self.user)
+        self.assertEqual(entry.pricing_snapshot["snf_component"], "40.00")
+        self.assertEqual(entry.pricing_snapshot["fat_component"], "28.00")
+        self.assertEqual(entry.pricing_snapshot["lactose_component"], "4.50")
+        self.assertEqual(entry.pricing_snapshot["effective_from"], "2026-01-01")

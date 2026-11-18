@@ -63,6 +63,11 @@ def collection_create(request, organization_slug):
                     collected_at=data["collected_at"], quantity_litres=data["quantity_litres"],
                     snf=data["snf"], fat=data["fat"], lactose=data["lactose"],
                     farmer=data["farmer"], customer=data["customer"], notes=data["notes"],
+                    lactometer_reading=data.get("lactometer_reading"),
+                    milk_temperature_c=data.get("milk_temperature_c"),
+                    sample_reference=data.get("sample_reference", ""),
+                    quality_test_method=data.get("quality_test_method", ""),
+                    tested_by=request.user,
                 )
             except ValidationError as exc:
                 form.add_error(None, exc)
