@@ -1,6 +1,7 @@
 from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 from django.http import JsonResponse
+from django.views.decorators.http import require_GET
 from django.shortcuts import redirect, render
 from datetime import date
 
@@ -40,6 +41,7 @@ def landing_page(request):
     return render(request, "public/home.html")
 
 
+@require_GET
 def nepali_calendar_month(request):
     """Return authoritative BS month metadata for the accessible date picker."""
     try:
