@@ -19,7 +19,7 @@ from .services import approve_expense, record_expense, record_payment
 @login_required
 @organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.ACCOUNTANT)
 def payment_list(request, organization_slug):
-    records = Payment.objects.filter(organization=request.organization).select_related(
+    records = Payment.objects.filter(organization=request.organization, deleted_at__isnull=True).select_related(
         "branch", "customer", "farmer", "recorded_by"
     ).order_by("-created_at")
     branch_ids = accessible_branch_ids(request.membership)
@@ -85,7 +85,7 @@ def payment_complete(request, organization_slug, payment_id):
 @login_required
 @organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.ACCOUNTANT)
 def expense_list(request, organization_slug):
-    records = Expense.objects.filter(organization=request.organization).select_related(
+    records = Expense.objects.filter(organization=request.organization, deleted_at__isnull=True).select_related(
         "branch", "recorded_by", "approved_by"
     ).order_by("-expense_date", "-created_at")
     branch_ids = accessible_branch_ids(request.membership)
