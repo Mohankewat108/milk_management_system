@@ -1,0 +1,3 @@
+{% extends "base.html" %}
+{% block title %}Accept staff invitation{% endblock %}
+{% block content %}<section class="content-card"><div class="eyebrow">{{ invitation.organization.name }}</div><h1>Activate your staff account</h1><p>You have been invited as {{ invitation.get_role_display }}. Set a secure password to activate your account.</p><form method="post">{% csrf_token %}{{ form.non_field_errors }}{% for field in form %}<label>{{ field.label }}</label>{{ field }}{{ field.errors }}{% endfor %}<button class="button" type="submit">Accept invitation and activate account</button></form></section>{% endblock %}

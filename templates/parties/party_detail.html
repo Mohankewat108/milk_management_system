@@ -7,6 +7,14 @@
     <h1>{{ party.full_name }}</h1>
     <p class="muted">{{ party.code }} · {{ party.branch.name|default:"No branch assigned" }} · {{ party.is_active|yesno:"Active,Inactive" }}</p>
   </div>
+  {% if can_manage_parties %}
+  <div class="actions">
+    <a class="button" href="{% if kind == 'customer' %}{% url 'parties:customer_edit' organization.slug party.pk %}{% else %}{% url 'parties:farmer_edit' organization.slug party.pk %}{% endif %}">Edit profile</a>
+    <form method="post" action="{% if kind == 'customer' %}{% url 'parties:customer_trash' organization.slug party.pk %}{% else %}{% url 'parties:farmer_trash' organization.slug party.pk %}{% endif %}">
+      {% csrf_token %}<button class="button button-danger" type="submit" onclick="return confirm('Move this record to Trash? Its milk and payment history will be retained.')">Move to Trash</button>
+    </form>
+  </div>
+  {% endif %}
   <a class="button button-secondary" href="{% if kind == 'customer' %}{% url 'parties:customers' organization.slug %}{% else %}{% url 'parties:farmers' organization.slug %}{% endif %}">Back to directory</a>
 </div>
 

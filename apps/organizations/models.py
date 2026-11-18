@@ -88,3 +88,29 @@ class BranchAssignment(UUIDModel, TimeStampedModel):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["membership", "branch"], name="uniq_member_branch_assignment")]
+
+
+
+class StaffInvitation(UUIDModel, TimeStampedModel):
+    """One-time, hashed-token invitation to join an organisation as staff."""
+
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="staff_invitations")
+    invited_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="sent_staff_invitations")
+    email = models.EmailField(db_index=True)
+    first_name = models.CharField(max_length=150, blank=True)
+    last_name = models.CharField(max_length=150, blank=True)
+    role = models.CharField(max_length=32, choices=Membership.Role.choices)
+    branches = models.ManyToManyField(Branch, blank=True, related_name="staff_invitations")
+    token_hash = models.CharField(max_length=64, unique=True)
+    expires_at = models.DateTimeField(db_index=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["organization", "email", "created_at"])]
+
+    @property
+    def is_pending(self):
+        from django.utils import timezone
+        return self.accepted_at is None and self.revoked_at is None and self.expires_at > timezone.now()

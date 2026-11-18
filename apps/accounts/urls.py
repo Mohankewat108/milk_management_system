@@ -9,11 +9,13 @@ from django.contrib.auth.views import (
 from django.urls import path, reverse_lazy
 
 from .views import AccountLoginView, account_logout, register_account
+from apps.organizations.staff_views import staff_invitation_accept
 
 app_name = "accounts"
 
 urlpatterns = [
     path("register/", register_account, name="register"),
+    path("staff-invitations/<uuid:invitation_id>/<str:token>/", staff_invitation_accept, name="staff_invitation_accept"),
     path("login/", AccountLoginView.as_view(), name="login"),
     path("logout/", account_logout, name="logout"),
     path("password/change/", PasswordChangeView.as_view(

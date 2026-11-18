@@ -129,3 +129,36 @@ class PartyProfileTests(TestCase):
         response = self.client.get(url, {"q": "find-me@example.test", "status": "inactive"})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(list(response.context["page_obj"].object_list), [self.customer])
+
+
+    def test_owner_can_edit_customer_profile(self):
+        self.client.force_login(self.owner)
+        url = reverse("parties:customer_edit", args=[self.organization.slug, self.customer.pk])
+        response = self.client.post(url, {
+            "branch": str(self.branch.pk), "code": "C001",
+            "full_name": "Corrected Customer", "phone": "9811111111",
+            "email": "corrected@example.test", "address": "Updated address",
+            "city": "Parasi", "village": "", "ward": "4",
+        })
+        self.assertEqual(response.status_code, 302)
+        self.customer.refresh_from_db()
+        self.assertEqual(self.customer.full_name, "Corrected Customer")
+
+    def test_soft_deleted_customer_is_hidden_and_can_be_restored(self):
+        self.client.force_login(self.owner)
+        trash_url = reverse("parties:customer_trash", args=[self.organization.slug, self.customer.pk])
+        response = self.client.post(trash_url)
+        self.assertEqual(response.status_code, 302)
+        self.customer.refresh_from_db()
+        self.assertIsNotNone(self.customer.deleted_at)
+        detail_url = reverse("parties:customer_detail", args=[self.organization.slug, self.customer.pk])
+        self.assertEqual(self.client.get(detail_url).status_code, 404)
+        directory_url = reverse("parties:customers", args=[self.organization.slug])
+        self.assertNotContains(self.client.get(directory_url), "Test Customer")
+        restore_url = reverse("parties:party_restore", args=[
+            self.organization.slug, "customer", self.customer.pk,
+        ])
+        response = self.client.post(restore_url)
+        self.assertEqual(response.status_code, 302)
+        self.customer.refresh_from_db()
+        self.assertIsNone(self.customer.deleted_at)

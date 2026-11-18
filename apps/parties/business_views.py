@@ -137,7 +137,7 @@ def _party_profile_context(*, party, kind, request):
 @organization_access(*PARTY_VIEW_ROLES)
 def customer_list(request, organization_slug):
     org = request.organization
-    records = Customer.objects.filter(organization=org).select_related("branch", "user").order_by("full_name")
+    records = Customer.objects.filter(organization=org, deleted_at__isnull=True).select_related("branch", "user").order_by("full_name")
     records = _party_scope(records, request.membership)
     term = request.GET.get("q", "").strip()
     status = request.GET.get("status", "").strip()
@@ -171,7 +171,7 @@ def customer_list(request, organization_slug):
 @organization_access(*PARTY_VIEW_ROLES)
 def customer_detail(request, organization_slug, customer_id):
     party = get_object_or_404(
-        _party_scope(Customer.objects.filter(organization=request.organization), request.membership),
+        _party_scope(Customer.objects.filter(organization=request.organization, deleted_at__isnull=True), request.membership),
         pk=customer_id,
     )
     return render(request, "parties/party_detail.html", _party_profile_context(
@@ -183,7 +183,7 @@ def customer_detail(request, organization_slug, customer_id):
 @organization_access(*PARTY_VIEW_ROLES)
 def farmer_list(request, organization_slug):
     org = request.organization
-    records = Farmer.objects.filter(organization=org).select_related("branch", "user").order_by("full_name")
+    records = Farmer.objects.filter(organization=org, deleted_at__isnull=True).select_related("branch", "user").order_by("full_name")
     records = _party_scope(records, request.membership)
     term = request.GET.get("q", "").strip()
     status = request.GET.get("status", "").strip()
@@ -218,7 +218,7 @@ def farmer_list(request, organization_slug):
 @organization_access(*PARTY_VIEW_ROLES)
 def farmer_detail(request, organization_slug, farmer_id):
     party = get_object_or_404(
-        _party_scope(Farmer.objects.filter(organization=request.organization), request.membership),
+        _party_scope(Farmer.objects.filter(organization=request.organization, deleted_at__isnull=True), request.membership),
         pk=farmer_id,
     )
     return render(request, "parties/party_detail.html", _party_profile_context(

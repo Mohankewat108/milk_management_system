@@ -4,12 +4,10 @@ from .models import Branch, Membership
 
 
 class StaffMembershipForm(forms.Form):
-    username = forms.CharField(max_length=150)
     email = forms.EmailField()
     first_name = forms.CharField(max_length=150)
     last_name = forms.CharField(max_length=150, required=False)
     role = forms.ChoiceField(choices=[
-        (Membership.Role.ADMIN, "Organisation admin"),
         (Membership.Role.BRANCH_MANAGER, "Branch manager"),
         (Membership.Role.COLLECTION_OPERATOR, "Milk collection operator"),
         (Membership.Role.QUALITY_OFFICER, "Quality officer"),
@@ -25,10 +23,11 @@ class StaffMembershipForm(forms.Form):
             organization=organization, is_active=True
         )
 
+    def clean_email(self):
+        return self.cleaned_data["email"].strip().lower()
+
     def clean(self):
         cleaned = super().clean()
-        role = cleaned.get("role")
-        branches = cleaned.get("branches")
-        if role not in {Membership.Role.OWNER, Membership.Role.ADMIN} and not branches:
+        if not cleaned.get("branches"):
             self.add_error("branches", "Assign at least one branch to this staff role.")
         return cleaned

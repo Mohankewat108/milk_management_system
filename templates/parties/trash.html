@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Trash · {{ organization.name }}{% endblock %}
+{% block content %}
+<div class="page-heading"><div><div class="eyebrow">{{ organization.name }} · Record retention</div><h1>Trash</h1><p class="muted">Deleted profiles are retained here. Restore a record to return it to the active directory. Related milk and payment history is not deleted.</p></div><a class="button button-secondary" href="{% url 'parties:customers' organization.slug %}">Back to customers</a></div>
+<form method="get" class="search-form"><label>Record type <select name="kind"><option value="customer" {% if kind == 'customer' %}selected{% endif %}>Customers</option><option value="farmer" {% if kind == 'farmer' %}selected{% endif %}>Farmers</option></select></label><button class="button button-secondary" type="submit">View</button></form>
+<section class="panel table-wrap"><table><thead><tr><th>Code</th><th>Name</th><th>Phone</th><th>Branch</th><th>Deleted at</th><th>Deleted by</th><th>Action</th></tr></thead><tbody>
+{% for item in records %}<tr><td>{{ item.code }}</td><td>{{ item.full_name }}</td><td>{{ item.phone|default:'—' }}</td><td>{{ item.branch.name|default:'—' }}</td><td>{{ item.deleted_at|date:'Y-m-d H:i' }}</td><td>{{ item.deleted_by|default:'—' }}</td><td><form method="post" action="{% url 'parties:party_restore' organization.slug kind item.pk %}">{% csrf_token %}<button class="button button-secondary" type="submit">Restore</button></form></td></tr>{% empty %}<tr><td colspan="7">Trash is empty.</td></tr>{% endfor %}
+</tbody></table></section>
+{% endblock %}

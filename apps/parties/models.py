@@ -18,6 +18,8 @@ class Customer(UUIDModel, TimeStampedModel):
     village = models.CharField(max_length=100, blank=True)
     ward = models.CharField(max_length=30, blank=True)
     is_active = models.BooleanField(default=True)
+    deleted_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    deleted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="deleted_customers")
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["organization", "code"], name="uniq_customer_code_org")]
@@ -40,6 +42,8 @@ class Farmer(UUIDModel, TimeStampedModel):
     bank_account_number = models.CharField(max_length=80, blank=True)
     bank_name = models.CharField(max_length=120, blank=True)
     is_active = models.BooleanField(default=True)
+    deleted_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    deleted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="deleted_farmers")
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["organization", "code"], name="uniq_farmer_code_org")]
