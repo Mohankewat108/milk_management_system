@@ -22,7 +22,7 @@
         <div class="profile-meta">
           <span class="profile-code">{{ party.code }}</span>
           <span class="profile-meta-dot" aria-hidden="true"></span>
-          <span>{{ party.branch.name|default:_("No branch assigned") }}</span>
+          <span>{{ party.branch.name|default:"No branch assigned" }}</span>
           <span class="status {% if party.is_active %}active{% else %}inactive{% endif %}">{% if party.is_active %}{% translate "Active" %}{% else %}{% translate "Inactive" %}{% endif %}</span>
         </div>
       </div>
