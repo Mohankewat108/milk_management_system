@@ -171,7 +171,7 @@ def customer_list(request, organization_slug):
 @organization_access(*PARTY_VIEW_ROLES)
 def customer_detail(request, organization_slug, customer_id):
     party = get_object_or_404(
-        _party_scope(Customer.objects.filter(organization=request.organization), request.membership),
+        _party_scope(Customer.objects.filter(organization=request.organization, deleted_at__isnull=True), request.membership),
         pk=customer_id,
     )
     return render(request, "parties/party_detail.html", _party_profile_context(
@@ -218,7 +218,7 @@ def farmer_list(request, organization_slug):
 @organization_access(*PARTY_VIEW_ROLES)
 def farmer_detail(request, organization_slug, farmer_id):
     party = get_object_or_404(
-        _party_scope(Farmer.objects.filter(organization=request.organization), request.membership),
+        _party_scope(Farmer.objects.filter(organization=request.organization, deleted_at__isnull=True), request.membership),
         pk=farmer_id,
     )
     return render(request, "parties/party_detail.html", _party_profile_context(
