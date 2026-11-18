@@ -62,6 +62,7 @@ TIME_ZONE = env("DJANGO_DEFAULT_TIME_ZONE", default="Asia/Kathmandu")
 USE_I18N = True
 USE_TZ = True
 STATIC_URL = "/static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
