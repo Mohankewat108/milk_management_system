@@ -58,9 +58,9 @@ def _scoped_queryset(module, organization, membership, params):
     else:
         raise ValidationError("Unsupported export category.")
 
-    if branch_ids is not None:
+    if branch_ids is not None and module != "suppliers":
         qs = qs.filter(branch_id__in=branch_ids)
-    if branch_id:
+    if branch_id and module != "suppliers":
         qs = qs.filter(branch_id=branch_id)
     if params.get("status"):
         if module in {"farmers", "customers"}:
