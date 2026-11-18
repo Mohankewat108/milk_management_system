@@ -1,1 +1,40 @@
-{% extends "base.html" %}{% block title %}Milk collections | {{ organization.name }}</div>{% endblock %}{% block content %}<div class="collection-page"><div class="page-heading"><div><div class="eyebrow">{{ organization.name }}</div><h1>Milk collections</h1><p class="muted">Recorded quantity: {{ total_litres|floatformat:3 }} L</p></div><a class="button" href="{% url 'collections:create' organization.slug %}">Record collection</a></div><form class="search-form" method="get"><label>From <input type="date" name="from" value="{{ request.GET.from }}"></label><label>To <input type="date" name="to" value="{{ request.GET.to }}"></label><button class="button button-secondary" type="submit">Filter</button></form><section class="panel table-wrap"><table><thead><tr><th>Reference</th><th>Date</th><th>Branch</th><th>Farmer / Customer</th><th>Litres</th><th>SNF</th><th>FAT</th><th>Lactose</th><th>Rate</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead><tbody>{% for item in page_obj %}<tr><td>{{ item.reference }}</td><td>{{ item.collected_at|date:"Y-m-d H:i" }}</td><td>{{ item.branch.name }}</td><td>{% if item.farmer %}{{ item.farmer.full_name }}{% else %}{{ item.customer.full_name }}{% endif %}</td><td>{{ item.quantity_litres }}</td><td>{{ item.snf }}</td><td>{{ item.fat }}</td><td>{{ item.lactose }}</td><td>{{ item.milk_rate }}</td><td>{{ item.total_amount }}</td><td><span class="tag">{{ item.get_status_display }}</span></td><td><div class="table-actions"><a class="button button-small button-secondary" href="{% url 'collections:edit' organization.slug item.id %}">Edit</a>{% if membership.role == "owner" or membership.role == "admin" %}{% if item.status != "reversed" %}<form method="post" action="{% url 'collections:reverse' organization.slug item.id %}">{% csrf_token %}<input type="hidden" name="reason" value="Reversed by authorised dairy administrator"><button class="button button-small button-ghost" type="submit" onclick="return confirm('Reverse this collection? This cannot be undone.')">Reverse</button></form>{% endif %}{% endif %}</div></td></tr>{% empty %}<tr><td colspan="12">No collection records found.</td></tr>{% endfor %}</tbody></table></section><div class="pagination">{% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}<span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">Next</a>{% endif %}</div>{% endblock %}
+{% extends "base.html" %}
+{% block title %}Milk collections | {{ organization.name }}{% endblock %}
+{% block content %}
+<div class="collection-page">
+  <div class="page-heading">
+    <div><div class="eyebrow">{{ organization.name }}</div><h1>Milk collections</h1><p class="muted">Recorded quantity: {{ total_litres|floatformat:3 }} L</p></div>
+    <a class="button" href="{% url 'collections:create' organization.slug %}">Record collection</a>
+  </div>
+  <form class="search-form" method="get">
+    <label>From <input type="date" name="from" value="{{ request.GET.from }}"></label>
+    <label>To <input type="date" name="to" value="{{ request.GET.to }}"></label>
+    <button class="button button-secondary" type="submit">Filter</button>
+  </form>
+  <section class="panel table-wrap"><table>
+    <thead><tr><th>Reference</th><th>Date</th><th>Branch</th><th>Farmer / Customer</th><th>Litres</th><th>SNF</th><th>FAT</th><th>Lactose</th><th>Rate</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>
+    {% for item in page_obj %}<tr>
+      <td>{{ item.reference }}</td><td>{{ item.collected_at|date:"Y-m-d H:i" }}</td><td>{{ item.branch.name }}</td>
+      <td>{% if item.farmer %}{{ item.farmer.full_name }}{% else %}{{ item.customer.full_name }}{% endif %}</td>
+      <td>{{ item.quantity_litres }}</td><td>{{ item.snf }}</td><td>{{ item.fat }}</td><td>{{ item.lactose }}</td>
+      <td>{{ item.milk_rate }}</td><td>{{ item.total_amount }}</td><td><span class="tag">{{ item.get_status_display }}</span></td>
+      <td><div class="table-actions">
+        {% if item.status != "approved" and item.status != "reversed" %}
+          <a class="button button-small button-secondary" href="{% url 'collections:edit' organization.slug item.id %}">Edit</a>
+        {% endif %}
+        {% if membership.role == "owner" or membership.role == "admin" %}
+          {% if item.status != "reversed" %}
+          <form method="post" action="{% url 'collections:reverse' organization.slug item.id %}">{% csrf_token %}
+            <input type="text" name="reason" minlength="8" required placeholder="Reversal reason" aria-label="Reason for reversal">
+            <button class="button button-small button-ghost" type="submit" onclick="return confirm('Reverse this collection? This action is recorded in the audit log.')">Reverse</button>
+          </form>
+          {% endif %}
+        {% endif %}
+      </div></td>
+    </tr>{% empty %}<tr><td colspan="12">No collection records found.</td></tr>{% endfor %}
+    </tbody>
+  </table></section>
+  <div class="pagination">{% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}<span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">Next</a>{% endif %}</div>
+</div>
+{% endblock %}
