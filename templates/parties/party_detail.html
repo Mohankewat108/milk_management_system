@@ -15,7 +15,7 @@
     </form>
   </div>
   {% endif %}
-  <a class="button button-secondary" href="{% if kind == 'customer' %}{% url 'parties:customers' organization.slug %}{% else %}{% url 'parties:farmers' organization.slug %}{% endif %}">Back to directory</a>\n  <a class="button button-secondary" href="{% if kind == 'customer' %}{% url 'parties:customers' organization.slug %}{% else %}{% url 'parties:farmers' organization.slug %}{% endif %}">Back to directory</a>
+  <a class="button button-secondary" href="{% if kind == 'customer' %}{% url 'parties:customers' organization.slug %}{% else %}{% url 'parties:farmers' organization.slug %}{% endif %}">Back to directory</a>
 </div>
 
 <section class="panel">
