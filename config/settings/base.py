@@ -66,6 +66,9 @@ LANGUAGES = [
     ("hi", "हिन्दी"),
 ]
 LOCALE_PATHS = [BASE_DIR / "locale"]
+FORMAT_MODULE_PATH = ["config.locale"]
+USE_THOUSAND_SEPARATOR = True
+NUMBER_GROUPING = 3
 TIME_ZONE = env("DJANGO_DEFAULT_TIME_ZONE", default="Asia/Kathmandu")
 USE_I18N = True
 USE_TZ = True
