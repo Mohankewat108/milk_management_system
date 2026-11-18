@@ -56,6 +56,7 @@ def collection_list(request, organization_slug):
         "date_from": format_local_date(start, language_code) if start else start_text,
         "date_to": format_local_date(end, language_code) if end else end_text,
         "date_error": date_error,
+        "date_calendar": "BS" if language_code == "ne" else "AD",
     })
 
 
