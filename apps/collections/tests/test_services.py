@@ -78,3 +78,15 @@ class CollectionServiceTests(TestCase):
         self.assertEqual(entry.pricing_snapshot["fat_component"], "28.00")
         self.assertEqual(entry.pricing_snapshot["lactose_component"], "4.50")
         self.assertEqual(entry.pricing_snapshot["effective_from"], "2026-01-01")
+
+    def test_rate_selection_uses_dairy_local_date_near_midnight(self):
+        self.org.timezone = "Asia/Kathmandu"
+        self.org.save(update_fields=["timezone", "updated_at"])
+        entry = create_collection(
+            organization=self.org, branch=self.branch, actor=self.user,
+            # 18 Nov 23:30 in Kathmandu; still 18 Nov in UTC in this fixture.
+            collected_at=datetime(2026, 11, 18, 18, 0, tzinfo=dt_timezone.utc),
+            quantity_litres="1.000", snf="8.0", fat="4.0", lactose="4.5",
+            farmer=self.farmer,
+        )
+        self.assertEqual(entry.pricing_id, self.pricing.id)
