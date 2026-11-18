@@ -12,6 +12,7 @@ from apps.finance.models import Expense, Payment
 from apps.inventory.models import InventoryItem, Supplier
 from apps.organizations.models import Branch
 from apps.parties.models import Customer, Farmer
+from apps.pricing.models import PricingConfiguration
 
 
 MODEL_REGISTRY = {
@@ -22,6 +23,7 @@ MODEL_REGISTRY = {
     "inventory_item": (InventoryItem, "Inventory item"),
     "payment": (Payment, "Payment"),
     "expense": (Expense, "Expense"),
+    "pricing": (PricingConfiguration, "Pricing schedule"),
 }
 
 
@@ -40,6 +42,9 @@ def soft_delete_record(*, key, record, actor):
         Payment.Status.PENDING, Payment.Status.FAILED,
     }:
         raise ValidationError("Completed or reversed payments cannot be deleted. Use the finance reversal workflow.")
+    if isinstance(record, PricingConfiguration):
+        if record.is_approved or record.collections.exists():
+            raise ValidationError("Approved or referenced rate schedules are retained for historical pricing and cannot be deleted.")
     if isinstance(record, Expense) and record.status == Expense.Status.APPROVED:
         raise ValidationError("Approved expenses are retained for audit and cannot be deleted.")
     if isinstance(record, InventoryItem):
