@@ -1,1 +1,16 @@
-{% extends "base.html" %}{% block title %}Record milk collection{% endblock %}{% block content %}<section class="content-card"><div class="eyebrow">{{ organization.name }}</div><h1>Record milk collection</h1><p class="muted">The server calculates the milk rate and total using the approved effective pricing version.</p><form method="post">{% csrf_token %}{{ form.non_field_errors }}{% for field in form %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}{% endfor %}<div class="actions"><button class="button" type="submit">Save collection</button><a class="button button-secondary" href="{% url 'collections:list' organization.slug %}">Cancel</a></div></form></section>{% endblock %}
+{% extends "base.html" %}
+{% block title %}Record milk collection{% endblock %}
+{% block content %}
+<section class="content-card">
+  <div class="eyebrow">{{ organization.name }}</div><h1>Record milk collection</h1>
+  <p class="muted">Enter actual instrument results. The system chooses the approved pricing and quality profile by collection date and branch, then calculates the price using Decimal arithmetic.</p>
+  <form method="post">{% csrf_token %}{{ form.non_field_errors }}
+    <h2>Collection details</h2>
+    {% for field in form %}
+      {% if field.name == "snf" %}<h2>Milk quality and laboratory readings</h2>{% endif %}
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small class="muted">{{ field.help_text }}</small>{% endif %}{{ field.errors }}
+    {% endfor %}
+    <div class="actions"><button class="button" type="submit">Save collection</button><a class="button button-secondary" href="{% url 'collections:list' organization.slug %}">Cancel</a></div>
+  </form>
+</section>
+{% endblock %}
