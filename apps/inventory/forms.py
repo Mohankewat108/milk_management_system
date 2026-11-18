@@ -36,7 +36,7 @@ class InventoryItemForm(forms.ModelForm):
         if membership.role not in {"owner", "admin"}:
             branches = branches.filter(pk__in=assignments)
         self.fields["branch"].queryset = branches
-        self.fields["supplier"].queryset = Supplier.objects.filter(organization=organization, is_active=True)
+        self.fields["supplier"].queryset = Supplier.objects.filter(organization=organization, is_active=True, deleted_at__isnull=True)
         self.fields["supplier"].required = False
 
     def clean_code(self):
