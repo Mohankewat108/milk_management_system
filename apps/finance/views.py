@@ -11,7 +11,7 @@ from apps.audit.services import record_event
 from apps.organizations.decorators import organization_access
 from apps.organizations.models import Membership
 from apps.organizations.permissions import accessible_branch_ids, can_access_branch
-from .forms import ExpenseEntryForm, PaymentEntryForm
+from .forms import ExpenseEntryForm, PaymentEditForm, PaymentEntryForm
 from .models import Expense, Payment
 from .services import approve_expense, record_expense, record_payment
 
@@ -136,3 +136,61 @@ def expense_approve(request, organization_slug, expense_id):
                      action="expense.approved", target=expense, request=request)
         messages.success(request, "Expense approved.")
     return redirect("finance:expenses", organization_slug=organization_slug)
+
+
+@login_required
+@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.ACCOUNTANT)
+@require_http_methods(["GET", "POST"])
+def payment_edit(request, organization_slug, payment_id):
+    payment = Payment.objects.get(
+        pk=payment_id, organization=request.organization,
+        deleted_at__isnull=True, status=Payment.Status.PENDING,
+    )
+    branch_ids = accessible_branch_ids(request.membership)
+    if branch_ids is not None and payment.branch_id not in branch_ids:
+        messages.error(request, "You cannot edit a payment outside your assigned branches.")
+        return redirect("finance:list", organization_slug=organization_slug)
+    form = PaymentEditForm(
+        request.POST or None, instance=payment,
+        organization=request.organization, membership=request.membership,
+    )
+    if request.method == "POST" and form.is_valid():
+        updated = form.save()
+        record_event(actor=request.user, organization=request.organization,
+                     action="payment.updated", target=updated,
+                     changes={"updated_fields": list(form.changed_data)}, request=request)
+        messages.success(request, f"Payment {updated.reference} updated.")
+        return redirect("finance:list", organization_slug=organization_slug)
+    return render(request, "finance/edit.html", {
+        "organization": request.organization, "form": form,
+        "record": payment, "record_type": "Payment",
+    })
+
+
+@login_required
+@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.ACCOUNTANT)
+@require_http_methods(["GET", "POST"])
+def expense_edit(request, organization_slug, expense_id):
+    expense = Expense.objects.get(
+        pk=expense_id, organization=request.organization,
+        deleted_at__isnull=True, status__in=[Expense.Status.PENDING, Expense.Status.REJECTED],
+    )
+    branch_ids = accessible_branch_ids(request.membership)
+    if branch_ids is not None and expense.branch_id not in branch_ids:
+        messages.error(request, "You cannot edit an expense outside your assigned branches.")
+        return redirect("finance:expenses", organization_slug=organization_slug)
+    form = ExpenseEntryForm(
+        request.POST or None, instance=expense,
+        organization=request.organization, membership=request.membership,
+    )
+    if request.method == "POST" and form.is_valid():
+        updated = form.save()
+        record_event(actor=request.user, organization=request.organization,
+                     action="expense.updated", target=updated,
+                     changes={"updated_fields": list(form.changed_data)}, request=request)
+        messages.success(request, f"Expense {updated.reference} updated.")
+        return redirect("finance:expenses", organization_slug=organization_slug)
+    return render(request, "finance/edit.html", {
+        "organization": request.organization, "form": form,
+        "record": expense, "record_type": "Expense",
+    })
