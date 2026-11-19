@@ -187,7 +187,8 @@ class CollectionServiceTests(TestCase):
                         farmer=self.farmer,
                     )
                 self.assertEqual(MilkCollection.objects.count(), 0)
-def test_collection_creation_rejects_unassigned_branch(self):
+
+    def test_collection_creation_rejects_unassigned_branch(self):
         from apps.organizations.models import BranchAssignment
 
         other_branch = Branch.objects.create(
@@ -212,4 +213,3 @@ def test_collection_creation_rejects_unassigned_branch(self):
                 farmer=self.farmer,
             )
         self.assertEqual(MilkCollection.objects.count(), 0)
-
