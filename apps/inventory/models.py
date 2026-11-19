@@ -60,6 +60,15 @@ class InventoryItem(UUIDModel, TimeStampedModel):
             models.UniqueConstraint(
                 fields=["organization", "code"], name="uniq_inventory_code_org"
             ),
+            models.CheckConstraint(
+                condition=models.Q(current_stock__gte=0), name="inventory_stock_nonnegative"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(reorder_level__gte=0), name="inventory_reorder_nonnegative"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(purchase_price__gte=0), name="inventory_price_nonnegative"
+            ),
         ]
         indexes = [
             models.Index(fields=["organization", "branch", "is_active"]),
@@ -96,4 +105,14 @@ class StockMovement(UUIDModel, TimeStampedModel):
         indexes = [
             models.Index(fields=["organization", "created_at"]),
             models.Index(fields=["item", "created_at"]),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(quantity_delta__gt=0, kind__in=["purchase", "transfer_in", "return"])
+                    | models.Q(quantity_delta__lt=0, kind__in=["usage", "transfer_out"])
+                    | (models.Q(kind="adjustment") & ~models.Q(quantity_delta=0))
+                ),
+                name="stock_movement_kind_sign",
+            ),
         ]

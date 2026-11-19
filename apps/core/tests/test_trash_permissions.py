@@ -26,6 +26,11 @@ class TrashDeleteRoleTests(TestCase):
             code="MAIN",
             name="Main",
         )
+        Membership.objects.create(
+            user=self.owner,
+            organization=self.organization,
+            role=Membership.Role.OWNER,
+        )
         self.item = InventoryItem.objects.create(
             organization=self.organization,
             branch=self.branch,
@@ -122,3 +127,24 @@ class TrashDeleteRoleTests(TestCase):
         self.item.refresh_from_db()
         self.assertEqual(response.status_code, 404)
         self.assertIsNotNone(self.item.deleted_at)
+
+    def test_trash_listing_paginates_database_results(self):
+        for index in range(26):
+            InventoryItem.objects.create(
+                organization=self.organization,
+                branch=self.branch,
+                code=f"TRASH-{index:02}",
+                name=f"Deleted item {index}",
+                current_stock="0.000",
+                deleted_at=timezone.now(),
+            )
+        self.client.force_login(self.owner)
+
+        response = self.client.get(
+            reverse("business:trash", kwargs={"organization_slug": self.organization.slug}),
+            {"type": "inventory_item"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context["page_obj"]), 25)
+        self.assertTrue(response.context["page_obj"].has_next())

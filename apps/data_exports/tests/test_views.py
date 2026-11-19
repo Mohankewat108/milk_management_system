@@ -66,12 +66,13 @@ class ExportDownloadAuthorizationTests(TestCase):
 
     def test_authorized_requester_can_download_export_for_current_branches(self):
         job = self.create_job(branch_scope=[str(self.branch_a.pk), str(self.branch_b.pk)])
-        with patch.object(private_storage, "open", return_value=BytesIO(b"export")):
+        stream = BytesIO(b"export")
+        with patch.object(private_storage, "open", return_value=stream):
             response = self.download(job)
 
         self.assertIsInstance(response, FileResponse)
         self.assertEqual(response.status_code, 200)
-        response.close()
+        stream.close()
 
     def test_branch_manager_can_view_reports(self):
         response = self.client.get(

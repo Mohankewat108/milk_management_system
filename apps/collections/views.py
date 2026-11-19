@@ -111,6 +111,7 @@ def collection_create(request, organization_slug):
                     sample_reference=data.get("sample_reference", ""),
                     quality_test_method=data.get("quality_test_method", ""),
                     tested_by=request.user,
+                    idempotency_key=data["idempotency_key"],
                 )
             except ValidationError as exc:
                 form.add_error(None, exc)

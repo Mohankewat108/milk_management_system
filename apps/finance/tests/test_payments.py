@@ -58,6 +58,26 @@ class PaymentServiceTests(TestCase):
         self.assertEqual(payment.status, Payment.Status.PENDING)
         self.assertIsNone(payment.paid_at)
 
+    def test_payment_submission_key_prevents_duplicate_records(self):
+        data = {
+            "organization": self.org,
+            "branch": self.branch,
+            "actor": self.user,
+            "direction": Payment.Direction.INCOMING,
+            "amount": "120.00",
+            "method": Payment.Method.ONLINE,
+            "customer": self.customer,
+            "idempotency_key": "payment-request-001",
+        }
+        first = record_payment(**data)
+        retry = record_payment(**data)
+        self.assertEqual(first.pk, retry.pk)
+        self.assertEqual(Payment.objects.count(), 1)
+
+        with self.assertRaises(ValidationError):
+            record_payment(**{**data, "amount": "121.00"})
+        self.assertEqual(Payment.objects.count(), 1)
+
     def test_foreign_tenant_party_is_rejected(self):
         other = Organization.objects.create(
             owner=self.user, name="Other Dairy", slug="other-payments-dairy"

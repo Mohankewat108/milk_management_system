@@ -145,37 +145,39 @@ def quality_settings(request, organization_slug):
     if request.method == "POST" and form.is_valid():
         data = form.cleaned_data
         query_end = data["effective_to"] or date.max
-        overlap = QualityConfiguration.objects.filter(
-            organization=organization,
-            branch=data["branch"],
-            effective_from__lte=query_end,
-        ).filter(Q(effective_to__isnull=True) | Q(effective_to__gte=data["effective_from"]))
-        if overlap.exists():
-            form.add_error(
-                None, "This branch scope already has an overlapping effective quality profile."
-            )
-        else:
-            version = (
-                QualityConfiguration.objects.filter(organization=organization).aggregate(
-                    value=Max("version")
-                )["value"]
-                or 0
-            ) + 1
-            config = form.save(commit=False)
-            config.organization = organization
-            config.version = version
-            config.created_by = request.user
-            config.is_approved = True
-            config.save()
-            record_event(
-                actor=request.user,
+        with transaction.atomic():
+            type(organization).objects.select_for_update().get(pk=organization.pk)
+            overlap = QualityConfiguration.objects.filter(
                 organization=organization,
-                action="quality_profile.created",
-                target=config,
-                request=request,
-            )
-            messages.success(request, "Quality profile saved and activated.")
-            return redirect("pricing:quality", organization_slug=organization_slug)
+                branch=data["branch"],
+                effective_from__lte=query_end,
+            ).filter(Q(effective_to__isnull=True) | Q(effective_to__gte=data["effective_from"]))
+            if overlap.exists():
+                form.add_error(
+                    None, "This branch scope already has an overlapping effective quality profile."
+                )
+            else:
+                version = (
+                    QualityConfiguration.objects.filter(organization=organization).aggregate(
+                        value=Max("version")
+                    )["value"]
+                    or 0
+                ) + 1
+                config = form.save(commit=False)
+                config.organization = organization
+                config.version = version
+                config.created_by = request.user
+                config.is_approved = True
+                config.save()
+                record_event(
+                    actor=request.user,
+                    organization=organization,
+                    action="quality_profile.created",
+                    target=config,
+                    request=request,
+                )
+                messages.success(request, "Quality profile saved and activated.")
+                return redirect("pricing:quality", organization_slug=organization_slug)
     history = QualityConfiguration.objects.filter(organization=organization).select_related(
         "branch"
     )
@@ -212,32 +214,36 @@ def pricing_edit(request, organization_slug, pricing_id):
     if request.method == "POST" and form.is_valid():
         data = form.cleaned_data
         branch, start, end = data["branch"], data["effective_from"], data["effective_to"]
-        overlaps = (
-            PricingConfiguration.objects.filter(
-                organization=organization,
-                branch=branch,
-                deleted_at__isnull=True,
-                effective_from__lte=_effective_end(end),
+        with transaction.atomic():
+            type(organization).objects.select_for_update().get(pk=organization.pk)
+            overlaps = (
+                PricingConfiguration.objects.filter(
+                    organization=organization,
+                    branch=branch,
+                    deleted_at__isnull=True,
+                    effective_from__lte=_effective_end(end),
+                )
+                .filter(Q(effective_to__isnull=True) | Q(effective_to__gte=start))
+                .exclude(pk=pricing.pk)
             )
-            .filter(Q(effective_to__isnull=True) | Q(effective_to__gte=start))
-            .exclude(pk=pricing.pk)
-        )
-        if overlaps.exists():
-            form.add_error(None, "This rate schedule overlaps another schedule for the same scope.")
-        else:
-            updated = form.save()
-            record_event(
-                actor=request.user,
-                organization=organization,
-                action="pricing.updated",
-                target=updated,
-                changes={"updated_fields": list(form.changed_data)},
-                request=request,
-            )
-            messages.success(
-                request, "Pending rate schedule updated. Owner approval is still required."
-            )
-            return redirect("pricing:settings", organization_slug=organization_slug)
+            if overlaps.exists():
+                form.add_error(
+                    None, "This rate schedule overlaps another schedule for the same scope."
+                )
+            else:
+                updated = form.save()
+                record_event(
+                    actor=request.user,
+                    organization=organization,
+                    action="pricing.updated",
+                    target=updated,
+                    changes={"updated_fields": list(form.changed_data)},
+                    request=request,
+                )
+                messages.success(
+                    request, "Pending rate schedule updated. Owner approval is still required."
+                )
+                return redirect("pricing:settings", organization_slug=organization_slug)
     return render(
         request,
         "pricing/edit.html",

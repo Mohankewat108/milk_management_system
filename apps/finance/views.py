@@ -61,6 +61,7 @@ def payment_create(request, organization_slug):
                     farmer=data["farmer"],
                     transaction_reference=data["transaction_reference"],
                     notes=data["notes"],
+                    idempotency_key=data["idempotency_key"],
                 )
             except ValidationError as exc:
                 form.add_error(None, exc)
