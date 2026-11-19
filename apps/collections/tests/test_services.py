@@ -178,7 +178,8 @@ class CollectionServiceTests(TestCase):
                     self.branch.deleted_at = timezone.now()
                     self.branch.save(update_fields=["deleted_at", "updated_at"])
 
-                with self.assertRaises(PermissionDenied):
+                expected_error = ValidationError if scenario == "inactive_branch" else PermissionDenied
+                with self.assertRaises(expected_error):
                     create_collection(
                         organization=self.org, branch=self.branch, actor=actor,
                         collected_at=datetime(2026, 11, 18, 6, 0, tzinfo=dt_timezone.utc),
