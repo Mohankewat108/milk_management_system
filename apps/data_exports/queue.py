@@ -16,7 +16,17 @@ from .services import export_queryset
 def queue_export(*, module, file_format, organization, membership, actor, filters):
     if file_format not in {"csv", "xlsx", "pdf"}:
         raise ValueError("Choose CSV, Excel or PDF.")
-    export_queryset(module=module, organization=organization, membership=membership, params=filters)
+    queryset = export_queryset(
+        module=module, organization=organization, membership=membership, params=filters
+    )
+    branch_scope = (
+        None
+        if module == "suppliers"
+        else [
+            str(value) if value is not None else None
+            for value in queryset.order_by().values_list("branch_id", flat=True).distinct()
+        ]
+    )
     job = ExportJob.objects.create(
         organization=organization,
         requested_by=actor,
@@ -28,6 +38,7 @@ def queue_export(*, module, file_format, organization, membership, actor, filter
             "status": filters.get("status", ""),
             "from": filters.get("from", ""),
             "to": filters.get("to", ""),
+            "branch_scope": branch_scope,
         },
         expires_at=timezone.now() + timedelta(days=7),
     )
@@ -54,11 +65,18 @@ def process_export_job(job_id):
         job.save(update_fields=["status", "updated_at"])
     try:
         membership = job.organization.memberships.get(user=job.requested_by, status="active")
+        if (
+            not isinstance(job.filters, dict)
+            or "branch_scope" not in job.filters
+            or (job.module != "suppliers" and not isinstance(job.filters["branch_scope"], list))
+        ):
+            raise ValueError("Export branch scope is missing; queue the export again.")
         queryset = export_queryset(
             module=job.module,
             organization=job.organization,
             membership=membership,
             params=_FilterParams(job.filters),
+            branch_scope=job.filters.get("branch_scope"),
         )
         payload, count = build_export_file(
             job.module, queryset, job.file_format, job.organization.name

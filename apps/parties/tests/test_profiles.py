@@ -31,7 +31,11 @@ class PartyProfileTests(TestCase):
             code="MAIN",
             name="Main Branch",
         )
-        self.membership = Membership.objects.get(user=self.owner, organization=self.organization)
+        self.membership = Membership.objects.create(
+            user=self.owner,
+            organization=self.organization,
+            role=Membership.Role.OWNER,
+        )
         self.customer = Customer.objects.create(
             organization=self.organization,
             branch=self.branch,
@@ -110,9 +114,73 @@ class PartyProfileTests(TestCase):
             code="C-FOREIGN",
             full_name="Foreign Customer",
         )
+        foreign_farmer = Farmer.objects.create(
+            organization=other,
+            code="F-FOREIGN",
+            full_name="Foreign Farmer",
+        )
         self.client.force_login(self.owner)
         url = reverse("parties:customer_detail", args=[self.organization.slug, foreign.pk])
         self.assertEqual(self.client.get(url).status_code, 404)
+        url = reverse("parties:farmer_detail", args=[self.organization.slug, foreign_farmer.pk])
+        self.assertEqual(self.client.get(url).status_code, 404)
+
+    def test_foreign_tenant_collection_uuid_is_not_resolvable(self):
+        other = Organization.objects.create(
+            owner=self.owner,
+            name="Other Collection Dairy",
+            slug="other-collection-dairy",
+            is_demo=True,
+        )
+        other_branch = Branch.objects.create(
+            organization=other,
+            code="OTHER",
+            name="Other Branch",
+        )
+        foreign_farmer = Farmer.objects.create(
+            organization=other,
+            branch=other_branch,
+            code="F-OTHER",
+            full_name="Foreign Farmer",
+        )
+        other_pricing = PricingConfiguration.objects.create(
+            organization=other,
+            version=1,
+            snf_rate=Decimal("5.0000"),
+            fat_rate=Decimal("7.0000"),
+            lactose_rate=Decimal("1.0000"),
+            effective_from=datetime(2026, 1, 1).date(),
+            is_approved=True,
+            created_by=self.owner,
+        )
+        collection = MilkCollection.objects.create(
+            organization=other,
+            branch=other_branch,
+            reference="FOREIGN-COLLECTION",
+            farmer=foreign_farmer,
+            recorded_by=self.owner,
+            collected_at=datetime(2026, 11, 18, 6, 0, tzinfo=UTC),
+            quantity_litres=Decimal("1.000"),
+            snf=Decimal("8.000"),
+            fat=Decimal("4.000"),
+            lactose=Decimal("4.500"),
+            milk_rate=Decimal("72.50"),
+            total_amount=Decimal("72.50"),
+            pricing=other_pricing,
+        )
+        self.client.force_login(self.owner)
+
+        response = self.client.get(
+            reverse(
+                "collections:edit",
+                kwargs={
+                    "organization_slug": self.organization.slug,
+                    "collection_id": collection.pk,
+                },
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
 
     def test_branch_restricted_user_cannot_open_other_branch_party(self):
         other_branch = Branch.objects.create(

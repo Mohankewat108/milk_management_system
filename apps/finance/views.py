@@ -2,7 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods, require_POST
 
 from apps.audit.services import record_event
@@ -190,7 +190,8 @@ def expense_approve(request, organization_slug, expense_id):
 @organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.ACCOUNTANT)
 @require_http_methods(["GET", "POST"])
 def payment_edit(request, organization_slug, payment_id):
-    payment = Payment.objects.get(
+    payment = get_object_or_404(
+        Payment,
         pk=payment_id,
         organization=request.organization,
         deleted_at__isnull=True,
@@ -234,7 +235,8 @@ def payment_edit(request, organization_slug, payment_id):
 @organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.ACCOUNTANT)
 @require_http_methods(["GET", "POST"])
 def expense_edit(request, organization_slug, expense_id):
-    expense = Expense.objects.get(
+    expense = get_object_or_404(
+        Expense,
         pk=expense_id,
         organization=request.organization,
         deleted_at__isnull=True,

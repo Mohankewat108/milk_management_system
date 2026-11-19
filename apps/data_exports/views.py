@@ -8,7 +8,7 @@ from django.views.decorators.http import require_POST
 
 from apps.audit.services import record_event
 from apps.organizations.decorators import organization_access
-from apps.organizations.models import Membership
+from apps.organizations.models import Branch, Membership
 from apps.organizations.permissions import accessible_branch_ids
 
 from .models import ExportJob, ImportBatch, SavedExportTemplate, ScheduledExport
@@ -100,13 +100,30 @@ def download_export(request, organization_slug, job_id):
         Membership.Role.ADMIN,
     }:
         raise Http404
-    branch_ids = accessible_branch_ids(request.membership)
-    if (
-        branch_ids is not None
-        and job.filters.get("branch")
-        and str(job.filters["branch"]) not in {str(value) for value in branch_ids}
-    ):
+    if request.membership.role not in MODULE_ROLES.get(job.module, set()):
         raise Http404
+    if not isinstance(job.filters, dict) or "branch_scope" not in job.filters:
+        raise Http404
+    branch_ids = accessible_branch_ids(request.membership)
+    if job.module != "suppliers":
+        branch_scope = job.filters["branch_scope"]
+        if not isinstance(branch_scope, list) or any(
+            value is not None and not isinstance(value, str) for value in branch_scope
+        ):
+            raise Http404
+        if branch_ids is not None:
+            scope_ids = {value for value in branch_scope if value is not None}
+            current_branch_ids = set(
+                str(value)
+                for value in Branch.objects.filter(
+                    organization=request.organization,
+                    pk__in=branch_ids,
+                    is_active=True,
+                    deleted_at__isnull=True,
+                ).values_list("pk", flat=True)
+            )
+            if None in branch_scope or not scope_ids.issubset(current_branch_ids):
+                raise Http404
     if job.status != ExportJob.Status.COMPLETED or job.expires_at <= timezone.now() or not job.file:
         raise Http404
     try:

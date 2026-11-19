@@ -4,12 +4,13 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.collections.models import MilkCollection
 from apps.finance.models import Expense, Payment
 from apps.inventory.models import InventoryItem, Supplier
-from apps.organizations.models import Membership
+from apps.organizations.models import Branch, Membership
 from apps.organizations.permissions import accessible_branch_ids
 from apps.parties.models import Customer, Farmer
 
@@ -42,8 +43,17 @@ MODULE_ROLES = {
 }
 
 
-def _scoped_queryset(module, organization, membership, params):
+def _scoped_queryset(module, organization, membership, params, branch_scope=None):
     branch_ids = accessible_branch_ids(membership)
+    if branch_ids is not None:
+        branch_ids = list(
+            Branch.objects.filter(
+                organization=organization,
+                pk__in=branch_ids,
+                is_active=True,
+                deleted_at__isnull=True,
+            ).values_list("pk", flat=True)
+        )
     branch_id = params.get("branch", "").strip()
     if branch_id:
         if branch_ids is not None and str(branch_id) not in {str(value) for value in branch_ids}:
@@ -87,6 +97,12 @@ def _scoped_queryset(module, organization, membership, params):
 
     if branch_ids is not None and module != "suppliers":
         qs = qs.filter(branch_id__in=branch_ids)
+    if branch_scope is not None and module != "suppliers":
+        scope_branch_ids = [value for value in branch_scope if value is not None]
+        scope_filter = Q(branch_id__in=scope_branch_ids)
+        if None in branch_scope:
+            scope_filter |= Q(branch__isnull=True)
+        qs = qs.filter(scope_filter)
     if branch_id and module != "suppliers":
         qs = qs.filter(branch_id=branch_id)
     if params.get("status"):
@@ -429,7 +445,7 @@ def build_csv(module, queryset):
     return "\ufeff" + buffer.getvalue(), count
 
 
-def export_queryset(*, module, organization, membership, params):
+def export_queryset(*, module, organization, membership, params, branch_scope=None):
     if module not in MODULE_ROLES or membership.role not in MODULE_ROLES[module]:
         raise PermissionDenied("You do not have permission to export this category.")
-    return _scoped_queryset(module, organization, membership, params)
+    return _scoped_queryset(module, organization, membership, params, branch_scope=branch_scope)

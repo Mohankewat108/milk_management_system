@@ -51,3 +51,42 @@ class TenantAccessTests(TestCase):
             reverse("business:dashboard", kwargs={"organization_slug": self.org_a.slug})
         )
         self.assertEqual(response.status_code, 404)
+
+    def test_suspended_organization_cannot_be_accessed(self):
+        self.org_a.status = Organization.Status.SUSPENDED
+        self.org_a.save(update_fields=["status", "updated_at"])
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("business:dashboard", kwargs={"organization_slug": self.org_a.slug})
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_non_manager_cannot_change_staff_membership_status(self):
+        staff_user = User.objects.create_user(
+            username="tenant-a-staff",
+            email="staff-a@example.test",
+            password="LongDemoPass!123",
+        )
+        staff_membership = Membership.objects.create(
+            user=staff_user,
+            organization=self.org_a,
+            role=Membership.Role.ACCOUNTANT,
+        )
+        self.client.force_login(staff_user)
+
+        response = self.client.post(
+            reverse(
+                "business:staff_status",
+                kwargs={
+                    "organization_slug": self.org_a.slug,
+                    "membership_id": staff_membership.pk,
+                },
+            ),
+            {"status": Membership.Status.SUSPENDED},
+        )
+
+        staff_membership.refresh_from_db()
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(staff_membership.status, Membership.Status.ACTIVE)

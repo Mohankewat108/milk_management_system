@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.test import TestCase
+from django.urls import reverse
 
 from apps.finance.models import Payment
 from apps.finance.services import record_payment
@@ -138,31 +139,60 @@ class PaymentServiceTests(TestCase):
                     )
                 self.assertEqual(Payment.objects.count(), 0)
 
-
-def test_record_payment_rejects_unassigned_branch(self):
-    from apps.organizations.models import BranchAssignment
-
-    other_branch = Branch.objects.create(organization=self.org, code="SECOND", name="Second")
-    accountant = User.objects.create_user(
-        username="payment-branch-accountant",
-        email="payment-branch-accountant@example.test",
-        password="LongDemoPass!123",
-    )
-    membership = Membership.objects.create(
-        user=accountant,
-        organization=self.org,
-        role=Membership.Role.ACCOUNTANT,
-    )
-    BranchAssignment.objects.create(membership=membership, branch=self.branch)
-
-    with self.assertRaises(PermissionDenied):
-        record_payment(
-            organization=self.org,
-            branch=other_branch,
-            actor=accountant,
-            direction=Payment.Direction.INCOMING,
-            amount="10.00",
-            method=Payment.Method.CASH,
-            customer=self.customer,
+    def test_foreign_tenant_payment_uuid_is_not_resolvable(self):
+        other = Organization.objects.create(
+            owner=self.user, name="Other Financial Dairy", slug="other-financial-dairy"
         )
-    self.assertEqual(Payment.objects.count(), 0)
+        other_branch = Branch.objects.create(organization=other, code="OTHER", name="Other Branch")
+        foreign_customer = Customer.objects.create(
+            organization=other, code="C-FOREIGN", full_name="Foreign Customer"
+        )
+        payment = Payment.objects.create(
+            organization=other,
+            branch=other_branch,
+            reference="FOREIGN-PAYMENT",
+            direction=Payment.Direction.INCOMING,
+            customer=foreign_customer,
+            amount=Decimal("10.00"),
+            currency="NPR",
+            method=Payment.Method.CASH,
+            recorded_by=self.user,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse(
+                "finance:edit",
+                kwargs={"organization_slug": self.org.slug, "payment_id": payment.pk},
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_record_payment_rejects_unassigned_branch(self):
+        from apps.organizations.models import BranchAssignment
+
+        other_branch = Branch.objects.create(organization=self.org, code="SECOND", name="Second")
+        accountant = User.objects.create_user(
+            username="payment-branch-accountant",
+            email="payment-branch-accountant@example.test",
+            password="LongDemoPass!123",
+        )
+        membership = Membership.objects.create(
+            user=accountant,
+            organization=self.org,
+            role=Membership.Role.ACCOUNTANT,
+        )
+        BranchAssignment.objects.create(membership=membership, branch=self.branch)
+
+        with self.assertRaises(PermissionDenied):
+            record_payment(
+                organization=self.org,
+                branch=other_branch,
+                actor=accountant,
+                direction=Payment.Direction.INCOMING,
+                amount="10.00",
+                method=Payment.Method.CASH,
+                customer=self.customer,
+            )
+        self.assertEqual(Payment.objects.count(), 0)

@@ -10,6 +10,8 @@
 - Shared-database tenant resolution is based on active user membership, never a client-provided tenant ID.
 - Tenant-filtered form querysets, scoped querysets and explicit organisation/branch checks in core collection and finance services.
 - Non-owner/admin memberships require explicit branch assignments; missing assignments do not imply organisation-wide access.
+- Staff invitations may activate only accounts created during that invitation acceptance; existing inactive accounts require the normal account-recovery process.
+- Export jobs retain the branch scope used to create them, and downloads re-check current module permission and branch access. Legacy jobs without saved scope must be queued again.
 - Customer self-service portal selects the customer profile linked to the authenticated user.
 - Collection and payment writes use transactions; sensitive status updates lock records.
 - Password reset uses Django's signed, time-limited reset-token flow.

@@ -196,7 +196,10 @@ def staff_invitation_accept(request, invitation_id, token):
         return render(request, "organizations/staff_invitation_invalid.html", status=410)
 
     user = User.objects.filter(email__iexact=invitation.email).first()
-    if user and user.is_active:
+    invited_user_created = user is None
+    if user and not user.is_active:
+        return HttpResponseForbidden("This account is inactive. Contact support to restore access.")
+    if user:
         if not request.user.is_authenticated:
             login_url = reverse("accounts:login")
             return redirect(f"{login_url}?next={request.path}")
@@ -204,13 +207,11 @@ def staff_invitation_accept(request, invitation_id, token):
             return HttpResponseForbidden(
                 "Sign in with the email address that received this staff invitation."
             )
-    elif request.user.is_authenticated and user and request.user.pk != user.pk:
-        return HttpResponseForbidden("This invitation belongs to another account.")
 
     from django.contrib.auth.forms import SetPasswordForm
 
-    if user is None:
-        user = User.objects.create(
+    if invited_user_created:
+        user = User(
             username=f"staff-{secrets.token_hex(8)}",
             email=invitation.email,
             first_name=invitation.first_name,
@@ -218,8 +219,7 @@ def staff_invitation_accept(request, invitation_id, token):
             is_active=False,
         )
         user.set_unusable_password()
-        user.save(update_fields=["password"])
-    form = None if user.is_active else SetPasswordForm(user, request.POST or None)
+    form = SetPasswordForm(user, request.POST or None) if invited_user_created else None
 
     if request.method == "POST":
         if form is not None and not form.is_valid():
@@ -235,9 +235,18 @@ def staff_invitation_accept(request, invitation_id, token):
             locked = StaffInvitation.objects.select_for_update().get(pk=invitation.pk)
             if not _invitation_valid(locked, token):
                 return render(request, "organizations/staff_invitation_invalid.html", status=410)
-            if Membership.objects.filter(organization=locked.organization, user=user).exists():
+            if not invited_user_created:
+                user = User.objects.select_for_update().get(pk=user.pk)
+                if not user.is_active:
+                    return HttpResponseForbidden(
+                        "This account is inactive. Contact support to restore access."
+                    )
+            if (
+                not invited_user_created
+                and Membership.objects.filter(organization=locked.organization, user=user).exists()
+            ):
                 return HttpResponseForbidden("This account already has access to this dairy.")
-            if not user.is_active:
+            if invited_user_created:
                 form.save()
                 user.is_active = True
                 user.email_verified = True

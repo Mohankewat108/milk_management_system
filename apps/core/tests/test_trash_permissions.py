@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.inventory.models import InventoryItem
 from apps.organizations.models import Branch, BranchAssignment, Membership, Organization
@@ -90,3 +91,34 @@ class TrashDeleteRoleTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.item.refresh_from_db()
         self.assertIsNone(self.item.deleted_at)
+
+    def test_non_manager_cannot_restore_an_inventory_item(self):
+        support = User.objects.create_user(
+            username="restore-support",
+            email="restore-support@example.test",
+            password="LongDemoPass!123",
+        )
+        membership = Membership.objects.create(
+            user=support,
+            organization=self.organization,
+            role=Membership.Role.SUPPORT,
+        )
+        BranchAssignment.objects.create(membership=membership, branch=self.branch)
+        self.item.deleted_at = timezone.now()
+        self.item.save(update_fields=["deleted_at"])
+        self.client.force_login(support)
+
+        response = self.client.post(
+            reverse(
+                "business:trash_restore",
+                kwargs={
+                    "organization_slug": self.organization.slug,
+                    "model_key": "inventory_item",
+                    "object_id": self.item.pk,
+                },
+            )
+        )
+
+        self.item.refresh_from_db()
+        self.assertEqual(response.status_code, 404)
+        self.assertIsNotNone(self.item.deleted_at)
