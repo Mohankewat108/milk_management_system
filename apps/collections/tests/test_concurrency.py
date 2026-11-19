@@ -13,6 +13,7 @@ from apps.collections.services import create_collection
 from apps.organizations.models import Branch, Membership, Organization
 from apps.parties.models import Farmer
 from apps.pricing.models import PricingConfiguration
+
 User = get_user_model()
 
 
