@@ -101,7 +101,9 @@ class FinancialAndInventoryConcurrencyTests(TransactionTestCase):
                 return payment.pk
 
             finally:
-                close_old_connections()
+                # close_old_connections() leaves healthy persistent connections
+                # open; close this worker's connection before the test DB is dropped.
+                connections.close_all()
 
         with ThreadPoolExecutor(max_workers=2) as executor:
             results = list(executor.map(lambda _: submit(), range(2)))
@@ -141,7 +143,9 @@ class FinancialAndInventoryConcurrencyTests(TransactionTestCase):
                 return movement.pk
 
             finally:
-                close_old_connections()
+                # close_old_connections() leaves healthy persistent connections
+                # open; close this worker's connection before the test DB is dropped.
+                connections.close_all()
 
         with ThreadPoolExecutor(max_workers=2) as executor:
             results = list(executor.map(lambda _: submit(), range(2)))
