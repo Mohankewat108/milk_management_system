@@ -151,7 +151,8 @@ class ExpenseWorkflowTests(TestCase):
                     self.branch.deleted_at = timezone.now()
                     self.branch.save(update_fields=["deleted_at", "updated_at"])
 
-                with self.assertRaises(PermissionDenied):
+                expected_error = ValidationError if scenario == "inactive_branch" else PermissionDenied
+                with self.assertRaises(expected_error):
                     record_expense(
                         organization=self.organization, branch=self.branch, actor=actor,
                         category="Utilities", description="Denied write",
