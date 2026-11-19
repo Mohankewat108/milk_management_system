@@ -1,4 +1,3 @@
-
 from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
 from threading import Barrier
@@ -14,7 +13,6 @@ from apps.inventory.models import InventoryItem
 from apps.inventory.services import move_stock
 from apps.organizations.models import Branch, Membership, Organization
 from apps.parties.models import Customer
-
 
 User = get_user_model()
 
@@ -81,9 +79,7 @@ class FinancialAndInventoryConcurrencyTests(TransactionTestCase):
             close_old_connections()
 
             try:
-                organization = Organization.objects.get(
-                    pk=organization_id
-                )
+                organization = Organization.objects.get(pk=organization_id)
                 branch = Branch.objects.get(pk=branch_id)
                 customer = Customer.objects.get(pk=customer_id)
                 actor = User.objects.get(pk=user_id)
@@ -105,12 +101,12 @@ class FinancialAndInventoryConcurrencyTests(TransactionTestCase):
                 return payment.pk
 
             finally:
-                close_old_connections()
+                # close_old_connections() leaves healthy persistent connections
+                # open; close this worker's connection before the test DB is dropped.
+                connections.close_all()
 
         with ThreadPoolExecutor(max_workers=2) as executor:
-            results = list(
-                executor.map(lambda _: submit(), range(2))
-            )
+            results = list(executor.map(lambda _: submit(), range(2)))
 
         # Both requests must return the same payment.
         self.assertEqual(results[0], results[1])
@@ -129,9 +125,7 @@ class FinancialAndInventoryConcurrencyTests(TransactionTestCase):
             close_old_connections()
 
             try:
-                organization = Organization.objects.get(
-                    pk=organization_id
-                )
+                organization = Organization.objects.get(pk=organization_id)
                 actor = User.objects.get(pk=user_id)
 
                 # Synchronize both worker threads before stock movement.
@@ -149,12 +143,12 @@ class FinancialAndInventoryConcurrencyTests(TransactionTestCase):
                 return movement.pk
 
             finally:
-                close_old_connections()
+                # close_old_connections() leaves healthy persistent connections
+                # open; close this worker's connection before the test DB is dropped.
+                connections.close_all()
 
         with ThreadPoolExecutor(max_workers=2) as executor:
-            results = list(
-                executor.map(lambda _: submit(), range(2))
-            )
+            results = list(executor.map(lambda _: submit(), range(2)))
 
         self.item.refresh_from_db()
 

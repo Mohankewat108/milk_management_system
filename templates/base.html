@@ -2,10 +2,10 @@
 <html lang="{{ LANGUAGE_CODE|default:'en' }}" data-nepali-calendar-api="{% url 'nepali_calendar_month' %}">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#eff6ff"><meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f3f7fc"><meta name="color-scheme" content="light dark">
   <title>{% block title %}DairyNexus{% endblock %}</title>
   <script>
-    (function(){try{var t=localStorage.getItem('dairynexus-theme')||'system';var d=t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';}catch(e){document.documentElement.dataset.theme='light';}}());
+    document.documentElement.dataset.theme = 'light';
   </script>
   <link rel="stylesheet" href="{% static 'css/app.css' %}">{% block extra_head %}{% endblock %}
 </head>
@@ -73,7 +73,18 @@
    document.querySelectorAll('input[data-calendar-date]').forEach(input=>{input.value=input.value.replace(/[0-9]/g,d=>devanagari[Number(d)]);input.addEventListener('input',()=>{const ascii=input.value.replace(/[०-९]/g,d=>String('०१२३४५६७८९'.indexOf(d)));input.setCustomValidity(input.value && !/^\d{4}-\d{2}-\d{2}$/.test(ascii)?'Use YYYY-MM-DD format.':'');});input.form?.addEventListener('submit',()=>{input.value=input.value.replace(/[०-९]/g,d=>String('०१२३४५६७८९'.indexOf(d)));});});
  }
  function apply(value){const dark=value==='dark'||(value==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);root.dataset.theme=dark?'dark':'light';if(theme)theme.value=value;try{localStorage.setItem('dairynexus-theme',value);}catch(e){}}
- const saved=(()=>{try{return localStorage.getItem('dairynexus-theme')||'system';}catch(e){return 'system';}})();apply(saved);
+ const saved=(()=>{
+   try{
+     const preferenceVersion='2';
+     if(localStorage.getItem('dairynexus-theme-version')!==preferenceVersion){
+       localStorage.setItem('dairynexus-theme','light');
+       localStorage.setItem('dairynexus-theme-version',preferenceVersion);
+       return 'light';
+     }
+     return localStorage.getItem('dairynexus-theme')||'light';
+   }catch(e){return 'light';}
+ })();
+ apply(saved);
  if(theme)theme.addEventListener('change',()=>apply(theme.value));
  if(toggle&&!sidebar)toggle.hidden=true;
  if(toggle&&sidebar){

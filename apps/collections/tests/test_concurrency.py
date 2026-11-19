@@ -1,4 +1,3 @@
-
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, date, datetime
 from decimal import Decimal
@@ -14,7 +13,6 @@ from apps.collections.services import create_collection
 from apps.organizations.models import Branch, Membership, Organization
 from apps.parties.models import Farmer
 from apps.pricing.models import PricingConfiguration
-
 
 User = get_user_model()
 
@@ -85,9 +83,7 @@ class CollectionConcurrencyTests(TransactionTestCase):
             close_old_connections()
 
             try:
-                organization = Organization.objects.get(
-                    pk=organization_id
-                )
+                organization = Organization.objects.get(pk=organization_id)
                 branch = Branch.objects.get(pk=branch_id)
                 farmer = Farmer.objects.get(pk=farmer_id)
                 actor = User.objects.get(pk=user_id)
@@ -99,9 +95,7 @@ class CollectionConcurrencyTests(TransactionTestCase):
                     organization=organization,
                     branch=branch,
                     actor=actor,
-                    collected_at=datetime(
-                        2026, 11, 19, 6, tzinfo=UTC
-                    ),
+                    collected_at=datetime(2026, 11, 19, 6, tzinfo=UTC),
                     quantity_litres="2.500",
                     snf="8.0",
                     fat="4.0",
@@ -113,12 +107,12 @@ class CollectionConcurrencyTests(TransactionTestCase):
                 return collection.pk
 
             finally:
-                close_old_connections()
+                # close_old_connections() leaves healthy persistent connections
+                # open; close this worker's connection before the test DB is dropped.
+                connections.close_all()
 
         with ThreadPoolExecutor(max_workers=2) as executor:
-            results = list(
-                executor.map(lambda _: submit(), range(2))
-            )
+            results = list(executor.map(lambda _: submit(), range(2)))
 
         # Both requests must return the same collection record.
         self.assertEqual(results[0], results[1])
