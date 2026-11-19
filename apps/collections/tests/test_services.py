@@ -187,4 +187,29 @@ class CollectionServiceTests(TestCase):
                         farmer=self.farmer,
                     )
                 self.assertEqual(MilkCollection.objects.count(), 0)
+def test_collection_creation_rejects_unassigned_branch(self):
+        from apps.organizations.models import BranchAssignment
+
+        other_branch = Branch.objects.create(
+            organization=self.org, code="SECOND", name="Second"
+        )
+        operator = User.objects.create_user(
+            username="branch-collection-operator",
+            email="branch-collection-operator@example.test",
+            password="LongDemoPass!123",
+        )
+        membership = Membership.objects.create(
+            user=operator, organization=self.org,
+            role=Membership.Role.COLLECTION_OPERATOR,
+        )
+        BranchAssignment.objects.create(membership=membership, branch=self.branch)
+
+        with self.assertRaises(PermissionDenied):
+            create_collection(
+                organization=self.org, branch=other_branch, actor=operator,
+                collected_at=datetime(2026, 11, 18, 6, 0, tzinfo=dt_timezone.utc),
+                quantity_litres="1.000", snf="8.0", fat="4.0", lactose="4.5",
+                farmer=self.farmer,
+            )
+        self.assertEqual(MilkCollection.objects.count(), 0)
 
