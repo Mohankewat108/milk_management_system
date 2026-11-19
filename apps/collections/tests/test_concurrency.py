@@ -4,8 +4,6 @@ from decimal import Decimal
 from threading import Barrier
 from unittest import skipUnless
 
-
-
 from django.contrib.auth import get_user_model
 from django.db import close_old_connections, connection, connections
 from django.test import TransactionTestCase
@@ -15,8 +13,6 @@ from apps.collections.services import create_collection
 from apps.organizations.models import Branch, Membership, Organization
 from apps.parties.models import Farmer
 from apps.pricing.models import PricingConfiguration
-
-
 User = get_user_model()
 
 
