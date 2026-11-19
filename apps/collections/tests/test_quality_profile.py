@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from apps.collections.services import create_collection
-from apps.organizations.models import Branch, Organization
+from apps.organizations.models import Branch, Membership, Organization
 from apps.parties.models import Farmer
 from apps.pricing.models import PricingConfiguration, QualityConfiguration
 
@@ -24,6 +24,9 @@ class QualityProfileTests(TestCase):
         )
         self.branch = Branch.objects.create(
             organization=self.organization, code="MAIN", name="Main"
+        )
+        Membership.objects.create(
+            user=self.user, organization=self.organization, role=Membership.Role.OWNER
         )
         self.farmer = Farmer.objects.create(
             organization=self.organization, branch=self.branch,
