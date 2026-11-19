@@ -79,9 +79,7 @@ class FinancialAndInventoryConcurrencyTests(TransactionTestCase):
             close_old_connections()
 
             try:
-                organization = Organization.objects.get(
-                    pk=organization_id
-                )
+                organization = Organization.objects.get(pk=organization_id)
                 branch = Branch.objects.get(pk=branch_id)
                 customer = Customer.objects.get(pk=customer_id)
                 actor = User.objects.get(pk=user_id)
@@ -106,9 +104,7 @@ class FinancialAndInventoryConcurrencyTests(TransactionTestCase):
                 close_old_connections()
 
         with ThreadPoolExecutor(max_workers=2) as executor:
-            results = list(
-                executor.map(lambda _: submit(), range(2))
-            )
+            results = list(executor.map(lambda _: submit(), range(2)))
 
         # Both requests must return the same payment.
         self.assertEqual(results[0], results[1])
