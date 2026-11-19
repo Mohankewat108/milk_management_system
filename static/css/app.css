@@ -767,3 +767,115 @@ label { color: var(--color-text-secondary); }
 .export-security-note{max-width:100ch}
 @media(max-width:850px){.export-schedule-form{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:550px){.export-schedule-form{grid-template-columns:1fr}.module-export-form{width:100%}.module-export-form select{flex:1}}
+
+
+/* Workspace appearance: enforce the clean light palette for the current product UI.
+   The theme selector remains available, but persisted legacy dark values are normalized
+   in the base template until a fully audited dark palette is reintroduced. */
+:root[data-theme="dark"] {
+  color-scheme: light;
+  --color-ink: #172b45;
+  --color-muted: #60738b;
+  --color-subtle: #8797aa;
+  --color-primary: #1559a6;
+  --color-primary-strong: #104781;
+  --color-primary-soft: #eaf3ff;
+  --color-accent: #0d9488;
+  --color-success: #167647;
+  --color-success-bg: #e9f7ef;
+  --color-warning: #946200;
+  --color-warning-bg: #fff6df;
+  --color-danger: #b42332;
+  --color-danger-bg: #fff0f1;
+  --color-info: #1559a6;
+  --color-info-bg: #eaf3ff;
+  --color-border: #dce5ef;
+  --color-border-strong: #c7d4e2;
+  --color-surface: #ffffff;
+  --color-page: #f3f7fc;
+  --color-text-primary: #172b45;
+  --color-text-secondary: #60738b;
+  --color-text-muted: #8797aa;
+  --shadow-sm: 0 1px 3px rgb(18 46 78 / 6%);
+  --shadow-md: 0 8px 24px rgb(18 46 78 / 8%);
+}
+:root[data-theme="dark"] .site-header,
+:root[data-theme="dark"] .app-sidebar,
+:root[data-theme="dark"] .panel,
+:root[data-theme="dark"] .content-card,
+:root[data-theme="dark"] .auth-card,
+:root[data-theme="dark"] .kpi,
+:root[data-theme="dark"] .table-wrap,
+:root[data-theme="dark"] .search-form,
+:root[data-theme="dark"] .chart-card,
+:root[data-theme="dark"] .chart-panel,
+:root[data-theme="dark"] .modal,
+:root[data-theme="dark"] .dialog,
+:root[data-theme="dark"] .toast,
+:root[data-theme="dark"] .notification,
+:root[data-theme="dark"] .table-container,
+:root[data-theme="dark"] .table-responsive,
+:root[data-theme="dark"] .directory-filters,
+:root[data-theme="dark"] .directory-table-panel .table-wrap {
+  background-color: #ffffff;
+  color: #172b45;
+  border-color: #dce5ef;
+}
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea {
+  background: #ffffff;
+  color: #172b45;
+  border-color: #c7d4e2;
+}
+:root[data-theme="dark"] .table-wrap th,
+:root[data-theme="dark"] .data-table thead th,
+:root[data-theme="dark"] .table thead th {
+  background: #f3f7fc;
+  color: #52677f;
+}
+:root[data-theme="dark"] .table-wrap tbody tr:nth-child(even),
+:root[data-theme="dark"] .data-table tbody tr:nth-child(even),
+:root[data-theme="dark"] .table tbody tr:nth-child(even),
+:root[data-theme="dark"] .directory-table-panel .table-wrap tbody tr:nth-child(even) {
+  background: #fbfdff;
+}
+:root[data-theme="dark"] .table-wrap tbody tr:hover,
+:root[data-theme="dark"] .data-table tbody tr:hover,
+:root[data-theme="dark"] .table tbody tr:hover,
+:root[data-theme="dark"] .directory-table-panel .table-wrap tbody tr:hover {
+  background: #f0f6fd;
+}
+:root[data-theme="dark"] .kpi strong,
+:root[data-theme="dark"] h1,
+:root[data-theme="dark"] h2,
+:root[data-theme="dark"] h3,
+:root[data-theme="dark"] h4,
+:root[data-theme="dark"] label,
+:root[data-theme="dark"] .sidebar-title,
+:root[data-theme="dark"] .sidebar-nav a,
+:root[data-theme="dark"] .link-list a {
+  color: #172b45;
+}
+:root[data-theme="dark"] .button-secondary,
+:root[data-theme="dark"] .button-ghost,
+:root[data-theme="dark"] .icon-button {
+  background: #ffffff;
+  color: #1559a6;
+  border-color: #c7d4e2;
+}
+:root[data-theme="dark"] .profile-hero,
+:root[data-theme="dark"] .profile-contact-item,
+:root[data-theme="dark"] .profile-quality-item,
+:root[data-theme="dark"] .profile-finance-grid > div,
+:root[data-theme="dark"] .profile-date-filter,
+:root[data-theme="dark"] .profile-metric-card,
+:root[data-theme="dark"] .profile-summary-strip,
+:root[data-theme="dark"] .export-hero,
+:root[data-theme="dark"] .export-module-card,
+:root[data-theme="dark"] .export-stats article,
+:root[data-theme="dark"] .empty-state {
+  background: #ffffff;
+  color: #172b45;
+  border-color: #dce5ef;
+}
