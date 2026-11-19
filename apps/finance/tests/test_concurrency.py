@@ -123,9 +123,7 @@ class FinancialAndInventoryConcurrencyTests(TransactionTestCase):
             close_old_connections()
 
             try:
-                organization = Organization.objects.get(
-                    pk=organization_id
-                )
+                organization = Organization.objects.get(pk=organization_id)
                 actor = User.objects.get(pk=user_id)
 
                 # Synchronize both worker threads before stock movement.
@@ -146,9 +144,7 @@ class FinancialAndInventoryConcurrencyTests(TransactionTestCase):
                 close_old_connections()
 
         with ThreadPoolExecutor(max_workers=2) as executor:
-            results = list(
-                executor.map(lambda _: submit(), range(2))
-            )
+            results = list(executor.map(lambda _: submit(), range(2)))
 
         self.item.refresh_from_db()
 
