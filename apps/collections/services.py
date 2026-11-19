@@ -3,7 +3,7 @@ from uuid import uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.organizations.permissions import require_actor_branch_access
@@ -36,6 +36,7 @@ def create_collection(
     sample_reference="",
     quality_test_method="",
     tested_by=None,
+    idempotency_key="",
 ):
     if branch.organization_id != organization.id or not branch.is_active:
         raise ValidationError("Select an active branch belonging to this organisation.")
@@ -55,6 +56,43 @@ def create_collection(
     temperature = Decimal(str(milk_temperature_c)) if milk_temperature_c not in (None, "") else None
     if lactometer is not None and lactometer < 0:
         raise ValidationError("Lactometer reading cannot be negative.")
+    if len(idempotency_key) > 64:
+        raise ValidationError("The submission key is invalid.")
+
+    def matches_submission(collection):
+        return all(
+            (
+                collection.branch_id == branch.id,
+                collection.farmer_id == getattr(farmer, "id", None),
+                collection.customer_id == getattr(customer, "id", None),
+                collection.recorded_by_id == actor.id,
+                collection.collected_at == collected_at,
+                collection.quantity_litres == quantity,
+                collection.snf == quality[0],
+                collection.fat == quality[1],
+                collection.lactose == quality[2],
+                collection.lactometer_reading == lactometer,
+                collection.milk_temperature_c == temperature,
+                collection.sample_reference == sample_reference,
+                collection.quality_test_method == quality_test_method,
+                collection.tested_by_id == getattr(tested_by or actor, "id", None),
+                collection.notes == notes,
+            )
+        )
+
+    def existing_submission():
+        if not idempotency_key:
+            return None
+        existing = MilkCollection.objects.filter(
+            organization=organization, idempotency_key=idempotency_key
+        ).first()
+        if existing and not matches_submission(existing):
+            raise ValidationError("This submission key was already used for different data.")
+        return existing
+
+    existing = existing_submission()
+    if existing:
+        return existing
 
     # Resolve the applicable price using the dairy's local business date, not
     # the server's UTC date. This matters for late-night collections near midnight.
@@ -102,29 +140,37 @@ def create_collection(
         "currency": organization.currency,
         "quality_profile": quality_snapshot,
     }
-    return MilkCollection.objects.create(
-        organization=organization,
-        branch=branch,
-        reference=f"MC-{local_collected_at:%Y%m%d}-{uuid4().hex[:8].upper()}",
-        farmer=farmer,
-        customer=customer,
-        recorded_by=actor,
-        collected_at=collected_at,
-        quantity_litres=quantity,
-        snf=quality[0],
-        fat=quality[1],
-        lactose=quality[2],
-        lactometer_reading=lactometer,
-        milk_temperature_c=temperature,
-        sample_reference=sample_reference,
-        quality_test_method=quality_test_method,
-        tested_by=tested_by or actor,
-        milk_rate=rate,
-        total_amount=total,
-        pricing=pricing,
-        pricing_snapshot=snapshot,
-        notes=notes,
-    )
+    try:
+        with transaction.atomic():
+            return MilkCollection.objects.create(
+                organization=organization,
+                branch=branch,
+                reference=f"MC-{local_collected_at:%Y%m%d}-{uuid4().hex[:8].upper()}",
+                farmer=farmer,
+                customer=customer,
+                recorded_by=actor,
+                collected_at=collected_at,
+                quantity_litres=quantity,
+                snf=quality[0],
+                fat=quality[1],
+                lactose=quality[2],
+                lactometer_reading=lactometer,
+                milk_temperature_c=temperature,
+                sample_reference=sample_reference,
+                quality_test_method=quality_test_method,
+                tested_by=tested_by or actor,
+                milk_rate=rate,
+                total_amount=total,
+                pricing=pricing,
+                pricing_snapshot=snapshot,
+                notes=notes,
+                idempotency_key=idempotency_key,
+            )
+    except IntegrityError:
+        existing = existing_submission()
+        if existing:
+            return existing
+        raise
 
 
 @transaction.atomic

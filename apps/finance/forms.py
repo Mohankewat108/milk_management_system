@@ -1,3 +1,5 @@
+import secrets
+
 from django import forms
 
 from apps.organizations.models import Branch
@@ -7,6 +9,9 @@ from .models import Expense, Payment
 
 
 class PaymentEntryForm(forms.Form):
+    idempotency_key = forms.CharField(
+        max_length=64, initial=lambda: secrets.token_urlsafe(32), widget=forms.HiddenInput
+    )
     branch = forms.ModelChoiceField(queryset=Branch.objects.none())
     direction = forms.ChoiceField(choices=Payment.Direction.choices)
     party_type = forms.ChoiceField(choices=(("customer", "Customer"), ("farmer", "Farmer")))

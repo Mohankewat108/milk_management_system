@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+from apps.organizations.models import Organization
 from apps.organizations.permissions import require_actor_branch_access
 
 from .models import Account, AccountingPeriod, JournalEntry, JournalLine
@@ -58,6 +59,7 @@ def create_default_chart_of_accounts(*, organization):
 def create_accounting_period(*, organization, code, name, starts_on, ends_on):
     if ends_on < starts_on:
         raise ValidationError("Accounting period end date must be on or after its start date.")
+    Organization.objects.select_for_update().get(pk=organization.pk)
     overlap = AccountingPeriod.objects.select_for_update().filter(
         organization=organization, starts_on__lte=ends_on, ends_on__gte=starts_on
     )

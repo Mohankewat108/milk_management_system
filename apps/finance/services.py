@@ -2,7 +2,7 @@ from decimal import Decimal
 from uuid import uuid4
 
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.organizations.permissions import require_actor_branch_access
@@ -76,6 +76,7 @@ def record_payment(
     status=Payment.Status.PENDING,
     notes="",
     transaction_reference="",
+    idempotency_key="",
 ):
     if branch.organization_id != organization.id or not branch.is_active:
         raise ValidationError("Select an active branch belonging to this organisation.")
@@ -92,23 +93,63 @@ def record_payment(
         raise ValidationError("Customer payments must be incoming.")
     if farmer and direction != Payment.Direction.OUTGOING:
         raise ValidationError("Farmer payments must be outgoing.")
+    if len(idempotency_key) > 64:
+        raise ValidationError("The submission key is invalid.")
+
+    def matches_submission(payment):
+        return all(
+            (
+                payment.branch_id == branch.id,
+                payment.recorded_by_id == actor.id,
+                payment.direction == direction,
+                payment.customer_id == getattr(customer, "id", None),
+                payment.farmer_id == getattr(farmer, "id", None),
+                payment.amount == value,
+                payment.method == method,
+                payment.status == status,
+                payment.transaction_reference == transaction_reference,
+                payment.notes == notes,
+            )
+        )
+
+    def existing_submission():
+        if not idempotency_key:
+            return None
+        existing = Payment.objects.filter(
+            organization=organization, idempotency_key=idempotency_key
+        ).first()
+        if existing and not matches_submission(existing):
+            raise ValidationError("This submission key was already used for different data.")
+        return existing
+
+    existing = existing_submission()
+    if existing:
+        return existing
     paid_at = timezone.now() if status == Payment.Status.COMPLETED else None
-    return Payment.objects.create(
-        organization=organization,
-        branch=branch,
-        reference=f"PAY-{uuid4().hex[:12].upper()}",
-        direction=direction,
-        customer=customer,
-        farmer=farmer,
-        amount=value,
-        currency=organization.currency,
-        method=method,
-        status=status,
-        paid_at=paid_at,
-        transaction_reference=transaction_reference,
-        notes=notes,
-        recorded_by=actor,
-    )
+    try:
+        with transaction.atomic():
+            return Payment.objects.create(
+                organization=organization,
+                branch=branch,
+                reference=f"PAY-{uuid4().hex[:12].upper()}",
+                direction=direction,
+                customer=customer,
+                farmer=farmer,
+                amount=value,
+                currency=organization.currency,
+                method=method,
+                status=status,
+                paid_at=paid_at,
+                transaction_reference=transaction_reference,
+                notes=notes,
+                recorded_by=actor,
+                idempotency_key=idempotency_key,
+            )
+    except IntegrityError:
+        existing = existing_submission()
+        if existing:
+            return existing
+        raise
 
 
 @transaction.atomic

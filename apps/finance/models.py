@@ -46,6 +46,7 @@ class Payment(UUIDModel, TimeStampedModel):
     )
     paid_at = models.DateTimeField(null=True, blank=True)
     transaction_reference = models.CharField(max_length=120, blank=True)
+    idempotency_key = models.CharField(max_length=64, blank=True)
     notes = models.TextField(blank=True)
     recorded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="recorded_payments"
@@ -61,6 +62,11 @@ class Payment(UUIDModel, TimeStampedModel):
             models.UniqueConstraint(
                 fields=["organization", "reference"], name="uniq_payment_reference_org"
             ),
+            models.UniqueConstraint(
+                fields=["organization", "idempotency_key"],
+                condition=~Q(idempotency_key=""),
+                name="uniq_payment_idem_org",
+            ),
             models.CheckConstraint(condition=Q(amount__gt=0), name="payment_amount_positive"),
             models.CheckConstraint(
                 condition=(
@@ -68,6 +74,13 @@ class Payment(UUIDModel, TimeStampedModel):
                     | Q(customer__isnull=True, farmer__isnull=False)
                 ),
                 name="payment_exactly_one_party",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(customer__isnull=False, farmer__isnull=True, direction="incoming")
+                    | Q(customer__isnull=True, farmer__isnull=False, direction="outgoing")
+                ),
+                name="payment_direction_matches_party",
             ),
         ]
         indexes = [
@@ -302,6 +315,7 @@ class JournalLine(UUIDModel, TimeStampedModel):
                 condition=(Q(debit__gt=0, credit=0) | Q(debit=0, credit__gt=0)),
                 name="jline_one_side_only",
             ),
+            models.CheckConstraint(condition=Q(line_number__gt=0), name="jline_number_positive"),
         ]
 
     def save(self, *args, **kwargs):

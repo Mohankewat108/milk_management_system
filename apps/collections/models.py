@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 from django.db.models import Q
+from django.db.models.functions import Round
 
 from apps.core.models import TimeStampedModel, UUIDModel
 from apps.organizations.models import Branch, Organization
@@ -54,6 +55,7 @@ class MilkCollection(UUIDModel, TimeStampedModel):
         PricingConfiguration, on_delete=models.PROTECT, related_name="collections"
     )
     pricing_snapshot = models.JSONField(default=dict)
+    idempotency_key = models.CharField(max_length=64, blank=True)
     status = models.CharField(
         max_length=16, choices=Status.choices, default=Status.SUBMITTED, db_index=True
     )
@@ -63,6 +65,11 @@ class MilkCollection(UUIDModel, TimeStampedModel):
         constraints = [
             models.UniqueConstraint(
                 fields=["organization", "reference"], name="uniq_collection_ref_org"
+            ),
+            models.UniqueConstraint(
+                fields=["organization", "idempotency_key"],
+                condition=~Q(idempotency_key=""),
+                name="uniq_collection_idem_org",
             ),
             models.CheckConstraint(
                 condition=Q(quantity_litres__gt=0), name="collection_quantity_positive"
@@ -81,6 +88,16 @@ class MilkCollection(UUIDModel, TimeStampedModel):
             models.CheckConstraint(
                 condition=Q(lactometer_reading__isnull=True) | Q(lactometer_reading__gte=0),
                 name="collection_lactometer_nonnegative",
+            ),
+            models.CheckConstraint(
+                condition=Q(milk_rate__gte=0) & Q(total_amount__gte=0),
+                name="collection_money_nonnegative",
+            ),
+            models.CheckConstraint(
+                condition=Q(
+                    total_amount=Round(models.F("quantity_litres") * models.F("milk_rate"), 2)
+                ),
+                name="collection_total_matches_rate",
             ),
         ]
         indexes = [

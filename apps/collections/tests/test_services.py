@@ -73,6 +73,28 @@ class CollectionServiceTests(TestCase):
         self.assertEqual(entry.total_amount, Decimal("181.25"))
         self.assertEqual(entry.pricing_snapshot["version"], 1)
 
+    def test_collection_submission_key_returns_the_original_record(self):
+        data = {
+            "organization": self.org,
+            "branch": self.branch,
+            "actor": self.user,
+            "collected_at": datetime(2026, 11, 18, 6, 0, tzinfo=UTC),
+            "quantity_litres": "2.500",
+            "snf": "8.0",
+            "fat": "4.0",
+            "lactose": "4.5",
+            "farmer": self.farmer,
+            "idempotency_key": "collection-request-001",
+        }
+        first = create_collection(**data)
+        retry = create_collection(**data)
+        self.assertEqual(first.pk, retry.pk)
+        self.assertEqual(MilkCollection.objects.count(), 1)
+
+        with self.assertRaises(ValidationError):
+            create_collection(**{**data, "quantity_litres": "3.000"})
+        self.assertEqual(MilkCollection.objects.count(), 1)
+
     def test_party_from_another_organisation_is_rejected(self):
         other = Organization.objects.create(
             owner=self.user, name="Dairy B", slug="dairy-b", is_demo=True
