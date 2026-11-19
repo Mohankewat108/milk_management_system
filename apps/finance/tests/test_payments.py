@@ -111,4 +111,28 @@ class PaymentServiceTests(TestCase):
                         method=Payment.Method.CASH, customer=self.customer,
                     )
                 self.assertEqual(Payment.objects.count(), 0)
+def test_record_payment_rejects_unassigned_branch(self):
+        from apps.organizations.models import BranchAssignment
+
+        other_branch = Branch.objects.create(
+            organization=self.org, code="SECOND", name="Second"
+        )
+        accountant = User.objects.create_user(
+            username="payment-branch-accountant",
+            email="payment-branch-accountant@example.test",
+            password="LongDemoPass!123",
+        )
+        membership = Membership.objects.create(
+            user=accountant, organization=self.org,
+            role=Membership.Role.ACCOUNTANT,
+        )
+        BranchAssignment.objects.create(membership=membership, branch=self.branch)
+
+        with self.assertRaises(PermissionDenied):
+            record_payment(
+                organization=self.org, branch=other_branch, actor=accountant,
+                direction=Payment.Direction.INCOMING, amount="10.00",
+                method=Payment.Method.CASH, customer=self.customer,
+            )
+        self.assertEqual(Payment.objects.count(), 0)
 
