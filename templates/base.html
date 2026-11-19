@@ -5,7 +5,7 @@
   <meta name="theme-color" content="#eff6ff"><meta name="color-scheme" content="light dark">
   <title>{% block title %}DairyNexus{% endblock %}</title>
   <script>
-    (function(){try{document.documentElement.dataset.theme='light';}catch(e){document.documentElement.dataset.theme='light';}}());
+    (function(){try{var t='light';document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme='light';}}());
   </script>
   <link rel="stylesheet" href="{% static 'css/app.css' %}">{% block extra_head %}{% endblock %}
 </head>
@@ -73,8 +73,8 @@
    document.querySelectorAll('input[data-calendar-date]').forEach(input=>{input.value=input.value.replace(/[0-9]/g,d=>devanagari[Number(d)]);input.addEventListener('input',()=>{const ascii=input.value.replace(/[०-९]/g,d=>String('०१२३४५६७८९'.indexOf(d)));input.setCustomValidity(input.value && !/^\d{4}-\d{2}-\d{2}$/.test(ascii)?'Use YYYY-MM-DD format.':'');});input.form?.addEventListener('submit',()=>{input.value=input.value.replace(/[०-९]/g,d=>String('०१२३४५६७८९'.indexOf(d)));});});
  }
  function apply(value){const dark=value==='dark'||(value==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);root.dataset.theme=dark?'dark':'light';if(theme)theme.value=value;try{localStorage.setItem('dairynexus-theme',value);}catch(e){}}
- const saved='light';apply(saved);
- if(theme){theme.value='light';theme.disabled=true;theme.setAttribute('aria-label','Light theme is active');}
+ const saved=(()=>{try{return localStorage.getItem('dairynexus-theme')||'light';}catch(e){return 'light';}})();apply(saved);
+ if(theme)theme.addEventListener('change',()=>apply(theme.value));
  if(toggle&&!sidebar)toggle.hidden=true;
  if(toggle&&sidebar){
    const backdrop=document.createElement('button');
