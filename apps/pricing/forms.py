@@ -1,20 +1,34 @@
 from django import forms
 
 from apps.organizations.models import Branch
+
 from .models import PricingConfiguration, QualityConfiguration
 
 
 class PricingConfigurationForm(forms.ModelForm):
     class Meta:
         model = PricingConfiguration
-        fields = ("branch", "snf_rate", "fat_rate", "lactose_rate", "effective_from", "effective_to", "notes")
+        fields = (
+            "branch",
+            "snf_rate",
+            "fat_rate",
+            "lactose_rate",
+            "effective_from",
+            "effective_to",
+            "notes",
+        )
         widgets = {
             "effective_from": forms.DateInput(attrs={"type": "date"}),
             "effective_to": forms.DateInput(attrs={"type": "date"}),
-            "notes": forms.TextInput(attrs={"placeholder": "Reason for this rate change (optional)"}),
+            "notes": forms.TextInput(
+                attrs={"placeholder": "Reason for this rate change (optional)"}
+            ),
         }
         help_texts = {
-            "branch": "Leave blank to apply this exact rate schedule to every customer and every branch in this dairy.",
+            "branch": (
+                "Leave blank to apply this exact rate schedule to every customer "
+                "and every branch in this dairy."
+            ),
             "snf_rate": "Coefficient multiplied by the measured SNF value.",
             "fat_rate": "Coefficient multiplied by the measured fat value.",
             "lactose_rate": "Coefficient multiplied by the measured lactose value.",
@@ -25,7 +39,9 @@ class PricingConfigurationForm(forms.ModelForm):
     def __init__(self, *args, organization, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["branch"].required = False
-        self.fields["branch"].queryset = Branch.objects.filter(organization=organization, is_active=True, deleted_at__isnull=True)
+        self.fields["branch"].queryset = Branch.objects.filter(
+            organization=organization, is_active=True, deleted_at__isnull=True
+        )
         self.fields["branch"].empty_label = "All customers and all branches (recommended)"
         for field in ("snf_rate", "fat_rate", "lactose_rate"):
             self.fields[field].min_value = 0
@@ -42,8 +58,15 @@ class QualityConfigurationForm(forms.ModelForm):
     class Meta:
         model = QualityConfiguration
         fields = (
-            "branch", "snf_min", "snf_max", "fat_min", "fat_max",
-            "lactose_min", "lactose_max", "effective_from", "effective_to",
+            "branch",
+            "snf_min",
+            "snf_max",
+            "fat_min",
+            "fat_max",
+            "lactose_min",
+            "lactose_max",
+            "effective_from",
+            "effective_to",
         )
         widgets = {
             "effective_from": forms.DateInput(attrs={"type": "date"}),
@@ -53,7 +76,9 @@ class QualityConfigurationForm(forms.ModelForm):
     def __init__(self, *args, organization, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["branch"].required = False
-        self.fields["branch"].queryset = Branch.objects.filter(organization=organization, is_active=True, deleted_at__isnull=True)
+        self.fields["branch"].queryset = Branch.objects.filter(
+            organization=organization, is_active=True, deleted_at__isnull=True
+        )
 
     def clean(self):
         cleaned = super().clean()

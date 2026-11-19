@@ -7,14 +7,16 @@ class StaffMembershipForm(forms.Form):
     email = forms.EmailField()
     first_name = forms.CharField(max_length=150)
     last_name = forms.CharField(max_length=150, required=False)
-    role = forms.ChoiceField(choices=[
-        (Membership.Role.BRANCH_MANAGER, "Branch manager"),
-        (Membership.Role.COLLECTION_OPERATOR, "Milk collection operator"),
-        (Membership.Role.QUALITY_OFFICER, "Quality officer"),
-        (Membership.Role.ACCOUNTANT, "Accountant"),
-        (Membership.Role.INVENTORY_MANAGER, "Inventory manager"),
-        (Membership.Role.SUPPORT, "Customer support"),
-    ])
+    role = forms.ChoiceField(
+        choices=[
+            (Membership.Role.BRANCH_MANAGER, "Branch manager"),
+            (Membership.Role.COLLECTION_OPERATOR, "Milk collection operator"),
+            (Membership.Role.QUALITY_OFFICER, "Quality officer"),
+            (Membership.Role.ACCOUNTANT, "Accountant"),
+            (Membership.Role.INVENTORY_MANAGER, "Inventory manager"),
+            (Membership.Role.SUPPORT, "Customer support"),
+        ]
+    )
     branches = forms.ModelMultipleChoiceField(queryset=Branch.objects.none(), required=False)
 
     def __init__(self, *args, organization, **kwargs):

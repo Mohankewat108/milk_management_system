@@ -11,7 +11,9 @@ class Organization(UUIDModel, TimeStampedModel):
         SUSPENDED = "suspended", "Suspended"
         CLOSED = "closed", "Closed"
 
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="owned_organizations")
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="owned_organizations"
+    )
     name = models.CharField(max_length=180)
     legal_name = models.CharField(max_length=220, blank=True)
     slug = models.SlugField(max_length=190, unique=True)
@@ -23,7 +25,9 @@ class Organization(UUIDModel, TimeStampedModel):
     country = models.CharField(max_length=80, default="Nepal")
     currency = models.CharField(max_length=3, default="NPR")
     timezone = models.CharField(max_length=64, default="Asia/Kathmandu")
-    status = models.CharField(max_length=16, choices=Status.choices, default=Status.TRIAL, db_index=True)
+    status = models.CharField(
+        max_length=16, choices=Status.choices, default=Status.TRIAL, db_index=True
+    )
     is_demo = models.BooleanField(default=False, db_index=True)
 
     class Meta:
@@ -35,19 +39,33 @@ class Organization(UUIDModel, TimeStampedModel):
 
 
 class Branch(UUIDModel, TimeStampedModel):
-    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="branches")
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="branches"
+    )
     code = models.CharField(max_length=30)
     name = models.CharField(max_length=150)
     address = models.TextField(blank=True)
     phone = models.CharField(max_length=30, blank=True)
-    manager = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="managed_branches")
+    manager = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="managed_branches",
+    )
     is_active = models.BooleanField(default=True)
 
     deleted_at = models.DateTimeField(null=True, blank=True, db_index=True)
-    deleted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=["organization", "code"], name="uniq_branch_code_per_org")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["organization", "code"], name="uniq_branch_code_per_org"
+            )
+        ]
         indexes = [models.Index(fields=["organization", "is_active"])]
 
     def __str__(self) -> str:
@@ -70,35 +88,55 @@ class Membership(UUIDModel, TimeStampedModel):
         INVITED = "invited", "Invited"
         SUSPENDED = "suspended", "Suspended"
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="memberships")
-    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="memberships")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="memberships"
+    )
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="memberships"
+    )
     role = models.CharField(max_length=32, choices=Role.choices)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACTIVE)
     invited_email = models.EmailField(blank=True)
     joined_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=["user", "organization"], name="uniq_user_org_membership")]
-        indexes = [models.Index(fields=["user", "status"]), models.Index(fields=["organization", "role", "status"])]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "organization"], name="uniq_user_org_membership"
+            )
+        ]
+        indexes = [
+            models.Index(fields=["user", "status"]),
+            models.Index(fields=["organization", "role", "status"]),
+        ]
 
     def __str__(self) -> str:
         return f"{self.user} · {self.organization} · {self.role}"
 
 
 class BranchAssignment(UUIDModel, TimeStampedModel):
-    membership = models.ForeignKey(Membership, on_delete=models.CASCADE, related_name="branch_assignments")
+    membership = models.ForeignKey(
+        Membership, on_delete=models.CASCADE, related_name="branch_assignments"
+    )
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="member_assignments")
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=["membership", "branch"], name="uniq_member_branch_assignment")]
-
+        constraints = [
+            models.UniqueConstraint(
+                fields=["membership", "branch"], name="uniq_member_branch_assignment"
+            )
+        ]
 
 
 class StaffInvitation(UUIDModel, TimeStampedModel):
     """One-time, hashed-token invitation to join an organisation as staff."""
 
-    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="staff_invitations")
-    invited_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="sent_staff_invitations")
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="staff_invitations"
+    )
+    invited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="sent_staff_invitations"
+    )
     email = models.EmailField(db_index=True)
     first_name = models.CharField(max_length=150, blank=True)
     last_name = models.CharField(max_length=150, blank=True)
@@ -116,4 +154,9 @@ class StaffInvitation(UUIDModel, TimeStampedModel):
     @property
     def is_pending(self):
         from django.utils import timezone
-        return self.accepted_at is None and self.revoked_at is None and self.expires_at > timezone.now()
+
+        return (
+            self.accepted_at is None
+            and self.revoked_at is None
+            and self.expires_at > timezone.now()
+        )

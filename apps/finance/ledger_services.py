@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+from apps.organizations.models import Organization
 from apps.organizations.permissions import require_actor_branch_access
 
 from .models import Account, AccountingPeriod, JournalEntry, JournalLine
@@ -20,19 +21,32 @@ def create_default_chart_of_accounts(*, organization):
         ("1100", "Accounts receivable", Account.AccountType.ASSET, Account.NormalBalance.DEBIT),
         ("1200", "Milk inventory", Account.AccountType.ASSET, Account.NormalBalance.DEBIT),
         ("2000", "Accounts payable", Account.AccountType.LIABILITY, Account.NormalBalance.CREDIT),
-        ("2100", "Farmer milk payable", Account.AccountType.LIABILITY, Account.NormalBalance.CREDIT),
+        (
+            "2100",
+            "Farmer milk payable",
+            Account.AccountType.LIABILITY,
+            Account.NormalBalance.CREDIT,
+        ),
         ("3000", "Owner equity", Account.AccountType.EQUITY, Account.NormalBalance.CREDIT),
         ("4000", "Milk sales revenue", Account.AccountType.INCOME, Account.NormalBalance.CREDIT),
-        ("5000", "Milk procurement expense", Account.AccountType.EXPENSE, Account.NormalBalance.DEBIT),
+        (
+            "5000",
+            "Milk procurement expense",
+            Account.AccountType.EXPENSE,
+            Account.NormalBalance.DEBIT,
+        ),
         ("6000", "Operating expenses", Account.AccountType.EXPENSE, Account.NormalBalance.DEBIT),
     ]
     created = []
     for code, name, account_type, normal_balance in definitions:
         account, was_created = Account.objects.get_or_create(
-            organization=organization, code=code,
+            organization=organization,
+            code=code,
             defaults={
-                "name": name, "account_type": account_type,
-                "normal_balance": normal_balance, "is_system": True,
+                "name": name,
+                "account_type": account_type,
+                "normal_balance": normal_balance,
+                "is_system": True,
                 "allow_manual_entries": True,
             },
         )
@@ -45,21 +59,35 @@ def create_default_chart_of_accounts(*, organization):
 def create_accounting_period(*, organization, code, name, starts_on, ends_on):
     if ends_on < starts_on:
         raise ValidationError("Accounting period end date must be on or after its start date.")
+    Organization.objects.select_for_update().get(pk=organization.pk)
     overlap = AccountingPeriod.objects.select_for_update().filter(
         organization=organization, starts_on__lte=ends_on, ends_on__gte=starts_on
     )
     if overlap.exists():
         raise ValidationError("Accounting periods for an organisation cannot overlap.")
     return AccountingPeriod.objects.create(
-        organization=organization, code=code, name=name,
-        starts_on=starts_on, ends_on=ends_on,
+        organization=organization,
+        code=code,
+        name=name,
+        starts_on=starts_on,
+        ends_on=ends_on,
     )
 
 
 @transaction.atomic
 def post_journal_entry(
-    *, organization, branch, actor, entry_date, description, lines,
-    source_type="", source_id="", idempotency_key="", reference=None, reversal_of=None,
+    *,
+    organization,
+    branch,
+    actor,
+    entry_date,
+    description,
+    lines,
+    source_type="",
+    source_id="",
+    idempotency_key="",
+    reference=None,
+    reversal_of=None,
 ):
     """Create and post an immutable, balanced journal in one database transaction.
 
@@ -83,9 +111,11 @@ def post_journal_entry(
                 return existing
             raise ValidationError("An entry with this idempotency key is already being processed.")
 
-    period = AccountingPeriod.objects.select_for_update().filter(
-        organization=organization, starts_on__lte=entry_date, ends_on__gte=entry_date
-    ).first()
+    period = (
+        AccountingPeriod.objects.select_for_update()
+        .filter(organization=organization, starts_on__lte=entry_date, ends_on__gte=entry_date)
+        .first()
+    )
     if period is None:
         raise ValidationError("Create an accounting period covering the journal date first.")
     if period.status != AccountingPeriod.Status.OPEN:
@@ -103,27 +133,37 @@ def post_journal_entry(
         debit = Decimal(str(item.get("debit", 0))).quantize(Decimal("0.01"))
         credit = Decimal(str(item.get("credit", 0))).quantize(Decimal("0.01"))
         if debit < 0 or credit < 0 or (debit > 0) == (credit > 0):
-            raise ValidationError("Each line must contain one positive debit or one positive credit.")
+            raise ValidationError(
+                "Each line must contain one positive debit or one positive credit."
+            )
         total_debit += debit
         total_credit += credit
-        normalized.append({
-            "account": account, "line_number": number,
-            "debit": debit, "credit": credit,
-            "description": item.get("description", "")[:240],
-        })
+        normalized.append(
+            {
+                "account": account,
+                "line_number": number,
+                "debit": debit,
+                "credit": credit,
+                "description": item.get("description", "")[:240],
+            }
+        )
     if total_debit <= 0 or total_debit != total_credit:
         raise ValidationError("Journal debits and credits must be equal and greater than zero.")
 
     entry = JournalEntry.objects.create(
-        organization=organization, branch=branch, period=period,
+        organization=organization,
+        branch=branch,
+        period=period,
         reference=reference or f"JRN-{uuid4().hex[:12].upper()}",
-        entry_date=entry_date, description=description,
-        source_type=source_type, source_id=str(source_id),
-        idempotency_key=idempotency_key, created_by=actor, reversal_of=reversal_of,
+        entry_date=entry_date,
+        description=description,
+        source_type=source_type,
+        source_id=str(source_id),
+        idempotency_key=idempotency_key,
+        created_by=actor,
+        reversal_of=reversal_of,
     )
-    JournalLine.objects.bulk_create([
-        JournalLine(entry=entry, **line) for line in normalized
-    ])
+    JournalLine.objects.bulk_create([JournalLine(entry=entry, **line) for line in normalized])
     entry.status = JournalEntry.Status.POSTED
     entry.posted_by = actor
     entry.posted_at = timezone.now()
@@ -134,9 +174,11 @@ def post_journal_entry(
 @transaction.atomic
 def reverse_journal_entry(*, entry_id, organization, actor, reversal_date, reason):
     """Post an equal-and-opposite journal; the original entry is never changed."""
-    original = JournalEntry.objects.select_for_update().filter(
-        pk=entry_id, organization=organization, status=JournalEntry.Status.POSTED
-    ).first()
+    original = (
+        JournalEntry.objects.select_for_update()
+        .filter(pk=entry_id, organization=organization, status=JournalEntry.Status.POSTED)
+        .first()
+    )
     if original is None:
         raise ValidationError("Only a posted journal in this organisation can be reversed.")
     if hasattr(original, "reversal"):
@@ -154,13 +196,18 @@ def reverse_journal_entry(*, entry_id, organization, actor, reversal_date, reaso
         for line in original_lines
     ]
     return post_journal_entry(
-        organization=organization, branch=original.branch, actor=actor,
-        entry_date=reversal_date, description=f"Reversal of {original.reference}: {reason}"[:240],
-        lines=reversed_lines, source_type="journal_reversal", source_id=original.pk,
-        idempotency_key=f"reverse:{original.pk}", reference=f"REV-{uuid4().hex[:12].upper()}",
+        organization=organization,
+        branch=original.branch,
+        actor=actor,
+        entry_date=reversal_date,
+        description=f"Reversal of {original.reference}: {reason}"[:240],
+        lines=reversed_lines,
+        source_type="journal_reversal",
+        source_id=original.pk,
+        idempotency_key=f"reverse:{original.pk}",
+        reference=f"REV-{uuid4().hex[:12].upper()}",
         reversal_of=original,
     )
-
 
 
 def _organization_local_date(organization, value):
@@ -177,21 +224,32 @@ def _organization_local_date(organization, value):
 
 def _enabled_ledger_configuration(organization):
     from .models import LedgerConfiguration
+
     try:
         configuration = LedgerConfiguration.objects.select_related(
-            "cash_account", "bank_account", "mobile_wallet_account",
-            "online_clearing_account", "other_payment_account",
-            "receivables_account", "farmer_payable_account",
-            "procurement_expense_account", "sales_revenue_account",
+            "cash_account",
+            "bank_account",
+            "mobile_wallet_account",
+            "online_clearing_account",
+            "other_payment_account",
+            "receivables_account",
+            "farmer_payable_account",
+            "procurement_expense_account",
+            "sales_revenue_account",
             "default_expense_account",
         ).get(organization=organization, is_enabled=True)
     except LedgerConfiguration.DoesNotExist:
         return None
     account_fields = (
-        "cash_account", "bank_account", "mobile_wallet_account",
-        "online_clearing_account", "other_payment_account",
-        "receivables_account", "farmer_payable_account",
-        "procurement_expense_account", "sales_revenue_account",
+        "cash_account",
+        "bank_account",
+        "mobile_wallet_account",
+        "online_clearing_account",
+        "other_payment_account",
+        "receivables_account",
+        "farmer_payable_account",
+        "procurement_expense_account",
+        "sales_revenue_account",
         "default_expense_account",
     )
     expected_types = {
@@ -209,14 +267,19 @@ def _enabled_ledger_configuration(organization):
     for field in account_fields:
         account = getattr(configuration, field)
         if account.organization_id != organization.id or not account.is_active:
-            raise ValidationError(f"Ledger mapping {field} must reference an active account in this organisation.")
+            raise ValidationError(
+                f"Ledger mapping {field} must reference an active account in this organisation."
+            )
         if account.account_type != expected_types[field]:
-            raise ValidationError(f"Ledger mapping {field} must use an {expected_types[field]} account.")
+            raise ValidationError(
+                f"Ledger mapping {field} must use an {expected_types[field]} account."
+            )
     return configuration
 
 
 def _payment_asset_account(configuration, method):
     from .models import Payment
+
     return {
         Payment.Method.CASH: configuration.cash_account,
         Payment.Method.BANK: configuration.bank_account,
@@ -236,12 +299,20 @@ def post_approved_expense(*, expense, actor):
         raise ValidationError("Only approved expenses can be posted.")
     cash_account = _payment_asset_account(configuration, expense.method)
     return post_journal_entry(
-        organization=expense.organization, branch=expense.branch, actor=actor,
-        entry_date=expense.expense_date, description=f"Expense {expense.reference}: {expense.description}",
-        source_type="expense", source_id=expense.pk,
+        organization=expense.organization,
+        branch=expense.branch,
+        actor=actor,
+        entry_date=expense.expense_date,
+        description=f"Expense {expense.reference}: {expense.description}",
+        source_type="expense",
+        source_id=expense.pk,
         idempotency_key=f"expense:{expense.pk}:approved",
         lines=[
-            {"account": configuration.default_expense_account, "debit": expense.amount, "credit": 0},
+            {
+                "account": configuration.default_expense_account,
+                "debit": expense.amount,
+                "credit": 0,
+            },
             {"account": cash_account, "debit": 0, "credit": expense.amount},
         ],
     )
@@ -254,6 +325,7 @@ def post_completed_payment(*, payment, actor):
     if configuration is None:
         return None
     from .models import Payment
+
     if payment.status != Payment.Status.COMPLETED:
         raise ValidationError("Only completed payments can be posted.")
     asset_account = _payment_asset_account(configuration, payment.method)
@@ -272,10 +344,15 @@ def post_completed_payment(*, payment, actor):
     else:
         raise ValidationError("Payment direction and party do not match a supported posting rule.")
     return post_journal_entry(
-        organization=payment.organization, branch=payment.branch, actor=actor,
-        entry_date=_organization_local_date(payment.organization, payment.paid_at), description=description,
-        source_type="payment", source_id=payment.pk,
-        idempotency_key=f"payment:{payment.pk}:completed", lines=lines,
+        organization=payment.organization,
+        branch=payment.branch,
+        actor=actor,
+        entry_date=_organization_local_date(payment.organization, payment.paid_at),
+        description=description,
+        source_type="payment",
+        source_id=payment.pk,
+        idempotency_key=f"payment:{payment.pk}:completed",
+        lines=lines,
     )
 
 
@@ -286,38 +363,62 @@ def post_approved_farmer_collection(*, collection, actor):
     if configuration is None or not configuration.enable_farmer_collection_posting:
         return None
     from apps.collections.models import MilkCollection
+
     if collection.status != MilkCollection.Status.APPROVED or not collection.farmer_id:
         raise ValidationError("Only approved farmer collections can be posted.")
     return post_journal_entry(
-        organization=collection.organization, branch=collection.branch, actor=actor,
+        organization=collection.organization,
+        branch=collection.branch,
+        actor=actor,
         entry_date=_organization_local_date(collection.organization, collection.collected_at),
         description=f"Farmer milk procurement {collection.reference}",
-        source_type="milk_collection", source_id=collection.pk,
+        source_type="milk_collection",
+        source_id=collection.pk,
         idempotency_key=f"milk-collection:{collection.pk}:approved",
         lines=[
-            {"account": configuration.procurement_expense_account, "debit": collection.total_amount, "credit": 0},
-            {"account": configuration.farmer_payable_account, "debit": 0, "credit": collection.total_amount},
+            {
+                "account": configuration.procurement_expense_account,
+                "debit": collection.total_amount,
+                "credit": 0,
+            },
+            {
+                "account": configuration.farmer_payable_account,
+                "debit": 0,
+                "credit": collection.total_amount,
+            },
         ],
     )
 
 
 @transaction.atomic
 def post_approved_customer_collection_sale(*, collection, actor):
-    """Optional sale posting; enabled only after the dairy confirms customer-collection semantics."""
+    """Post an approved customer-collection sale when customer posting is enabled."""
     configuration = _enabled_ledger_configuration(collection.organization)
     if configuration is None or not configuration.enable_customer_sales_posting:
         return None
     from apps.collections.models import MilkCollection
+
     if collection.status != MilkCollection.Status.APPROVED or not collection.customer_id:
         raise ValidationError("Only approved customer collections can be posted as sales.")
     return post_journal_entry(
-        organization=collection.organization, branch=collection.branch, actor=actor,
+        organization=collection.organization,
+        branch=collection.branch,
+        actor=actor,
         entry_date=collection.collected_at.date(),
         description=f"Customer milk sale {collection.reference}",
-        source_type="customer_milk_sale", source_id=collection.pk,
+        source_type="customer_milk_sale",
+        source_id=collection.pk,
         idempotency_key=f"customer-milk-sale:{collection.pk}:approved",
         lines=[
-            {"account": configuration.receivables_account, "debit": collection.total_amount, "credit": 0},
-            {"account": configuration.sales_revenue_account, "debit": 0, "credit": collection.total_amount},
+            {
+                "account": configuration.receivables_account,
+                "debit": collection.total_amount,
+                "credit": 0,
+            },
+            {
+                "account": configuration.sales_revenue_account,
+                "debit": 0,
+                "credit": collection.total_amount,
+            },
         ],
     )

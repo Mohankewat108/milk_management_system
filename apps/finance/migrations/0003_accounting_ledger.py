@@ -94,5 +94,14 @@ class Migration(migrations.Migration):
         migrations.AddIndex("journalentry", models.Index(fields=["organization","source_type","source_id"], name="fin_jrn_org_source")),
         migrations.AddConstraint("journalline", models.UniqueConstraint(fields=("entry","line_number"), name="uniq_journal_line_no")),
         migrations.AddConstraint("journalline", models.CheckConstraint(condition=models.Q(("debit__gte",0),("credit__gte",0)), name="jline_nonnegative")),
-        migrations.AddConstraint("journalline", models.CheckConstraint(condition=(models.Q(("debit__gt",0),("credit",0)) | models.Q(("debit",0),("credit__gt",0))), name="jline_one_side_only")),
+        migrations.AddConstraint(
+            "journalline",
+            models.CheckConstraint(
+                condition=(
+                    models.Q(debit__gt=0, credit=0)
+                    | models.Q(debit=0, credit__gt=0)
+                ),
+                name="jline_one_side_only",
+            ),
+        ),
     ]

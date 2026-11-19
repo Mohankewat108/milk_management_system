@@ -47,13 +47,16 @@ def staff_list(request, organization_slug):
         data = form.cleaned_data
         email = data["email"]
         existing_user = User.objects.filter(email__iexact=email).first()
-        if existing_user and Membership.objects.filter(
-            organization=org, user=existing_user
-        ).exists():
+        if (
+            existing_user
+            and Membership.objects.filter(organization=org, user=existing_user).exists()
+        ):
             form.add_error("email", "This person already has a membership in this dairy.")
         elif StaffInvitation.objects.filter(
-            organization=org, email__iexact=email,
-            accepted_at__isnull=True, revoked_at__isnull=True,
+            organization=org,
+            email__iexact=email,
+            accepted_at__isnull=True,
+            revoked_at__isnull=True,
             expires_at__gt=timezone.now(),
         ).exists():
             form.add_error("email", "An active invitation already exists for this email.")
@@ -61,8 +64,11 @@ def staff_list(request, organization_slug):
             token = secrets.token_urlsafe(32)
             with transaction.atomic():
                 invitation = StaffInvitation.objects.create(
-                    organization=org, invited_by=request.user, email=email,
-                    first_name=data["first_name"], last_name=data["last_name"],
+                    organization=org,
+                    invited_by=request.user,
+                    email=email,
+                    first_name=data["first_name"],
+                    last_name=data["last_name"],
                     role=data["role"],
                     token_hash=hashlib.sha256(token.encode("utf-8")).hexdigest(),
                     expires_at=timezone.now() + timedelta(hours=48),
@@ -82,32 +88,51 @@ def staff_list(request, organization_slug):
                 try:
                     send_mail(
                         f"Staff invitation to {org.name}",
-                        body, settings.DEFAULT_FROM_EMAIL, [email],
+                        body,
+                        settings.DEFAULT_FROM_EMAIL,
+                        [email],
                         fail_silently=False,
                     )
                 except Exception:
                     invitation.revoked_at = timezone.now()
                     invitation.save(update_fields=["revoked_at", "updated_at"])
-                    messages.error(request, "Invitation could not be emailed. Check email configuration and try again.")
+                    messages.error(
+                        request,
+                        "Invitation could not be emailed. Check email configuration and try again.",
+                    )
                     return redirect("business:staff", organization_slug=organization_slug)
             record_event(
-                actor=request.user, organization=org,
-                action="staff.invitation.created", target=invitation,
-                changes={"email": email, "role": invitation.role,
-                         "branch_ids": [str(b.pk) for b in data["branches"]]},
+                actor=request.user,
+                organization=org,
+                action="staff.invitation.created",
+                target=invitation,
+                changes={
+                    "email": email,
+                    "role": invitation.role,
+                    "branch_ids": [str(b.pk) for b in data["branches"]],
+                },
                 request=request,
             )
             messages.success(request, f"Staff invitation sent to {email}. It expires in 48 hours.")
             return redirect("business:staff", organization_slug=organization_slug)
 
-    memberships = org.memberships.exclude(
-        role=Membership.Role.OWNER
-    ).select_related("user").prefetch_related("branch_assignments__branch").order_by("user__email")
+    memberships = (
+        org.memberships.exclude(role=Membership.Role.OWNER)
+        .select_related("user")
+        .prefetch_related("branch_assignments__branch")
+        .order_by("user__email")
+    )
     invitations = org.staff_invitations.select_related("invited_by").prefetch_related("branches")
-    return render(request, "organizations/staff.html", {
-        "organization": org, "form": form, "memberships": memberships,
-        "invitations": invitations,
-    })
+    return render(
+        request,
+        "organizations/staff.html",
+        {
+            "organization": org,
+            "form": form,
+            "memberships": memberships,
+            "invitations": invitations,
+        },
+    )
 
 
 @login_required
@@ -115,7 +140,9 @@ def staff_list(request, organization_slug):
 @require_POST
 def staff_membership_status(request, organization_slug, membership_id):
     membership = get_object_or_404(
-        Membership.objects.filter(organization=request.organization).exclude(role=Membership.Role.OWNER),
+        Membership.objects.filter(organization=request.organization).exclude(
+            role=Membership.Role.OWNER
+        ),
         pk=membership_id,
     )
     status = request.POST.get("status")
@@ -124,9 +151,14 @@ def staff_membership_status(request, organization_slug, membership_id):
     else:
         membership.status = status
         membership.save(update_fields=["status", "updated_at"])
-        record_event(actor=request.user, organization=request.organization,
-                     action="staff.membership_status_changed", target=membership,
-                     changes={"status": status}, request=request)
+        record_event(
+            actor=request.user,
+            organization=request.organization,
+            action="staff.membership_status_changed",
+            target=membership,
+            changes={"status": status},
+            request=request,
+        )
         messages.success(request, f"Staff access {status}.")
     return redirect("business:staff", organization_slug=organization_slug)
 
@@ -142,8 +174,13 @@ def staff_invitation_revoke(request, organization_slug, invitation_id):
     if invitation.accepted_at is None and invitation.revoked_at is None:
         invitation.revoked_at = timezone.now()
         invitation.save(update_fields=["revoked_at", "updated_at"])
-        record_event(actor=request.user, organization=request.organization,
-                     action="staff.invitation.revoked", target=invitation, request=request)
+        record_event(
+            actor=request.user,
+            organization=request.organization,
+            action="staff.invitation.revoked",
+            target=invitation,
+            request=request,
+        )
         messages.success(request, "Staff invitation revoked.")
     return redirect("business:staff", organization_slug=organization_slug)
 
@@ -159,60 +196,96 @@ def staff_invitation_accept(request, invitation_id, token):
         return render(request, "organizations/staff_invitation_invalid.html", status=410)
 
     user = User.objects.filter(email__iexact=invitation.email).first()
-    if user and user.is_active:
+    invited_user_created = user is None
+    if user and not user.is_active:
+        return HttpResponseForbidden("This account is inactive. Contact support to restore access.")
+    if user:
         if not request.user.is_authenticated:
             login_url = reverse("accounts:login")
             return redirect(f"{login_url}?next={request.path}")
         if request.user.pk != user.pk:
-            return HttpResponseForbidden("Sign in with the email address that received this staff invitation.")
-    elif request.user.is_authenticated and user and request.user.pk != user.pk:
-        return HttpResponseForbidden("This invitation belongs to another account.")
+            return HttpResponseForbidden(
+                "Sign in with the email address that received this staff invitation."
+            )
 
     from django.contrib.auth.forms import SetPasswordForm
-    if user is None:
-        user = User.objects.create(
+
+    if invited_user_created:
+        user = User(
             username=f"staff-{secrets.token_hex(8)}",
-            email=invitation.email, first_name=invitation.first_name,
-            last_name=invitation.last_name, is_active=False,
+            email=invitation.email,
+            first_name=invitation.first_name,
+            last_name=invitation.last_name,
+            is_active=False,
         )
         user.set_unusable_password()
-        user.save(update_fields=["password"])
-    form = None if user.is_active else SetPasswordForm(user, request.POST or None)
+    form = SetPasswordForm(user, request.POST or None) if invited_user_created else None
 
     if request.method == "POST":
         if form is not None and not form.is_valid():
-            return render(request, "organizations/staff_invitation_accept.html", {
-                "invitation": invitation, "form": form,
-            })
+            return render(
+                request,
+                "organizations/staff_invitation_accept.html",
+                {
+                    "invitation": invitation,
+                    "form": form,
+                },
+            )
         with transaction.atomic():
             locked = StaffInvitation.objects.select_for_update().get(pk=invitation.pk)
             if not _invitation_valid(locked, token):
                 return render(request, "organizations/staff_invitation_invalid.html", status=410)
-            if Membership.objects.filter(organization=locked.organization, user=user).exists():
+            if not invited_user_created:
+                user = User.objects.select_for_update().get(pk=user.pk)
+                if not user.is_active:
+                    return HttpResponseForbidden(
+                        "This account is inactive. Contact support to restore access."
+                    )
+            if (
+                not invited_user_created
+                and Membership.objects.filter(organization=locked.organization, user=user).exists()
+            ):
                 return HttpResponseForbidden("This account already has access to this dairy.")
-            if not user.is_active:
+            if invited_user_created:
                 form.save()
                 user.is_active = True
                 user.email_verified = True
                 user.save(update_fields=["is_active", "email_verified"])
             membership = Membership.objects.create(
-                user=user, organization=locked.organization, role=locked.role,
-                status=Membership.Status.ACTIVE, invited_email=locked.email,
+                user=user,
+                organization=locked.organization,
+                role=locked.role,
+                status=Membership.Status.ACTIVE,
+                invited_email=locked.email,
                 joined_at=timezone.now(),
             )
-            BranchAssignment.objects.bulk_create([
-                BranchAssignment(membership=membership, branch=branch)
-                for branch in locked.branches.all()
-            ])
+            BranchAssignment.objects.bulk_create(
+                [
+                    BranchAssignment(membership=membership, branch=branch)
+                    for branch in locked.branches.all()
+                ]
+            )
             locked.accepted_at = timezone.now()
             locked.save(update_fields=["accepted_at", "updated_at"])
-            record_event(actor=user, organization=locked.organization,
-                         action="staff.invitation.accepted", target=locked, request=request)
+            record_event(
+                actor=user,
+                organization=locked.organization,
+                action="staff.invitation.accepted",
+                target=locked,
+                request=request,
+            )
         if not request.user.is_authenticated:
             login(request, user, backend="apps.accounts.backends.EmailOrUsernameBackend")
-        messages.success(request, f"Welcome to {invitation.organization.name}. Your staff access is active.")
+        messages.success(
+            request, f"Welcome to {invitation.organization.name}. Your staff access is active."
+        )
         return redirect("business:workspace")
 
-    return render(request, "organizations/staff_invitation_accept.html", {
-        "invitation": invitation, "form": form,
-    })
+    return render(
+        request,
+        "organizations/staff_invitation_accept.html",
+        {
+            "invitation": invitation,
+            "form": form,
+        },
+    )

@@ -7,8 +7,15 @@ class Command(BaseCommand):
     help = "Fail unless critical production migration and database prerequisites are present."
 
     required_apps = (
-        "accounts", "organizations", "parties", "pricing", "collections",
-        "finance", "inventory", "audit", "platform_admin",
+        "accounts",
+        "organizations",
+        "parties",
+        "pricing",
+        "collections",
+        "finance",
+        "inventory",
+        "audit",
+        "platform_admin",
     )
 
     def handle(self, *args, **options):
@@ -18,8 +25,7 @@ class Command(BaseCommand):
         loader = MigrationLoader(connection, ignore_no_migrations=True)
         if loader.unmigrated_apps:
             problems.append(
-                "Apps without committed migrations: "
-                + ", ".join(sorted(loader.unmigrated_apps))
+                "Apps without committed migrations: " + ", ".join(sorted(loader.unmigrated_apps))
             )
         for app_label in self.required_apps:
             if app_label not in loader.migrated_apps:
@@ -30,7 +36,6 @@ class Command(BaseCommand):
                 self.stderr.write(f" - {problem}")
             raise CommandError("Resolve every release blocker before deployment.")
         pending = loader.graph.leaf_nodes()
-        executor = loader
         if not pending:
             raise CommandError("No migration graph exists.")
         self.stdout.write(

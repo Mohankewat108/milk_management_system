@@ -1,8 +1,9 @@
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.test import TestCase
+from django.urls import reverse
 
 from apps.finance.models import Payment
 from apps.finance.services import record_payment
@@ -17,48 +18,84 @@ class PaymentServiceTests(TestCase):
         self.user = User.objects.create_user(
             username="cashier", email="cashier@example.test", password="LongDemoPass!123"
         )
-        self.org = Organization.objects.create(owner=self.user, name="Payments Dairy", slug="payments-dairy")
-        self.branch = Branch.objects.create(organization=self.org, code="MAIN", name="Main")
-        Membership.objects.create(
-            user=self.user, organization=self.org, role=Membership.Role.OWNER
+        self.org = Organization.objects.create(
+            owner=self.user, name="Payments Dairy", slug="payments-dairy"
         )
+        self.branch = Branch.objects.create(organization=self.org, code="MAIN", name="Main")
+        Membership.objects.create(user=self.user, organization=self.org, role=Membership.Role.OWNER)
         self.customer = Customer.objects.create(
             organization=self.org, code="C001", full_name="Test Customer"
         )
 
     def test_record_payment_requires_active_branch_membership(self):
         outsider = User.objects.create_user(
-            username="payment-outsider", email="payment-outsider@example.test",
+            username="payment-outsider",
+            email="payment-outsider@example.test",
             password="LongDemoPass!123",
         )
         with self.assertRaises(PermissionDenied):
             record_payment(
-                organization=self.org, branch=self.branch, actor=outsider,
-                direction=Payment.Direction.INCOMING, amount="10.00",
-                method=Payment.Method.CASH, customer=self.customer,
+                organization=self.org,
+                branch=self.branch,
+                actor=outsider,
+                direction=Payment.Direction.INCOMING,
+                amount="10.00",
+                method=Payment.Method.CASH,
+                customer=self.customer,
             )
         self.assertEqual(Payment.objects.count(), 0)
 
     def test_payment_is_pending_until_explicitly_verified(self):
         payment = record_payment(
-            organization=self.org, branch=self.branch, actor=self.user,
-            direction=Payment.Direction.INCOMING, amount=Decimal("120.00"),
-            method=Payment.Method.ONLINE, customer=self.customer,
+            organization=self.org,
+            branch=self.branch,
+            actor=self.user,
+            direction=Payment.Direction.INCOMING,
+            amount=Decimal("120.00"),
+            method=Payment.Method.ONLINE,
+            customer=self.customer,
         )
         self.assertEqual(payment.status, Payment.Status.PENDING)
         self.assertIsNone(payment.paid_at)
 
+    def test_payment_submission_key_prevents_duplicate_records(self):
+        data = {
+            "organization": self.org,
+            "branch": self.branch,
+            "actor": self.user,
+            "direction": Payment.Direction.INCOMING,
+            "amount": "120.00",
+            "method": Payment.Method.ONLINE,
+            "customer": self.customer,
+            "idempotency_key": "payment-request-001",
+        }
+        first = record_payment(**data)
+        retry = record_payment(**data)
+        self.assertEqual(first.pk, retry.pk)
+        self.assertEqual(Payment.objects.count(), 1)
+
+        with self.assertRaises(ValidationError):
+            record_payment(**{**data, "amount": "121.00"})
+        self.assertEqual(Payment.objects.count(), 1)
+
     def test_foreign_tenant_party_is_rejected(self):
-        other = Organization.objects.create(owner=self.user, name="Other Dairy", slug="other-payments-dairy")
+        other = Organization.objects.create(
+            owner=self.user, name="Other Dairy", slug="other-payments-dairy"
+        )
         foreign_customer = Customer.objects.create(
             organization=other, code="C002", full_name="Foreign Customer"
         )
         from django.core.exceptions import ValidationError
+
         with self.assertRaises(ValidationError):
             record_payment(
-                organization=self.org, branch=self.branch, actor=self.user,
-                direction=Payment.Direction.INCOMING, amount="10",
-                method=Payment.Method.CASH, customer=foreign_customer,
+                organization=self.org,
+                branch=self.branch,
+                actor=self.user,
+                direction=Payment.Direction.INCOMING,
+                amount="10",
+                method=Payment.Method.CASH,
+                customer=foreign_customer,
             )
 
     def test_record_payment_rejects_suspended_or_inaccessible_context(self):
@@ -69,15 +106,19 @@ class PaymentServiceTests(TestCase):
             owner=self.user, name="Unrelated Payment Dairy", slug="unrelated-payment-dairy"
         )
         outsider = User.objects.create_user(
-            username="payment-other-tenant", email="payment-other-tenant@example.test",
+            username="payment-other-tenant",
+            email="payment-other-tenant@example.test",
             password="LongDemoPass!123",
         )
-        Membership.objects.create(
-            user=outsider, organization=other_org, role=Membership.Role.OWNER
-        )
+        Membership.objects.create(user=outsider, organization=other_org, role=Membership.Role.OWNER)
 
-        for scenario in ("foreign_tenant_membership", "suspended_membership",
-                         "suspended_organization", "inactive_branch", "soft_deleted_branch"):
+        for scenario in (
+            "foreign_tenant_membership",
+            "suspended_membership",
+            "suspended_organization",
+            "inactive_branch",
+            "soft_deleted_branch",
+        ):
             with self.subTest(scenario=scenario):
                 self.org.status = Organization.Status.ACTIVE
                 self.org.save(update_fields=["status", "updated_at"])
@@ -103,36 +144,75 @@ class PaymentServiceTests(TestCase):
                     self.branch.deleted_at = timezone.now()
                     self.branch.save(update_fields=["deleted_at", "updated_at"])
 
-                expected_error = ValidationError if scenario == "inactive_branch" else PermissionDenied
+                expected_error = (
+                    ValidationError if scenario == "inactive_branch" else PermissionDenied
+                )
                 with self.assertRaises(expected_error):
                     record_payment(
-                        organization=self.org, branch=self.branch, actor=actor,
-                        direction=Payment.Direction.INCOMING, amount="10.00",
-                        method=Payment.Method.CASH, customer=self.customer,
+                        organization=self.org,
+                        branch=self.branch,
+                        actor=actor,
+                        direction=Payment.Direction.INCOMING,
+                        amount="10.00",
+                        method=Payment.Method.CASH,
+                        customer=self.customer,
                     )
                 self.assertEqual(Payment.objects.count(), 0)
-def test_record_payment_rejects_unassigned_branch(self):
+
+    def test_foreign_tenant_payment_uuid_is_not_resolvable(self):
+        other = Organization.objects.create(
+            owner=self.user, name="Other Financial Dairy", slug="other-financial-dairy"
+        )
+        other_branch = Branch.objects.create(organization=other, code="OTHER", name="Other Branch")
+        foreign_customer = Customer.objects.create(
+            organization=other, code="C-FOREIGN", full_name="Foreign Customer"
+        )
+        payment = Payment.objects.create(
+            organization=other,
+            branch=other_branch,
+            reference="FOREIGN-PAYMENT",
+            direction=Payment.Direction.INCOMING,
+            customer=foreign_customer,
+            amount=Decimal("10.00"),
+            currency="NPR",
+            method=Payment.Method.CASH,
+            recorded_by=self.user,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse(
+                "finance:edit",
+                kwargs={"organization_slug": self.org.slug, "payment_id": payment.pk},
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_record_payment_rejects_unassigned_branch(self):
         from apps.organizations.models import BranchAssignment
 
-        other_branch = Branch.objects.create(
-            organization=self.org, code="SECOND", name="Second"
-        )
+        other_branch = Branch.objects.create(organization=self.org, code="SECOND", name="Second")
         accountant = User.objects.create_user(
             username="payment-branch-accountant",
             email="payment-branch-accountant@example.test",
             password="LongDemoPass!123",
         )
         membership = Membership.objects.create(
-            user=accountant, organization=self.org,
+            user=accountant,
+            organization=self.org,
             role=Membership.Role.ACCOUNTANT,
         )
         BranchAssignment.objects.create(membership=membership, branch=self.branch)
 
         with self.assertRaises(PermissionDenied):
             record_payment(
-                organization=self.org, branch=other_branch, actor=accountant,
-                direction=Payment.Direction.INCOMING, amount="10.00",
-                method=Payment.Method.CASH, customer=self.customer,
+                organization=self.org,
+                branch=other_branch,
+                actor=accountant,
+                direction=Payment.Direction.INCOMING,
+                amount="10.00",
+                method=Payment.Method.CASH,
+                customer=self.customer,
             )
         self.assertEqual(Payment.objects.count(), 0)
-

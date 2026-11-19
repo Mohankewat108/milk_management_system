@@ -11,7 +11,6 @@ from django.utils.text import slugify
 from apps.organizations.models import Branch, Membership, Organization
 from apps.platform_admin.models import FarmOwnerInvitation
 
-
 User = get_user_model()
 
 

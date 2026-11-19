@@ -137,7 +137,7 @@ jobs:
 
       # Security checks
       - name: Bandit security scan
-        run: bandit -r apps config -ll
+        run: bandit -r apps config -ll --exclude '*/migrations/*'
 
       - name: Dependency vulnerability audit
         run: pip-audit

@@ -7,7 +7,6 @@ from apps.organizations.permissions import require_actor_branch_access
 
 from .models import InventoryItem, StockMovement
 
-
 INCREASING_MOVEMENTS = {
     StockMovement.Kind.PURCHASE,
     StockMovement.Kind.TRANSFER_IN,
@@ -40,9 +39,7 @@ def move_stock(*, item_id, organization, actor, kind, quantity, reason, referenc
     new_balance = item.current_stock + delta
     if new_balance < 0:
         raise ValidationError("This movement would make stock negative.")
-    item.current_stock = new_balance
-    item.save(update_fields=["current_stock", "updated_at"])
-    return StockMovement.objects.create(
+    movement = StockMovement.objects.create(
         organization=organization,
         item=item,
         kind=kind,
@@ -51,6 +48,8 @@ def move_stock(*, item_id, organization, actor, kind, quantity, reason, referenc
         reference=reference,
         created_by=actor,
     )
+    item.current_stock = new_balance
+    return movement
 
 
 @transaction.atomic
@@ -65,9 +64,7 @@ def adjust_stock(*, item_id, organization, actor, signed_delta, reason, referenc
     new_balance = item.current_stock + delta
     if new_balance < 0:
         raise ValidationError("This adjustment would make stock negative.")
-    item.current_stock = new_balance
-    item.save(update_fields=["current_stock", "updated_at"])
-    return StockMovement.objects.create(
+    movement = StockMovement.objects.create(
         organization=organization,
         item=item,
         kind=StockMovement.Kind.ADJUSTMENT,
@@ -76,3 +73,5 @@ def adjust_stock(*, item_id, organization, actor, signed_delta, reason, referenc
         reference=reference,
         created_by=actor,
     )
+    item.current_stock = new_balance
+    return movement

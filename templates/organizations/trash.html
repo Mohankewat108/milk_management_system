@@ -4,6 +4,11 @@
 <div class="page-heading"><div><div class="eyebrow">{{ organization.name }} · Data retention</div><h1>Central Trash</h1><p class="muted">Restore accidentally deleted master records. Financial and stock ledgers remain protected from destructive deletion.</p></div></div>
 <form method="get" class="search-form"><label>Record type <select name="type"><option value="all" {% if selected_type == "all" %}selected{% endif %}>All record types</option>{% for key,label in types %}<option value="{{ key }}" {% if selected_type == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><button class="button button-secondary" type="submit">Filter</button></form>
 <section class="panel table-wrap"><table><thead><tr><th>Record type</th><th>Record</th><th>Code / reference</th><th>Deleted at</th><th>Deleted by</th><th>Action</th></tr></thead><tbody>
-{% for row in records %}<tr><td>{{ row.label }}</td><td>{{ row.display }}</td><td>{{ row.object.version|default:row.object.code|default:row.object.reference|default:"—" }}</td><td>{{ row.object.deleted_at|date:"Y-m-d H:i" }}</td><td>{{ row.object.deleted_by|default:"—" }}</td><td><form method="post" action="{% url 'business:trash_restore' organization.slug row.key row.object.pk %}">{% csrf_token %}<button class="button button-small" type="submit">Restore</button></form></td></tr>{% empty %}<tr><td colspan="6" class="text-center">Trash is empty.</td></tr>{% endfor %}
+{% for row in page_obj %}<tr><td>{{ row.label }}</td><td>{{ row.display }}</td><td>{{ row.code_reference|default:"—" }}</td><td>{{ row.deleted_at|date:"Y-m-d H:i" }}</td><td>{{ row.deleted_by_name|default:"—" }}</td><td><form method="post" action="{% url 'business:trash_restore' organization.slug row.key row.object_id %}">{% csrf_token %}<button class="button button-small" type="submit">Restore</button></form></td></tr>{% empty %}<tr><td colspan="6" class="text-center">Trash is empty.</td></tr>{% endfor %}
 </tbody></table></section>
+{% if page_obj.has_other_pages %}<nav class="pagination" aria-label="Trash pagination">
+{% if page_obj.has_previous %}<a href="?{% if selected_type != 'all' %}type={{ selected_type|urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}
+<span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+{% if page_obj.has_next %}<a href="?{% if selected_type != 'all' %}type={{ selected_type|urlencode }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>{% endif %}
+</nav>{% endif %}
 {% endblock %}

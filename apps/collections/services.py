@@ -1,9 +1,9 @@
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 from uuid import uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.organizations.permissions import require_actor_branch_access
@@ -19,9 +19,24 @@ from .models import MilkCollection
 
 @transaction.atomic
 def create_collection(
-    *, organization, branch, actor, collected_at, quantity_litres, snf, fat, lactose,
-    farmer=None, customer=None, notes="", lactometer_reading=None,
-    milk_temperature_c=None, sample_reference="", quality_test_method="", tested_by=None,
+    *,
+    organization,
+    branch,
+    actor,
+    collected_at,
+    quantity_litres,
+    snf,
+    fat,
+    lactose,
+    farmer=None,
+    customer=None,
+    notes="",
+    lactometer_reading=None,
+    milk_temperature_c=None,
+    sample_reference="",
+    quality_test_method="",
+    tested_by=None,
+    idempotency_key="",
 ):
     if branch.organization_id != organization.id or not branch.is_active:
         raise ValidationError("Select an active branch belonging to this organisation.")
@@ -41,6 +56,43 @@ def create_collection(
     temperature = Decimal(str(milk_temperature_c)) if milk_temperature_c not in (None, "") else None
     if lactometer is not None and lactometer < 0:
         raise ValidationError("Lactometer reading cannot be negative.")
+    if len(idempotency_key) > 64:
+        raise ValidationError("The submission key is invalid.")
+
+    def matches_submission(collection):
+        return all(
+            (
+                collection.branch_id == branch.id,
+                collection.farmer_id == getattr(farmer, "id", None),
+                collection.customer_id == getattr(customer, "id", None),
+                collection.recorded_by_id == actor.id,
+                collection.collected_at == collected_at,
+                collection.quantity_litres == quantity,
+                collection.snf == quality[0],
+                collection.fat == quality[1],
+                collection.lactose == quality[2],
+                collection.lactometer_reading == lactometer,
+                collection.milk_temperature_c == temperature,
+                collection.sample_reference == sample_reference,
+                collection.quality_test_method == quality_test_method,
+                collection.tested_by_id == getattr(tested_by or actor, "id", None),
+                collection.notes == notes,
+            )
+        )
+
+    def existing_submission():
+        if not idempotency_key:
+            return None
+        existing = MilkCollection.objects.filter(
+            organization=organization, idempotency_key=idempotency_key
+        ).first()
+        if existing and not matches_submission(existing):
+            raise ValidationError("This submission key was already used for different data.")
+        return existing
+
+    existing = existing_submission()
+    if existing:
+        return existing
 
     # Resolve the applicable price using the dairy's local business date, not
     # the server's UTC date. This matters for late-night collections near midnight.
@@ -48,7 +100,11 @@ def create_collection(
         tenant_tz = ZoneInfo(organization.timezone or timezone.get_current_timezone_name())
     except ZoneInfoNotFoundError:
         tenant_tz = timezone.get_current_timezone()
-    local_collected_at = timezone.localtime(collected_at, tenant_tz) if timezone.is_aware(collected_at) else timezone.make_aware(collected_at, tenant_tz)
+    local_collected_at = (
+        timezone.localtime(collected_at, tenant_tz)
+        if timezone.is_aware(collected_at)
+        else timezone.make_aware(collected_at, tenant_tz)
+    )
     collection_date = local_collected_at.date()
     pricing = pricing_for_collection(
         organization=organization, branch=branch, collection_date=collection_date
@@ -62,9 +118,15 @@ def create_collection(
     rate = calculate_milk_rate(snf=quality[0], fat=quality[1], lactose=quality[2], pricing=pricing)
     total = (quantity * rate).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     components = {
-        "snf_component": str((quality[0] * pricing.snf_rate).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)),
-        "fat_component": str((quality[1] * pricing.fat_rate).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)),
-        "lactose_component": str((quality[2] * pricing.lactose_rate).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)),
+        "snf_component": str(
+            (quality[0] * pricing.snf_rate).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        ),
+        "fat_component": str(
+            (quality[1] * pricing.fat_rate).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        ),
+        "lactose_component": str(
+            (quality[2] * pricing.lactose_rate).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        ),
     }
     snapshot = {
         "version": pricing.version,
@@ -78,28 +140,47 @@ def create_collection(
         "currency": organization.currency,
         "quality_profile": quality_snapshot,
     }
-    return MilkCollection.objects.create(
-        organization=organization, branch=branch,
-        reference=f"MC-{local_collected_at:%Y%m%d}-{uuid4().hex[:8].upper()}",
-        farmer=farmer, customer=customer, recorded_by=actor, collected_at=collected_at,
-        quantity_litres=quantity, snf=quality[0], fat=quality[1], lactose=quality[2],
-        lactometer_reading=lactometer, milk_temperature_c=temperature,
-        sample_reference=sample_reference, quality_test_method=quality_test_method,
-        tested_by=tested_by or actor,
-        milk_rate=rate, total_amount=total, pricing=pricing,
-        pricing_snapshot=snapshot, notes=notes,
-    )
+    try:
+        with transaction.atomic():
+            return MilkCollection.objects.create(
+                organization=organization,
+                branch=branch,
+                reference=f"MC-{local_collected_at:%Y%m%d}-{uuid4().hex[:8].upper()}",
+                farmer=farmer,
+                customer=customer,
+                recorded_by=actor,
+                collected_at=collected_at,
+                quantity_litres=quantity,
+                snf=quality[0],
+                fat=quality[1],
+                lactose=quality[2],
+                lactometer_reading=lactometer,
+                milk_temperature_c=temperature,
+                sample_reference=sample_reference,
+                quality_test_method=quality_test_method,
+                tested_by=tested_by or actor,
+                milk_rate=rate,
+                total_amount=total,
+                pricing=pricing,
+                pricing_snapshot=snapshot,
+                notes=notes,
+                idempotency_key=idempotency_key,
+            )
+    except IntegrityError:
+        existing = existing_submission()
+        if existing:
+            return existing
+        raise
 
 
 @transaction.atomic
 def approve_collection(*, collection_id, organization, actor):
     """Approve a submitted collection and post its configured accounting effect atomically."""
-    from django.utils import timezone
-    from apps.organizations.permissions import require_actor_branch_access
     from apps.finance.ledger_services import (
         post_approved_customer_collection_sale,
         post_approved_farmer_collection,
     )
+    from apps.organizations.permissions import require_actor_branch_access
 
     entry = MilkCollection.objects.select_for_update().get(
         pk=collection_id, organization=organization

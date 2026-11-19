@@ -3,7 +3,6 @@ from django.contrib.auth import get_user_model
 
 from apps.organizations.models import Organization
 
-
 User = get_user_model()
 
 
@@ -12,14 +11,25 @@ class PlatformOrganizationCreateForm(forms.ModelForm):
     owner_last_name = forms.CharField(max_length=150, required=False, label="Owner last name")
     owner_email = forms.EmailField(
         label="Farm owner's email",
-        help_text="We will send a secure invitation to this address. The owner will set their own password.",
+        help_text=(
+            "We will send a secure invitation to this address. "
+            "The owner will set their own password."
+        ),
     )
 
     class Meta:
         model = Organization
         fields = (
-            "name", "legal_name", "registration_number", "business_type",
-            "email", "phone", "country", "currency", "timezone", "address",
+            "name",
+            "legal_name",
+            "registration_number",
+            "business_type",
+            "email",
+            "phone",
+            "country",
+            "currency",
+            "timezone",
+            "address",
         )
         widgets = {"address": forms.Textarea(attrs={"rows": 3})}
 

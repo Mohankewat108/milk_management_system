@@ -1,7 +1,10 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 from django.db import transaction
+from django.db.models import CharField, F, Value
+from django.db.models.functions import Cast, Coalesce
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -10,8 +13,13 @@ from apps.organizations.decorators import organization_access
 from apps.organizations.models import Membership
 from apps.organizations.permissions import accessible_branch_ids
 
-from .soft_delete import MODEL_REGISTRY, display_record, get_registered_model, restore_record, soft_delete_record
-
+from .soft_delete import (
+    MODEL_REGISTRY,
+    display_record,
+    get_registered_model,
+    restore_record,
+    soft_delete_record,
+)
 
 MANAGERS = (Membership.Role.OWNER, Membership.Role.ADMIN)
 
@@ -20,7 +28,7 @@ MANAGERS = (Membership.Role.OWNER, Membership.Role.ADMIN)
 @organization_access(*MANAGERS)
 def trash_list(request, organization_slug):
     selected = request.GET.get("type", "all")
-    records = []
+    querysets = []
     branch_ids = accessible_branch_ids(request.membership)
     for key, (model, label) in MODEL_REGISTRY.items():
         if selected not in {"all", key}:
@@ -30,14 +38,57 @@ def trash_list(request, organization_slug):
         ).select_related("deleted_by")
         if branch_ids is not None and key != "branch" and hasattr(model, "branch"):
             queryset = queryset.filter(branch_id__in=branch_ids)
-        for obj in queryset.order_by("-deleted_at"):
-            records.append({"key": key, "label": label, "object": obj, "display": display_record(obj)})
-    records.sort(key=lambda item: item["object"].deleted_at, reverse=True)
-    return render(request, "organizations/trash.html", {
-        "organization": request.organization, "records": records,
-        "selected_type": selected,
-        "types": [(key, label) for key, (_, label) in MODEL_REGISTRY.items()],
-    })
+        display_fields = [
+            field_name
+            for field_name in ("full_name", "name", "reference", "code")
+            if any(field.name == field_name for field in model._meta.fields)
+        ]
+        code_fields = [
+            Cast(F(field_name), CharField())
+            for field_name in ("version", "code", "reference")
+            if any(field.name == field_name for field in model._meta.fields)
+        ]
+        queryset = queryset.annotate(
+            key=Value(key, output_field=CharField()),
+            label=Value(label, output_field=CharField()),
+            object_id=F("pk"),
+            display=Coalesce(
+                *[F(field_name) for field_name in display_fields],
+                Cast("pk", CharField()),
+                output_field=CharField(),
+            ),
+            code_reference=Coalesce(*code_fields, Value("—"), output_field=CharField()),
+            deleted_by_name=Coalesce(
+                F("deleted_by__username"), Value("—"), output_field=CharField()
+            ),
+        ).values(
+            "key",
+            "label",
+            "object_id",
+            "display",
+            "code_reference",
+            "deleted_at",
+            "deleted_by_name",
+        )
+        querysets.append(queryset)
+
+    if querysets:
+        combined = (
+            querysets[0].union(*querysets[1:], all=True).order_by("-deleted_at", "key", "object_id")
+        )
+    else:
+        combined = []
+    page_obj = Paginator(combined, 25).get_page(request.GET.get("page"))
+    return render(
+        request,
+        "organizations/trash.html",
+        {
+            "organization": request.organization,
+            "page_obj": page_obj,
+            "selected_type": selected,
+            "types": [(key, label) for key, (_, label) in MODEL_REGISTRY.items()],
+        },
+    )
 
 
 @login_required
@@ -46,9 +97,15 @@ def trash_list(request, organization_slug):
 def trash_delete(request, organization_slug, model_key, object_id):
     model = get_registered_model(model_key)
     allowed_roles = {
-        "customer": MANAGERS, "farmer": MANAGERS, "branch": MANAGERS,
+        "customer": MANAGERS,
+        "farmer": MANAGERS,
+        "branch": MANAGERS,
         "supplier": MANAGERS,
-        "inventory_item": (Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.INVENTORY_MANAGER),
+        "inventory_item": (
+            Membership.Role.OWNER,
+            Membership.Role.ADMIN,
+            Membership.Role.INVENTORY_MANAGER,
+        ),
         "payment": (Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.ACCOUNTANT),
         "expense": (Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.ACCOUNTANT),
     }
@@ -66,13 +123,18 @@ def trash_delete(request, organization_slug, model_key, object_id):
             record = get_object_or_404(queryset.select_for_update(), pk=object_id)
             soft_delete_record(key=model_key, record=record, actor=request.user)
             record_event(
-                actor=request.user, organization=request.organization,
-                action=f"{model_key}.moved_to_trash", target=record, request=request,
+                actor=request.user,
+                organization=request.organization,
+                action=f"{model_key}.moved_to_trash",
+                target=record,
+                request=request,
             )
     except ValidationError as exc:
         messages.error(request, str(exc))
     else:
-        messages.success(request, f"{display_record(record)} moved to Trash. Its history has been retained.")
+        messages.success(
+            request, f"{display_record(record)} moved to Trash. Its history has been retained."
+        )
     return redirect("business:trash", organization_slug=organization_slug)
 
 
@@ -92,8 +154,11 @@ def trash_restore(request, organization_slug, model_key, object_id):
             record = get_object_or_404(queryset.select_for_update(), pk=object_id)
             restore_record(record=record)
             record_event(
-                actor=request.user, organization=request.organization,
-                action=f"{model_key}.restored", target=record, request=request,
+                actor=request.user,
+                organization=request.organization,
+                action=f"{model_key}.restored",
+                target=record,
+                request=request,
             )
     except ValidationError as exc:
         messages.error(request, str(exc))

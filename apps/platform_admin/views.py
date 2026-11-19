@@ -20,12 +20,11 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods, require_POST
 
 from apps.audit.services import record_event
+from apps.core.site_urls import build_site_absolute_uri
 from apps.organizations.models import Membership, Organization
 from apps.platform_admin.forms import PlatformOrganizationCreateForm
 from apps.platform_admin.models import FarmOwnerInvitation, Subscription
 from apps.platform_admin.services import create_platform_organization_invitation
-from apps.core.site_urls import build_site_absolute_uri
-
 
 User = get_user_model()
 
@@ -38,24 +37,37 @@ def is_platform_owner(user):
 @user_passes_test(is_platform_owner)
 def dashboard(request):
     from django.db.models import Exists, OuterRef
+
     pending_owner_membership = Membership.objects.filter(
         organization_id=OuterRef("pk"),
         role=Membership.Role.OWNER,
         status=Membership.Status.INVITED,
     )
-    organizations = Organization.objects.select_related("owner").annotate(
-        member_count=Count("memberships", distinct=True),
-        customer_count=Count("customers", distinct=True),
-        farmer_count=Count("farmers", distinct=True),
-        owner_invitation_pending=Exists(pending_owner_membership),
-    ).order_by("-created_at")
+    organizations = (
+        Organization.objects.select_related("owner")
+        .annotate(
+            member_count=Count("memberships", distinct=True),
+            customer_count=Count("customers", distinct=True),
+            farmer_count=Count("farmers", distinct=True),
+            owner_invitation_pending=Exists(pending_owner_membership),
+        )
+        .order_by("-created_at")
+    )
     context = {
         "organization_count": Organization.objects.count(),
-        "active_organizations": Organization.objects.filter(status=Organization.Status.ACTIVE).count(),
-        "trial_organizations": Organization.objects.filter(status=Organization.Status.TRIAL).count(),
-        "suspended_organizations": Organization.objects.filter(status=Organization.Status.SUSPENDED).count(),
+        "active_organizations": Organization.objects.filter(
+            status=Organization.Status.ACTIVE
+        ).count(),
+        "trial_organizations": Organization.objects.filter(
+            status=Organization.Status.TRIAL
+        ).count(),
+        "suspended_organizations": Organization.objects.filter(
+            status=Organization.Status.SUSPENDED
+        ).count(),
         "user_count": User.objects.count(),
-        "customer_count": Organization.objects.aggregate(total=Count("customers", distinct=True))["total"],
+        "customer_count": Organization.objects.aggregate(total=Count("customers", distinct=True))[
+            "total"
+        ],
         "subscription_count": Subscription.objects.count(),
         "organizations": organizations[:50],
     }
@@ -113,9 +125,11 @@ def organization_create(request):
                 "Check email configuration before inviting the owner again.",
             )
             record_event(
-                actor=request.user, organization=organization,
+                actor=request.user,
+                organization=organization,
                 action="platform.owner_invitation.email_failed",
-                target=invitation, request=request,
+                target=invitation,
+                request=request,
             )
             return redirect("platform:dashboard")
 
@@ -172,9 +186,15 @@ def owner_invitation_accept(request, invitation_id, token):
 
     if request.method == "POST":
         if form is not None and not form.is_valid():
-            return render(request, "platform/invitation_accept.html", {
-                "invitation": invitation, "form": form, "requires_password": True,
-            })
+            return render(
+                request,
+                "platform/invitation_accept.html",
+                {
+                    "invitation": invitation,
+                    "form": form,
+                    "requires_password": True,
+                },
+            )
         with transaction.atomic():
             locked = FarmOwnerInvitation.objects.select_for_update().get(pk=invitation.pk)
             if not _valid_invitation(locked, token):
@@ -187,7 +207,8 @@ def owner_invitation_accept(request, invitation_id, token):
                 user.email_verified = True
             user.save(update_fields=["is_active", "email_verified"])
             membership = Membership.objects.select_for_update().get(
-                user=user, organization=locked.organization,
+                user=user,
+                organization=locked.organization,
                 role=Membership.Role.OWNER,
             )
             membership.status = Membership.Status.ACTIVE
@@ -196,20 +217,28 @@ def owner_invitation_accept(request, invitation_id, token):
             locked.accepted_at = timezone.now()
             locked.save(update_fields=["accepted_at", "updated_at"])
             record_event(
-                actor=user, organization=locked.organization,
+                actor=user,
+                organization=locked.organization,
                 action="platform.owner_invitation.accepted",
-                target=locked, request=request,
+                target=locked,
+                request=request,
             )
         if not request.user.is_authenticated:
             login(request, user, backend="apps.accounts.backends.EmailOrUsernameBackend")
-        messages.success(request, f"Welcome! You now have access to {invitation.organization.name}.")
+        messages.success(
+            request, f"Welcome! You now have access to {invitation.organization.name}."
+        )
         return redirect("business:workspace")
 
-    return render(request, "platform/invitation_accept.html", {
-        "invitation": invitation,
-        "form": form,
-        "requires_password": form is not None,
-    })
+    return render(
+        request,
+        "platform/invitation_accept.html",
+        {
+            "invitation": invitation,
+            "form": form,
+            "requires_password": form is not None,
+        },
+    )
 
 
 @login_required
@@ -244,7 +273,9 @@ def organization_set_status(request, organization_id):
         changes={"from": old_status, "to": new_status, "reason": reason},
         request=request,
     )
-    messages.success(request, f"{organization.name} status changed to {organization.get_status_display()}.")
+    messages.success(
+        request, f"{organization.name} status changed to {organization.get_status_display()}."
+    )
     return redirect("platform:dashboard")
 
 
@@ -255,7 +286,7 @@ def organization_resend_invitation(request, organization_id):
     organization = get_object_or_404(
         Organization.objects.select_related("owner"), pk=organization_id
     )
-    membership = get_object_or_404(
+    get_object_or_404(
         Membership,
         organization=organization,
         user=organization.owner,
@@ -301,15 +332,21 @@ def organization_resend_invitation(request, organization_id):
     except Exception:
         messages.error(request, "The invitation could not be sent. Check the SMTP configuration.")
         record_event(
-            actor=request.user, organization=organization,
+            actor=request.user,
+            organization=organization,
             action="platform.owner_invitation.resend_failed",
-            target=invitation, request=request,
+            target=invitation,
+            request=request,
         )
         return redirect("platform:dashboard")
     record_event(
-        actor=request.user, organization=organization,
+        actor=request.user,
+        organization=organization,
         action="platform.owner_invitation.resent",
-        target=invitation, request=request,
+        target=invitation,
+        request=request,
     )
-    messages.success(request, f"A fresh invitation was sent to {email}. The previous link is no longer valid.")
+    messages.success(
+        request, f"A fresh invitation was sent to {email}. The previous link is no longer valid."
+    )
     return redirect("platform:dashboard")

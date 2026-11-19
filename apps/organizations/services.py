@@ -8,7 +8,9 @@ from .models import Branch, Membership, Organization
 
 
 @transaction.atomic
-def register_organization(*, user, name, legal_name="", phone="", email="", country="Nepal", address=""):
+def register_organization(
+    *, user, name, legal_name="", phone="", email="", country="Nepal", address=""
+):
     base = slugify(name)[:150] or "dairy"
     organization = Organization.objects.create(
         owner=user,
@@ -20,10 +22,17 @@ def register_organization(*, user, name, legal_name="", phone="", email="", coun
         country=country,
     )
     Membership.objects.create(
-        user=user, organization=organization, role=Membership.Role.OWNER,
-        status=Membership.Status.ACTIVE, joined_at=timezone.now(),
+        user=user,
+        organization=organization,
+        role=Membership.Role.OWNER,
+        status=Membership.Status.ACTIVE,
+        joined_at=timezone.now(),
     )
     Branch.objects.create(
-        organization=organization, code="MAIN", name="Main branch", address=address, phone=phone,
+        organization=organization,
+        code="MAIN",
+        name="Main branch",
+        address=address,
+        phone=phone,
     )
     return organization

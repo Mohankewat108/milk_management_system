@@ -12,7 +12,15 @@ class SupplierAdmin(admin.ModelAdmin):
 
 @admin.register(InventoryItem)
 class InventoryItemAdmin(admin.ModelAdmin):
-    list_display = ("code", "name", "organization", "branch", "current_stock", "reorder_level", "is_active")
+    list_display = (
+        "code",
+        "name",
+        "organization",
+        "branch",
+        "current_stock",
+        "reorder_level",
+        "is_active",
+    )
     list_filter = ("organization", "branch", "is_active")
     search_fields = ("code", "name")
 
@@ -21,7 +29,16 @@ class InventoryItemAdmin(admin.ModelAdmin):
 class StockMovementAdmin(admin.ModelAdmin):
     list_display = ("created_at", "organization", "item", "kind", "quantity_delta", "created_by")
     list_filter = ("organization", "kind")
-    readonly_fields = ("organization", "item", "kind", "quantity_delta", "reason", "reference", "created_by", "created_at")
+    readonly_fields = (
+        "organization",
+        "item",
+        "kind",
+        "quantity_delta",
+        "reason",
+        "reference",
+        "created_by",
+        "created_at",
+    )
 
     def has_add_permission(self, request):
         return False

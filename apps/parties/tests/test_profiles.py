@@ -1,4 +1,4 @@
-from datetime import datetime, timezone as dt_timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
@@ -16,43 +16,68 @@ User = get_user_model()
 class PartyProfileTests(TestCase):
     def setUp(self):
         self.owner = User.objects.create_user(
-            username="profile-owner", email="profile-owner@example.test",
+            username="profile-owner",
+            email="profile-owner@example.test",
             password="LongDemoPass!123",
         )
         self.organization = Organization.objects.create(
-            owner=self.owner, name="Profile Dairy", slug="profile-dairy", is_demo=True,
+            owner=self.owner,
+            name="Profile Dairy",
+            slug="profile-dairy",
+            is_demo=True,
         )
         self.branch = Branch.objects.create(
-            organization=self.organization, code="MAIN", name="Main Branch",
+            organization=self.organization,
+            code="MAIN",
+            name="Main Branch",
         )
-        self.membership = Membership.objects.get(user=self.owner, organization=self.organization)
+        self.membership = Membership.objects.create(
+            user=self.owner,
+            organization=self.organization,
+            role=Membership.Role.OWNER,
+        )
         self.customer = Customer.objects.create(
-            organization=self.organization, branch=self.branch,
-            code="C001", full_name="Test Customer", phone="9800000000",
+            organization=self.organization,
+            branch=self.branch,
+            code="C001",
+            full_name="Test Customer",
+            phone="9800000000",
         )
         self.farmer = Farmer.objects.create(
-            organization=self.organization, branch=self.branch,
-            code="F001", full_name="Test Farmer",
+            organization=self.organization,
+            branch=self.branch,
+            code="F001",
+            full_name="Test Farmer",
         )
         self.pricing = PricingConfiguration.objects.create(
-            organization=self.organization, version=1,
-            snf_rate=Decimal("5.0000"), fat_rate=Decimal("7.0000"),
+            organization=self.organization,
+            version=1,
+            snf_rate=Decimal("5.0000"),
+            fat_rate=Decimal("7.0000"),
             lactose_rate=Decimal("1.0000"),
             effective_from=datetime(2026, 1, 1).date(),
-            is_approved=True, created_by=self.owner,
+            is_approved=True,
+            created_by=self.owner,
         )
 
     def _collection(self, party, status, reference, day):
         kwargs = {"customer": party} if isinstance(party, Customer) else {"farmer": party}
         return MilkCollection.objects.create(
-            organization=self.organization, branch=self.branch,
-            reference=reference, recorded_by=self.owner,
-            collected_at=datetime(2026, 11, day, 6, 0, tzinfo=dt_timezone.utc),
-            quantity_litres=Decimal("2.500"), snf=Decimal("8.000"),
-            fat=Decimal("4.000"), lactose=Decimal("4.500"),
-            milk_rate=Decimal("72.50"), total_amount=Decimal("181.25"),
-            pricing=self.pricing, pricing_snapshot={"version": 1},
-            status=status, **kwargs,
+            organization=self.organization,
+            branch=self.branch,
+            reference=reference,
+            recorded_by=self.owner,
+            collected_at=datetime(2026, 11, day, 6, 0, tzinfo=UTC),
+            quantity_litres=Decimal("2.500"),
+            snf=Decimal("8.000"),
+            fat=Decimal("4.000"),
+            lactose=Decimal("4.500"),
+            milk_rate=Decimal("72.50"),
+            total_amount=Decimal("181.25"),
+            pricing=self.pricing,
+            pricing_snapshot={"version": 1},
+            status=status,
+            **kwargs,
         )
 
     def test_customer_profile_sums_only_approved_collections(self):
@@ -79,30 +104,104 @@ class PartyProfileTests(TestCase):
 
     def test_foreign_tenant_party_uuid_is_not_resolvable(self):
         other = Organization.objects.create(
-            owner=self.owner, name="Other Dairy", slug="other-dairy", is_demo=True,
+            owner=self.owner,
+            name="Other Dairy",
+            slug="other-dairy",
+            is_demo=True,
         )
         foreign = Customer.objects.create(
-            organization=other, code="C-FOREIGN", full_name="Foreign Customer",
+            organization=other,
+            code="C-FOREIGN",
+            full_name="Foreign Customer",
+        )
+        foreign_farmer = Farmer.objects.create(
+            organization=other,
+            code="F-FOREIGN",
+            full_name="Foreign Farmer",
         )
         self.client.force_login(self.owner)
         url = reverse("parties:customer_detail", args=[self.organization.slug, foreign.pk])
         self.assertEqual(self.client.get(url).status_code, 404)
+        url = reverse("parties:farmer_detail", args=[self.organization.slug, foreign_farmer.pk])
+        self.assertEqual(self.client.get(url).status_code, 404)
 
+    def test_foreign_tenant_collection_uuid_is_not_resolvable(self):
+        other = Organization.objects.create(
+            owner=self.owner,
+            name="Other Collection Dairy",
+            slug="other-collection-dairy",
+            is_demo=True,
+        )
+        other_branch = Branch.objects.create(
+            organization=other,
+            code="OTHER",
+            name="Other Branch",
+        )
+        foreign_farmer = Farmer.objects.create(
+            organization=other,
+            branch=other_branch,
+            code="F-OTHER",
+            full_name="Foreign Farmer",
+        )
+        other_pricing = PricingConfiguration.objects.create(
+            organization=other,
+            version=1,
+            snf_rate=Decimal("5.0000"),
+            fat_rate=Decimal("7.0000"),
+            lactose_rate=Decimal("1.0000"),
+            effective_from=datetime(2026, 1, 1).date(),
+            is_approved=True,
+            created_by=self.owner,
+        )
+        collection = MilkCollection.objects.create(
+            organization=other,
+            branch=other_branch,
+            reference="FOREIGN-COLLECTION",
+            farmer=foreign_farmer,
+            recorded_by=self.owner,
+            collected_at=datetime(2026, 11, 18, 6, 0, tzinfo=UTC),
+            quantity_litres=Decimal("1.000"),
+            snf=Decimal("8.000"),
+            fat=Decimal("4.000"),
+            lactose=Decimal("4.500"),
+            milk_rate=Decimal("72.50"),
+            total_amount=Decimal("72.50"),
+            pricing=other_pricing,
+        )
+        self.client.force_login(self.owner)
+
+        response = self.client.get(
+            reverse(
+                "collections:edit",
+                kwargs={
+                    "organization_slug": self.organization.slug,
+                    "collection_id": collection.pk,
+                },
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
 
     def test_branch_restricted_user_cannot_open_other_branch_party(self):
         other_branch = Branch.objects.create(
-            organization=self.organization, code="REMOTE", name="Remote Branch",
+            organization=self.organization,
+            code="REMOTE",
+            name="Remote Branch",
         )
         remote_customer = Customer.objects.create(
-            organization=self.organization, branch=other_branch,
-            code="C-REMOTE", full_name="Remote Customer",
+            organization=self.organization,
+            branch=other_branch,
+            code="C-REMOTE",
+            full_name="Remote Customer",
         )
         staff = User.objects.create_user(
-            username="branch-staff", email="branch-staff@example.test",
+            username="branch-staff",
+            email="branch-staff@example.test",
             password="LongDemoPass!123",
         )
         membership = Membership.objects.create(
-            user=staff, organization=self.organization,
+            user=staff,
+            organization=self.organization,
             role=Membership.Role.BRANCH_MANAGER,
             status=Membership.Status.ACTIVE,
         )
@@ -116,9 +215,10 @@ class PartyProfileTests(TestCase):
         url = reverse("parties:farmers", args=[self.organization.slug])
         response = self.client.get(url, {"q": "F001", "status": "active"})
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, reverse(
-            "parties:farmer_detail", args=[self.organization.slug, self.farmer.pk]
-        ))
+        self.assertContains(
+            response,
+            reverse("parties:farmer_detail", args=[self.organization.slug, self.farmer.pk]),
+        )
 
     def test_search_supports_email_and_filters_inactive_customers(self):
         self.customer.email = "find-me@example.test"
@@ -130,34 +230,50 @@ class PartyProfileTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(list(response.context["page_obj"].object_list), [self.customer])
 
-
     def test_owner_can_edit_customer_profile(self):
         self.client.force_login(self.owner)
         url = reverse("parties:customer_edit", args=[self.organization.slug, self.customer.pk])
-        response = self.client.post(url, {
-            "branch": str(self.branch.pk), "code": "C001",
-            "full_name": "Corrected Customer", "phone": "9811111111",
-            "email": "corrected@example.test", "address": "Updated address",
-            "city": "Parasi", "village": "", "ward": "4",
-        })
+        response = self.client.post(
+            url,
+            {
+                "branch": str(self.branch.pk),
+                "code": "C001",
+                "full_name": "Corrected Customer",
+                "phone": "9811111111",
+                "email": "corrected@example.test",
+                "address": "Updated address",
+                "city": "Parasi",
+                "village": "",
+                "ward": "4",
+            },
+        )
         self.assertEqual(response.status_code, 302)
         self.customer.refresh_from_db()
         self.assertEqual(self.customer.full_name, "Corrected Customer")
 
     def test_soft_deleted_customer_is_hidden_and_can_be_restored(self):
         self.client.force_login(self.owner)
-        trash_url = reverse("parties:customer_trash", args=[self.organization.slug, self.customer.pk])
+        trash_url = reverse(
+            "parties:customer_trash", args=[self.organization.slug, self.customer.pk]
+        )
         response = self.client.post(trash_url)
         self.assertEqual(response.status_code, 302)
         self.customer.refresh_from_db()
         self.assertIsNotNone(self.customer.deleted_at)
-        detail_url = reverse("parties:customer_detail", args=[self.organization.slug, self.customer.pk])
+        detail_url = reverse(
+            "parties:customer_detail", args=[self.organization.slug, self.customer.pk]
+        )
         self.assertEqual(self.client.get(detail_url).status_code, 404)
         directory_url = reverse("parties:customers", args=[self.organization.slug])
         self.assertNotContains(self.client.get(directory_url), "Test Customer")
-        restore_url = reverse("parties:party_restore", args=[
-            self.organization.slug, "customer", self.customer.pk,
-        ])
+        restore_url = reverse(
+            "parties:party_restore",
+            args=[
+                self.organization.slug,
+                "customer",
+                self.customer.pk,
+            ],
+        )
         response = self.client.post(restore_url)
         self.assertEqual(response.status_code, 302)
         self.customer.refresh_from_db()

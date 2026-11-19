@@ -28,15 +28,22 @@ class Subscription(UUIDModel, TimeStampedModel):
         CANCELLED = "cancelled", "Cancelled"
         EXPIRED = "expired", "Expired"
 
-    organization = models.ForeignKey(Organization, on_delete=models.PROTECT, related_name="subscriptions")
-    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.PROTECT, related_name="subscriptions")
+    organization = models.ForeignKey(
+        Organization, on_delete=models.PROTECT, related_name="subscriptions"
+    )
+    plan = models.ForeignKey(
+        SubscriptionPlan, on_delete=models.PROTECT, related_name="subscriptions"
+    )
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.TRIAL)
     starts_at = models.DateField()
     ends_at = models.DateField(null=True, blank=True)
     auto_renew = models.BooleanField(default=False)
 
     class Meta:
-        indexes = [models.Index(fields=["organization", "status"]), models.Index(fields=["status", "ends_at"])]
+        indexes = [
+            models.Index(fields=["organization", "status"]),
+            models.Index(fields=["status", "ends_at"]),
+        ]
 
 
 class FarmOwnerInvitation(UUIDModel, TimeStampedModel):
@@ -67,6 +74,7 @@ class FarmOwnerInvitation(UUIDModel, TimeStampedModel):
     @property
     def is_pending(self):
         from django.utils import timezone
+
         return (
             self.accepted_at is None
             and self.revoked_at is None

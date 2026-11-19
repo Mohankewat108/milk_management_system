@@ -2,12 +2,11 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from apps.finance.models import Expense, Payment
+from apps.core.soft_delete import restore_record, soft_delete_record
+from apps.finance.models import Payment
 from apps.inventory.models import InventoryItem, Supplier
 from apps.organizations.models import Branch, Organization
 from apps.parties.models import Customer
-from apps.core.soft_delete import restore_record, soft_delete_record
-
 
 User = get_user_model()
 
@@ -15,18 +14,25 @@ User = get_user_model()
 class CentralSoftDeleteTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
-            username="trash-owner", email="trash-owner@example.test",
+            username="trash-owner",
+            email="trash-owner@example.test",
             password="LongDemoPass!123",
         )
         self.organization = Organization.objects.create(
-            owner=self.user, name="Trash Dairy", slug="trash-dairy",
+            owner=self.user,
+            name="Trash Dairy",
+            slug="trash-dairy",
         )
         self.branch = Branch.objects.create(
-            organization=self.organization, code="MAIN", name="Main",
+            organization=self.organization,
+            code="MAIN",
+            name="Main",
         )
         self.customer = Customer.objects.create(
-            organization=self.organization, branch=self.branch,
-            code="C001", full_name="Test Customer",
+            organization=self.organization,
+            branch=self.branch,
+            code="C001",
+            full_name="Test Customer",
         )
 
     def test_customer_can_be_soft_deleted_and_restored(self):
@@ -41,7 +47,9 @@ class CentralSoftDeleteTests(TestCase):
 
     def test_supplier_can_be_soft_deleted_and_restored(self):
         supplier = Supplier.objects.create(
-            organization=self.organization, code="SUP1", name="Milk Equipment",
+            organization=self.organization,
+            code="SUP1",
+            name="Milk Equipment",
         )
         soft_delete_record(key="supplier", record=supplier, actor=self.user)
         supplier.refresh_from_db()
@@ -53,8 +61,11 @@ class CentralSoftDeleteTests(TestCase):
 
     def test_zero_stock_item_without_movement_can_be_trashed(self):
         item = InventoryItem.objects.create(
-            organization=self.organization, branch=self.branch,
-            code="ITEM1", name="Empty Can", current_stock=0,
+            organization=self.organization,
+            branch=self.branch,
+            code="ITEM1",
+            name="Empty Can",
+            current_stock=0,
         )
         soft_delete_record(key="inventory_item", record=item, actor=self.user)
         item.refresh_from_db()
@@ -63,18 +74,26 @@ class CentralSoftDeleteTests(TestCase):
 
     def test_inventory_item_with_stock_cannot_be_trashed(self):
         item = InventoryItem.objects.create(
-            organization=self.organization, branch=self.branch,
-            code="ITEM2", name="Full Can", current_stock=5,
+            organization=self.organization,
+            branch=self.branch,
+            code="ITEM2",
+            name="Full Can",
+            current_stock=5,
         )
         with self.assertRaises(ValidationError):
             soft_delete_record(key="inventory_item", record=item, actor=self.user)
 
     def test_completed_payment_cannot_be_trashed(self):
         payment = Payment.objects.create(
-            organization=self.organization, branch=self.branch,
-            reference="PAY-TEST", direction=Payment.Direction.INCOMING,
-            customer=self.customer, amount="10.00", currency="NPR",
-            method=Payment.Method.CASH, status=Payment.Status.COMPLETED,
+            organization=self.organization,
+            branch=self.branch,
+            reference="PAY-TEST",
+            direction=Payment.Direction.INCOMING,
+            customer=self.customer,
+            amount="10.00",
+            currency="NPR",
+            method=Payment.Method.CASH,
+            status=Payment.Status.COMPLETED,
             recorded_by=self.user,
         )
         with self.assertRaises(ValidationError):

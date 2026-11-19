@@ -1,11 +1,17 @@
+import secrets
+
 from django import forms
 
 from apps.organizations.models import Branch
 from apps.parties.models import Customer, Farmer
+
 from .models import Expense, Payment
 
 
 class PaymentEntryForm(forms.Form):
+    idempotency_key = forms.CharField(
+        max_length=64, initial=lambda: secrets.token_urlsafe(32), widget=forms.HiddenInput
+    )
     branch = forms.ModelChoiceField(queryset=Branch.objects.none())
     direction = forms.ChoiceField(choices=Payment.Direction.choices)
     party_type = forms.ChoiceField(choices=(("customer", "Customer"), ("farmer", "Farmer")))
@@ -18,9 +24,15 @@ class PaymentEntryForm(forms.Form):
 
     def __init__(self, *args, organization, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["branch"].queryset = Branch.objects.filter(organization=organization, is_active=True, deleted_at__isnull=True)
-        self.fields["customer"].queryset = Customer.objects.filter(organization=organization, is_active=True, deleted_at__isnull=True)
-        self.fields["farmer"].queryset = Farmer.objects.filter(organization=organization, is_active=True, deleted_at__isnull=True)
+        self.fields["branch"].queryset = Branch.objects.filter(
+            organization=organization, is_active=True, deleted_at__isnull=True
+        )
+        self.fields["customer"].queryset = Customer.objects.filter(
+            organization=organization, is_active=True, deleted_at__isnull=True
+        )
+        self.fields["farmer"].queryset = Farmer.objects.filter(
+            organization=organization, is_active=True, deleted_at__isnull=True
+        )
 
     def clean(self):
         cleaned = super().clean()
@@ -41,12 +53,23 @@ class PaymentEntryForm(forms.Form):
 class ExpenseEntryForm(forms.ModelForm):
     class Meta:
         model = Expense
-        fields = ("branch", "category", "description", "supplier_name", "amount", "expense_date", "method", "notes")
+        fields = (
+            "branch",
+            "category",
+            "description",
+            "supplier_name",
+            "amount",
+            "expense_date",
+            "method",
+            "notes",
+        )
         widgets = {"expense_date": forms.DateInput(attrs={"type": "date"})}
 
     def __init__(self, *args, organization, membership, **kwargs):
         super().__init__(*args, **kwargs)
-        branches = Branch.objects.filter(organization=organization, is_active=True, deleted_at__isnull=True)
+        branches = Branch.objects.filter(
+            organization=organization, is_active=True, deleted_at__isnull=True
+        )
         assignments = membership.branch_assignments.values_list("branch_id", flat=True)
         if membership.role not in {"owner", "admin"}:
             branches = branches.filter(pk__in=assignments)
@@ -60,7 +83,11 @@ class PaymentEditForm(forms.ModelForm):
 
     def __init__(self, *args, organization, membership, **kwargs):
         super().__init__(*args, **kwargs)
-        branches = Branch.objects.filter(organization=organization, is_active=True, deleted_at__isnull=True)
+        branches = Branch.objects.filter(
+            organization=organization, is_active=True, deleted_at__isnull=True
+        )
         if membership.role not in {"owner", "admin"}:
-            branches = branches.filter(pk__in=membership.branch_assignments.values_list("branch_id", flat=True))
+            branches = branches.filter(
+                pk__in=membership.branch_assignments.values_list("branch_id", flat=True)
+            )
         self.fields["branch"].queryset = branches
