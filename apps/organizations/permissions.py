@@ -1,6 +1,5 @@
 from .models import Membership, Organization
 
-
 ORGANISATION_WIDE_ROLES = {
     Membership.Role.OWNER,
     Membership.Role.ADMIN,
@@ -19,7 +18,6 @@ def can_access_branch(membership, branch):
         return False
     branch_ids = accessible_branch_ids(membership)
     return branch_ids is None or branch.pk in branch_ids
-
 
 
 def require_actor_branch_access(*, actor, organization, branch):

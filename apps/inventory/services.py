@@ -7,7 +7,6 @@ from apps.organizations.permissions import require_actor_branch_access
 
 from .models import InventoryItem, StockMovement
 
-
 INCREASING_MOVEMENTS = {
     StockMovement.Kind.PURCHASE,
     StockMovement.Kind.TRANSFER_IN,

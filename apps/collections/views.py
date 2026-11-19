@@ -15,19 +15,25 @@ from apps.organizations.permissions import accessible_branch_ids, can_access_bra
 
 from .forms import CollectionEditForm, CollectionEntryForm
 from .models import MilkCollection
-from .services import approve_collection as approve_collection_service, create_collection
+from .services import approve_collection as approve_collection_service
+from .services import create_collection
 
 
 @login_required
 @organization_access(
-    Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.BRANCH_MANAGER,
-    Membership.Role.COLLECTION_OPERATOR, Membership.Role.QUALITY_OFFICER,
+    Membership.Role.OWNER,
+    Membership.Role.ADMIN,
+    Membership.Role.BRANCH_MANAGER,
+    Membership.Role.COLLECTION_OPERATOR,
+    Membership.Role.QUALITY_OFFICER,
 )
 def collection_list(request, organization_slug):
     organization = request.organization
-    records = MilkCollection.objects.filter(organization=organization).select_related(
-        "branch", "farmer", "customer", "recorded_by"
-    ).order_by("-collected_at")
+    records = (
+        MilkCollection.objects.filter(organization=organization)
+        .select_related("branch", "farmer", "customer", "recorded_by")
+        .order_by("-collected_at")
+    )
     branch_ids = accessible_branch_ids(request.membership)
     if branch_ids is not None:
         records = records.filter(branch_id__in=branch_ids)
@@ -48,21 +54,34 @@ def collection_list(request, organization_slug):
         records = records.filter(collected_at__date__gte=start)
     if end:
         records = records.filter(collected_at__date__lte=end)
-    total_litres = records.exclude(status=MilkCollection.Status.REVERSED).aggregate(value=Sum("quantity_litres"))["value"] or 0
+    total_litres = (
+        records.exclude(status=MilkCollection.Status.REVERSED).aggregate(
+            value=Sum("quantity_litres")
+        )["value"]
+        or 0
+    )
     page = Paginator(records, 25).get_page(request.GET.get("page"))
-    return render(request, "collections/list.html", {
-        "organization": organization, "page_obj": page, "total_litres": total_litres,
-        "membership": request.membership,
-        "date_from": format_local_date(start, language_code) if start else start_text,
-        "date_to": format_local_date(end, language_code) if end else end_text,
-        "date_error": date_error,
-        "date_calendar": "BS" if language_code == "ne" else "AD",
-    })
+    return render(
+        request,
+        "collections/list.html",
+        {
+            "organization": organization,
+            "page_obj": page,
+            "total_litres": total_litres,
+            "membership": request.membership,
+            "date_from": format_local_date(start, language_code) if start else start_text,
+            "date_to": format_local_date(end, language_code) if end else end_text,
+            "date_error": date_error,
+            "date_calendar": "BS" if language_code == "ne" else "AD",
+        },
+    )
 
 
 @login_required
 @organization_access(
-    Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.BRANCH_MANAGER,
+    Membership.Role.OWNER,
+    Membership.Role.ADMIN,
+    Membership.Role.BRANCH_MANAGER,
     Membership.Role.COLLECTION_OPERATOR,
 )
 @require_http_methods(["GET", "POST"])
@@ -76,10 +95,17 @@ def collection_create(request, organization_slug):
         else:
             try:
                 entry = create_collection(
-                    organization=organization, branch=data["branch"], actor=request.user,
-                    collected_at=data["collected_at"], quantity_litres=data["quantity_litres"],
-                    snf=data["snf"], fat=data["fat"], lactose=data["lactose"],
-                    farmer=data["farmer"], customer=data["customer"], notes=data["notes"],
+                    organization=organization,
+                    branch=data["branch"],
+                    actor=request.user,
+                    collected_at=data["collected_at"],
+                    quantity_litres=data["quantity_litres"],
+                    snf=data["snf"],
+                    fat=data["fat"],
+                    lactose=data["lactose"],
+                    farmer=data["farmer"],
+                    customer=data["customer"],
+                    notes=data["notes"],
                     lactometer_reading=data.get("lactometer_reading"),
                     milk_temperature_c=data.get("milk_temperature_c"),
                     sample_reference=data.get("sample_reference", ""),
@@ -89,8 +115,13 @@ def collection_create(request, organization_slug):
             except ValidationError as exc:
                 form.add_error(None, exc)
             else:
-                record_event(actor=request.user, organization=organization,
-                             action="milk_collection.created", target=entry, request=request)
+                record_event(
+                    actor=request.user,
+                    organization=organization,
+                    action="milk_collection.created",
+                    target=entry,
+                    request=request,
+                )
                 messages.success(request, f"Collection {entry.reference} recorded.")
                 return redirect("collections:list", organization_slug=organization_slug)
     return render(request, "collections/form.html", {"organization": organization, "form": form})
@@ -107,16 +138,24 @@ def approve_collection(request, organization_slug, collection_id):
     except (MilkCollection.DoesNotExist, ValidationError) as exc:
         messages.error(request, str(exc))
     else:
-        record_event(actor=request.user, organization=request.organization,
-                     action="milk_collection.approved", target=entry, request=request)
+        record_event(
+            actor=request.user,
+            organization=request.organization,
+            action="milk_collection.approved",
+            target=entry,
+            request=request,
+        )
         messages.success(request, "Collection approved.")
     return redirect("collections:list", organization_slug=organization_slug)
 
 
 @login_required
 @organization_access(
-    Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.BRANCH_MANAGER,
-    Membership.Role.COLLECTION_OPERATOR, Membership.Role.QUALITY_OFFICER,
+    Membership.Role.OWNER,
+    Membership.Role.ADMIN,
+    Membership.Role.BRANCH_MANAGER,
+    Membership.Role.COLLECTION_OPERATOR,
+    Membership.Role.QUALITY_OFFICER,
 )
 @require_http_methods(["GET", "POST"])
 def collection_edit(request, organization_slug, collection_id):
@@ -130,17 +169,24 @@ def collection_edit(request, organization_slug, collection_id):
             records = records.select_for_update()
         entry = get_object_or_404(records, pk=collection_id)
         if entry.status in {MilkCollection.Status.REVERSED, MilkCollection.Status.APPROVED}:
-            messages.error(request, "Approved or reversed collections cannot be edited; reverse an approved record with a reason.")
+            messages.error(
+                request,
+                "Approved or reversed collections cannot be edited; reverse an approved record with a reason.",
+            )
             return redirect("collections:list", organization_slug=organization_slug)
         form = CollectionEditForm(request.POST or None, instance=entry)
         if request.method == "POST" and form.is_valid():
             data = form.cleaned_data
             before = {
                 "quantity_litres": str(entry.quantity_litres),
-                "snf": str(entry.snf), "fat": str(entry.fat),
-                "lactose": str(entry.lactose), "milk_rate": str(entry.milk_rate), "total_amount": str(entry.total_amount),
+                "snf": str(entry.snf),
+                "fat": str(entry.fat),
+                "lactose": str(entry.lactose),
+                "milk_rate": str(entry.milk_rate),
+                "total_amount": str(entry.total_amount),
             }
-            from decimal import Decimal, ROUND_HALF_UP
+            from decimal import ROUND_HALF_UP, Decimal
+
             entry.quantity_litres = data["quantity_litres"]
             entry.snf = data["snf"]
             entry.fat = data["fat"]
@@ -158,29 +204,52 @@ def collection_edit(request, organization_slug, collection_id):
                     + entry.fat * Decimal(snapshot["fat_rate"])
                     + entry.lactose * Decimal(snapshot["lactose_rate"])
                 ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-            entry.total_amount = (
-                entry.quantity_litres * entry.milk_rate
-            ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-            entry.save(update_fields=[
-                "quantity_litres", "snf", "fat", "lactose", "milk_rate",
-                "lactometer_reading", "milk_temperature_c", "sample_reference",
-                "quality_test_method", "notes", "total_amount", "updated_at",
-            ])
+            entry.total_amount = (entry.quantity_litres * entry.milk_rate).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP
+            )
+            entry.save(
+                update_fields=[
+                    "quantity_litres",
+                    "snf",
+                    "fat",
+                    "lactose",
+                    "milk_rate",
+                    "lactometer_reading",
+                    "milk_temperature_c",
+                    "sample_reference",
+                    "quality_test_method",
+                    "notes",
+                    "total_amount",
+                    "updated_at",
+                ]
+            )
             after = {
                 "quantity_litres": str(entry.quantity_litres),
-                "snf": str(entry.snf), "fat": str(entry.fat),
-                "lactose": str(entry.lactose), "milk_rate": str(entry.milk_rate), "total_amount": str(entry.total_amount),
+                "snf": str(entry.snf),
+                "fat": str(entry.fat),
+                "lactose": str(entry.lactose),
+                "milk_rate": str(entry.milk_rate),
+                "total_amount": str(entry.total_amount),
             }
             record_event(
-                actor=request.user, organization=organization,
-                action="milk_collection.updated", target=entry,
-                changes={"before": before, "after": after}, request=request,
+                actor=request.user,
+                organization=organization,
+                action="milk_collection.updated",
+                target=entry,
+                changes={"before": before, "after": after},
+                request=request,
             )
             messages.success(request, f"Collection {entry.reference} updated.")
             return redirect("collections:list", organization_slug=organization_slug)
-    return render(request, "collections/edit.html", {
-        "organization": organization, "entry": entry, "form": form,
-    })
+    return render(
+        request,
+        "collections/edit.html",
+        {
+            "organization": organization,
+            "entry": entry,
+            "form": form,
+        },
+    )
 
 
 @login_required
@@ -203,10 +272,15 @@ def collection_reverse(request, organization_slug, collection_id):
             entry.notes = (entry.notes + "\n" if entry.notes else "") + f"REVERSAL: {reason}"
             entry.save(update_fields=["status", "notes", "updated_at"])
             record_event(
-                actor=request.user, organization=request.organization,
-                action="milk_collection.reversed", target=entry,
+                actor=request.user,
+                organization=request.organization,
+                action="milk_collection.reversed",
+                target=entry,
                 changes={"from_status": old_status, "to_status": entry.status, "reason": reason},
                 request=request,
             )
-            messages.success(request, f"Collection {entry.reference} reversed. Its audit history remains available.")
+            messages.success(
+                request,
+                f"Collection {entry.reference} reversed. Its audit history remains available.",
+            )
     return redirect("collections:list", organization_slug=organization_slug)

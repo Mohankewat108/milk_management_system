@@ -5,19 +5,50 @@ from .models import Expense, Payment
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
-    list_display = ("reference", "organization", "direction", "amount", "currency", "status", "paid_at")
+    list_display = (
+        "reference",
+        "organization",
+        "direction",
+        "amount",
+        "currency",
+        "status",
+        "paid_at",
+    )
     list_filter = ("organization", "direction", "status", "method")
     search_fields = ("reference", "transaction_reference")
 
 
 @admin.register(Expense)
 class ExpenseAdmin(admin.ModelAdmin):
-    list_display = ("reference", "organization", "branch", "category", "amount", "currency", "status", "expense_date")
+    list_display = (
+        "reference",
+        "organization",
+        "branch",
+        "category",
+        "amount",
+        "currency",
+        "status",
+        "expense_date",
+    )
     list_filter = ("organization", "status", "category", "method")
     search_fields = ("reference", "description", "supplier_name")
-    readonly_fields = ("organization", "branch", "reference", "category", "description",
-                       "supplier_name", "amount", "currency", "expense_date", "method",
-                       "recorded_by", "approved_by", "approved_at", "created_at", "updated_at")
+    readonly_fields = (
+        "organization",
+        "branch",
+        "reference",
+        "category",
+        "description",
+        "supplier_name",
+        "amount",
+        "currency",
+        "expense_date",
+        "method",
+        "recorded_by",
+        "approved_by",
+        "approved_at",
+        "created_at",
+        "updated_at",
+    )
 
 
 from .models import Account, AccountingPeriod, JournalEntry, JournalLine, LedgerConfiguration
@@ -51,9 +82,22 @@ class JournalEntryAdmin(admin.ModelAdmin):
     list_filter = ("organization", "status", "entry_date")
     search_fields = ("reference", "description", "source_type", "source_id")
     readonly_fields = (
-        "organization", "branch", "period", "reference", "entry_date", "description",
-        "source_type", "source_id", "idempotency_key", "status", "created_by",
-        "posted_by", "posted_at", "reversal_of", "created_at", "updated_at",
+        "organization",
+        "branch",
+        "period",
+        "reference",
+        "entry_date",
+        "description",
+        "source_type",
+        "source_id",
+        "idempotency_key",
+        "status",
+        "created_by",
+        "posted_by",
+        "posted_at",
+        "reversal_of",
+        "created_at",
+        "updated_at",
     )
     inlines = [JournalLineInline]
 
@@ -66,5 +110,14 @@ class JournalEntryAdmin(admin.ModelAdmin):
 
 @admin.register(LedgerConfiguration)
 class LedgerConfigurationAdmin(admin.ModelAdmin):
-    list_display = ("organization", "is_enabled", "enable_farmer_collection_posting", "enable_customer_sales_posting")
-    list_filter = ("is_enabled", "enable_farmer_collection_posting", "enable_customer_sales_posting")
+    list_display = (
+        "organization",
+        "is_enabled",
+        "enable_farmer_collection_posting",
+        "enable_customer_sales_posting",
+    )
+    list_filter = (
+        "is_enabled",
+        "enable_farmer_collection_posting",
+        "enable_customer_sales_posting",
+    )

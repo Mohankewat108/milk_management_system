@@ -2,7 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from django.views.decorators.http import require_POST, require_http_methods
+from django.views.decorators.http import require_http_methods, require_POST
 
 from apps.audit.services import record_event
 from apps.organizations.decorators import organization_access
@@ -11,7 +11,6 @@ from apps.organizations.permissions import accessible_branch_ids, can_access_bra
 
 from .forms import CustomerForm, FarmerForm
 from .models import Customer, Farmer
-
 
 MANAGERS = (Membership.Role.OWNER, Membership.Role.ADMIN)
 
@@ -37,12 +36,17 @@ def _list_name(kind):
 @require_http_methods(["GET", "POST"])
 def party_edit(request, organization_slug, kind, party_id):
     model = _party_model(kind)
-    party = get_object_or_404(model.objects.filter(
-        organization=request.organization, deleted_at__isnull=True
-    ), pk=party_id)
+    party = get_object_or_404(
+        model.objects.filter(organization=request.organization, deleted_at__isnull=True),
+        pk=party_id,
+    )
     form_class = _party_form(kind)
-    form = form_class(request.POST or None, instance=party,
-                      organization=request.organization, membership=request.membership)
+    form = form_class(
+        request.POST or None,
+        instance=party,
+        organization=request.organization,
+        membership=request.membership,
+    )
     if request.method == "POST" and form.is_valid():
         updated = form.save(commit=False)
         branch = form.cleaned_data.get("branch")
@@ -51,17 +55,27 @@ def party_edit(request, organization_slug, kind, party_id):
         else:
             updated.save()
             record_event(
-                actor=request.user, organization=request.organization,
-                action=f"{kind}.updated", target=updated,
-                changes={"updated_fields": list(form.changed_data)}, request=request,
+                actor=request.user,
+                organization=request.organization,
+                action=f"{kind}.updated",
+                target=updated,
+                changes={"updated_fields": list(form.changed_data)},
+                request=request,
             )
             messages.success(request, f"{kind.title()} profile updated successfully.")
-            return redirect(_detail_name(kind), organization_slug=organization_slug,
-                            **{f"{kind}_id": party.pk})
-    return render(request, f"parties/{kind}_form.html", {
-        "organization": request.organization, "form": form, "party": party,
-        "is_edit": True,
-    })
+            return redirect(
+                _detail_name(kind), organization_slug=organization_slug, **{f"{kind}_id": party.pk}
+            )
+    return render(
+        request,
+        f"parties/{kind}_form.html",
+        {
+            "organization": request.organization,
+            "form": form,
+            "party": party,
+            "is_edit": True,
+        },
+    )
 
 
 @login_required
@@ -76,9 +90,16 @@ def party_trash(request, organization_slug, kind, party_id):
     party.deleted_at = timezone.now()
     party.deleted_by = request.user
     party.save(update_fields=["deleted_at", "deleted_by", "updated_at"])
-    record_event(actor=request.user, organization=request.organization,
-                 action=f"{kind}.moved_to_trash", target=party, request=request)
-    messages.success(request, f"{kind.title()} moved to Trash. Its operational history has been retained.")
+    record_event(
+        actor=request.user,
+        organization=request.organization,
+        action=f"{kind}.moved_to_trash",
+        target=party,
+        request=request,
+    )
+    messages.success(
+        request, f"{kind.title()} moved to Trash. Its operational history has been retained."
+    )
     return redirect(_list_name(kind), organization_slug=organization_slug)
 
 
@@ -90,15 +111,22 @@ def party_trash_list(request, organization_slug):
         kind = "customer"
     model = _party_model(kind)
     branch_ids = accessible_branch_ids(request.membership)
-    records = model.objects.filter(
-        organization=request.organization, deleted_at__isnull=False
-    ).select_related("branch", "deleted_by").order_by("-deleted_at")
+    records = (
+        model.objects.filter(organization=request.organization, deleted_at__isnull=False)
+        .select_related("branch", "deleted_by")
+        .order_by("-deleted_at")
+    )
     if branch_ids is not None:
         records = records.filter(branch_id__in=branch_ids)
-    return render(request, "parties/trash.html", {
-        "organization": request.organization, "records": records,
-        "kind": kind,
-    })
+    return render(
+        request,
+        "parties/trash.html",
+        {
+            "organization": request.organization,
+            "records": records,
+            "kind": kind,
+        },
+    )
 
 
 @login_required
@@ -113,7 +141,12 @@ def party_restore(request, organization_slug, kind, party_id):
     party.deleted_at = None
     party.deleted_by = None
     party.save(update_fields=["deleted_at", "deleted_by", "updated_at"])
-    record_event(actor=request.user, organization=request.organization,
-                 action=f"{kind}.restored", target=party, request=request)
+    record_event(
+        actor=request.user,
+        organization=request.organization,
+        action=f"{kind}.restored",
+        target=party,
+        request=request,
+    )
     messages.success(request, f"{kind.title()} restored successfully.")
     return redirect("parties:trash", organization_slug=organization_slug)

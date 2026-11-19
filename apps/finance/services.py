@@ -11,8 +11,19 @@ from .models import Expense, Payment
 
 
 @transaction.atomic
-def record_expense(*, organization, branch, actor, category, description,
-                   amount, expense_date, method, supplier_name="", notes=""):
+def record_expense(
+    *,
+    organization,
+    branch,
+    actor,
+    category,
+    description,
+    amount,
+    expense_date,
+    method,
+    supplier_name="",
+    notes="",
+):
     if branch.organization_id != organization.id or not branch.is_active:
         raise ValidationError("Select an active branch belonging to this organisation.")
     require_actor_branch_access(actor=actor, organization=organization, branch=branch)
@@ -37,9 +48,7 @@ def record_expense(*, organization, branch, actor, category, description,
 
 @transaction.atomic
 def approve_expense(*, expense_id, organization, actor):
-    expense = Expense.objects.select_for_update().get(
-        pk=expense_id, organization=organization
-    )
+    expense = Expense.objects.select_for_update().get(pk=expense_id, organization=organization)
     require_actor_branch_access(actor=actor, organization=organization, branch=expense.branch)
     if expense.status != Expense.Status.PENDING:
         raise ValidationError("Only pending expenses can be approved.")
@@ -48,14 +57,26 @@ def approve_expense(*, expense_id, organization, actor):
     expense.approved_at = timezone.now()
     expense.save(update_fields=["status", "approved_by", "approved_at", "updated_at"])
     from .ledger_services import post_approved_expense
+
     post_approved_expense(expense=expense, actor=actor)
     return expense
 
 
 @transaction.atomic
-def record_payment(*, organization, branch, actor, direction, amount, method,
-                   customer=None, farmer=None, status=Payment.Status.PENDING, notes="",
-                   transaction_reference=""):
+def record_payment(
+    *,
+    organization,
+    branch,
+    actor,
+    direction,
+    amount,
+    method,
+    customer=None,
+    farmer=None,
+    status=Payment.Status.PENDING,
+    notes="",
+    transaction_reference="",
+):
     if branch.organization_id != organization.id or not branch.is_active:
         raise ValidationError("Select an active branch belonging to this organisation.")
     require_actor_branch_access(actor=actor, organization=organization, branch=branch)
@@ -73,13 +94,21 @@ def record_payment(*, organization, branch, actor, direction, amount, method,
         raise ValidationError("Farmer payments must be outgoing.")
     paid_at = timezone.now() if status == Payment.Status.COMPLETED else None
     return Payment.objects.create(
-        organization=organization, branch=branch,
-        reference=f"PAY-{uuid4().hex[:12].upper()}", direction=direction,
-        customer=customer, farmer=farmer, amount=value, currency=organization.currency,
-        method=method, status=status, paid_at=paid_at,
-        transaction_reference=transaction_reference, notes=notes, recorded_by=actor,
+        organization=organization,
+        branch=branch,
+        reference=f"PAY-{uuid4().hex[:12].upper()}",
+        direction=direction,
+        customer=customer,
+        farmer=farmer,
+        amount=value,
+        currency=organization.currency,
+        method=method,
+        status=status,
+        paid_at=paid_at,
+        transaction_reference=transaction_reference,
+        notes=notes,
+        recorded_by=actor,
     )
-
 
 
 @transaction.atomic
@@ -94,5 +123,6 @@ def complete_payment(*, payment_id, organization, actor):
     payment.paid_at = timezone.now()
     payment.save(update_fields=["status", "paid_at", "updated_at"])
     from .ledger_services import post_completed_payment
+
     post_completed_payment(payment=payment, actor=actor)
     return payment

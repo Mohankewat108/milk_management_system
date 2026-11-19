@@ -3,6 +3,7 @@ from django.db import models
 
 from apps.core.models import TimeStampedModel, UUIDModel
 from apps.organizations.models import Organization
+
 from .storage import private_storage
 
 
@@ -23,11 +24,17 @@ class ExportJob(UUIDModel, TimeStampedModel):
         FAILED = "failed", "Failed"
         EXPIRED = "expired", "Expired"
 
-    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="export_jobs")
-    requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="export_jobs")
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="export_jobs"
+    )
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="export_jobs"
+    )
     module = models.CharField(max_length=24, choices=Module.choices, db_index=True)
     file_format = models.CharField(max_length=8, default="csv")
-    status = models.CharField(max_length=16, choices=Status.choices, default=Status.QUEUED, db_index=True)
+    status = models.CharField(
+        max_length=16, choices=Status.choices, default=Status.QUEUED, db_index=True
+    )
     record_count = models.PositiveIntegerField(default=0)
     file_size = models.PositiveBigIntegerField(default=0)
     file = models.FileField(upload_to="private_exports/%Y/%m/", blank=True, storage=private_storage)
@@ -49,8 +56,12 @@ class ExportJob(UUIDModel, TimeStampedModel):
 
 
 class SavedExportTemplate(UUIDModel, TimeStampedModel):
-    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="export_templates")
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="saved_export_templates")
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="export_templates"
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="saved_export_templates"
+    )
     name = models.CharField(max_length=100)
     module = models.CharField(max_length=24, choices=ExportJob.Module.choices)
     file_format = models.CharField(max_length=8, default="xlsx")
@@ -59,7 +70,11 @@ class SavedExportTemplate(UUIDModel, TimeStampedModel):
 
     class Meta:
         ordering = ["name"]
-        constraints = [models.UniqueConstraint(fields=["organization", "name"], name="uniq_export_template_org_name")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["organization", "name"], name="uniq_export_template_org_name"
+            )
+        ]
 
 
 class ScheduledExport(UUIDModel, TimeStampedModel):
@@ -68,8 +83,12 @@ class ScheduledExport(UUIDModel, TimeStampedModel):
         WEEKLY = "weekly", "Weekly"
         MONTHLY = "monthly", "Monthly"
 
-    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="scheduled_exports")
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="scheduled_exports")
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="scheduled_exports"
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="scheduled_exports"
+    )
     name = models.CharField(max_length=100)
     module = models.CharField(max_length=24, choices=ExportJob.Module.choices)
     file_format = models.CharField(max_length=8, default="xlsx")
@@ -92,11 +111,19 @@ class ImportBatch(UUIDModel, TimeStampedModel):
         COMPLETED = "completed", "Completed"
         FAILED = "failed", "Failed"
 
-    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="import_batches")
-    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="data_imports")
-    module = models.CharField(max_length=24, choices=[("farmers", "Farmers"), ("customers", "Customers")])
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="import_batches"
+    )
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="data_imports"
+    )
+    module = models.CharField(
+        max_length=24, choices=[("farmers", "Farmers"), ("customers", "Customers")]
+    )
     file = models.FileField(upload_to="private_imports/%Y/%m/", storage=private_storage)
-    status = models.CharField(max_length=16, choices=Status.choices, default=Status.UPLOADED, db_index=True)
+    status = models.CharField(
+        max_length=16, choices=Status.choices, default=Status.UPLOADED, db_index=True
+    )
     total_rows = models.PositiveIntegerField(default=0)
     imported_rows = models.PositiveIntegerField(default=0)
     failed_rows = models.PositiveIntegerField(default=0)
@@ -105,4 +132,6 @@ class ImportBatch(UUIDModel, TimeStampedModel):
 
     class Meta:
         ordering = ["-created_at"]
-        indexes = [models.Index(fields=["organization", "created_at"], name="dex_import_org_created_idx")]
+        indexes = [
+            models.Index(fields=["organization", "created_at"], name="dex_import_org_created_idx")
+        ]

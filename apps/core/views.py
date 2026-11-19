@@ -1,12 +1,12 @@
-from django.db import connection
-from django.db.migrations.executor import MigrationExecutor
-from django.http import JsonResponse
-from django.views.decorators.http import require_GET
-from django.shortcuts import redirect, render
 from datetime import date
 
 import nepali_datetime
+from django.db import connection
+from django.db.migrations.executor import MigrationExecutor
+from django.http import JsonResponse
+from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.views.decorators.http import require_GET
 
 
 def health_check(request):
@@ -26,7 +26,9 @@ def readiness_check(request):
         executor = MigrationExecutor(connection)
         pending = executor.migration_plan(executor.loader.graph.leaf_nodes())
     except Exception:
-        return JsonResponse({"status": "unready", "reason": "migration_state_unavailable"}, status=503)
+        return JsonResponse(
+            {"status": "unready", "reason": "migration_state_unavailable"}, status=503
+        )
     if pending:
         return JsonResponse(
             {"status": "unready", "pending_migrations": len(pending)},
@@ -63,21 +65,35 @@ def nepali_calendar_month(request):
         return JsonResponse({"error": "invalid_month"}, status=400)
 
     month_names = [
-        "बैशाख", "जेठ", "असार", "साउन", "भदौ", "असोज",
-        "कार्तिक", "मंसिर", "पुष", "माघ", "फागुन", "चैत",
+        "बैशाख",
+        "जेठ",
+        "असार",
+        "साउन",
+        "भदौ",
+        "असोज",
+        "कार्तिक",
+        "मंसिर",
+        "पुष",
+        "माघ",
+        "फागुन",
+        "चैत",
     ]
-    return JsonResponse({
-        "year": year,
-        "month": month,
-        "month_name": month_names[month - 1],
-        "days_in_month": days_in_month,
-        "first_weekday": first_gregorian.weekday(),
-        "today": {"year": today_bs.year, "month": today_bs.month, "day": today_bs.day},
-        "days": [
-            {
-                "day": day,
-                "gregorian": nepali_datetime.date(year, month, day).to_datetime_date().isoformat(),
-            }
-            for day in range(1, days_in_month + 1)
-        ],
-    })
+    return JsonResponse(
+        {
+            "year": year,
+            "month": month,
+            "month_name": month_names[month - 1],
+            "days_in_month": days_in_month,
+            "first_weekday": first_gregorian.weekday(),
+            "today": {"year": today_bs.year, "month": today_bs.month, "day": today_bs.day},
+            "days": [
+                {
+                    "day": day,
+                    "gregorian": nepali_datetime.date(year, month, day)
+                    .to_datetime_date()
+                    .isoformat(),
+                }
+                for day in range(1, days_in_month + 1)
+            ],
+        }
+    )

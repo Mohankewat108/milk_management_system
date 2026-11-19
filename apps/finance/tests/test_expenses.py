@@ -1,5 +1,5 @@
-from decimal import Decimal
 from datetime import date
+from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -15,7 +15,8 @@ User = get_user_model()
 class ExpenseWorkflowTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
-            username="accountant", email="accountant@example.test",
+            username="accountant",
+            email="accountant@example.test",
             password="LongDemoPass!123",
         )
         self.organization = Organization.objects.create(
@@ -30,10 +31,15 @@ class ExpenseWorkflowTests(TestCase):
 
     def test_expense_requires_explicit_approval(self):
         expense = record_expense(
-            organization=self.organization, branch=self.branch, actor=self.user,
-            category="Utilities", description="Electricity",
-            amount="1200.00", expense_date=date(2026, 11, 18),
-            method="cash", supplier_name="Power company",
+            organization=self.organization,
+            branch=self.branch,
+            actor=self.user,
+            category="Utilities",
+            description="Electricity",
+            amount="1200.00",
+            expense_date=date(2026, 11, 18),
+            method="cash",
+            supplier_name="Power company",
         )
         self.assertEqual(expense.status, Expense.Status.PENDING)
         self.assertIsNone(expense.approved_at)
@@ -47,69 +53,90 @@ class ExpenseWorkflowTests(TestCase):
 
     def test_record_expense_requires_active_branch_membership(self):
         outsider = User.objects.create_user(
-            username="expense-outsider", email="expense-outsider@example.test",
+            username="expense-outsider",
+            email="expense-outsider@example.test",
             password="LongDemoPass!123",
         )
         with self.assertRaises(PermissionDenied):
             record_expense(
-                organization=self.organization, branch=self.branch, actor=outsider,
-                category="Utilities", description="Unauthorised",
-                amount="10.00", expense_date=date(2026, 11, 18), method="cash",
+                organization=self.organization,
+                branch=self.branch,
+                actor=outsider,
+                category="Utilities",
+                description="Unauthorised",
+                amount="10.00",
+                expense_date=date(2026, 11, 18),
+                method="cash",
             )
         self.assertEqual(Expense.objects.count(), 0)
 
     def test_negative_expense_is_rejected(self):
         with self.assertRaises(ValidationError):
             record_expense(
-                organization=self.organization, branch=self.branch, actor=self.user,
-                category="Utilities", description="Invalid",
-                amount=Decimal("-1"), expense_date=date(2026, 11, 18), method="cash",
+                organization=self.organization,
+                branch=self.branch,
+                actor=self.user,
+                category="Utilities",
+                description="Invalid",
+                amount=Decimal("-1"),
+                expense_date=date(2026, 11, 18),
+                method="cash",
             )
 
     def test_expense_branch_must_belong_to_organisation(self):
         other = Organization.objects.create(
             owner=self.user, name="Other Expense Dairy", slug="other-expense-dairy"
         )
-        other_branch = Branch.objects.create(
-            organization=other, code="MAIN", name="Other main"
-        )
+        other_branch = Branch.objects.create(organization=other, code="MAIN", name="Other main")
         with self.assertRaises(ValidationError):
             record_expense(
-                organization=self.organization, branch=other_branch, actor=self.user,
-                category="Utilities", description="Cross tenant",
-                amount="100", expense_date=date(2026, 11, 18), method="cash",
+                organization=self.organization,
+                branch=other_branch,
+                actor=self.user,
+                category="Utilities",
+                description="Cross tenant",
+                amount="100",
+                expense_date=date(2026, 11, 18),
+                method="cash",
             )
 
     def test_accountant_cannot_approve_expense_in_unassigned_branch(self):
         from django.core.exceptions import PermissionDenied
+
         from apps.organizations.models import BranchAssignment
 
         second_branch = Branch.objects.create(
             organization=self.organization, code="SECOND", name="Second"
         )
         accountant = User.objects.create_user(
-            username="branch-accountant", email="branch-accountant@example.test",
+            username="branch-accountant",
+            email="branch-accountant@example.test",
             password="LongDemoPass!123",
         )
         membership = Membership.objects.create(
-            user=accountant, organization=self.organization,
+            user=accountant,
+            organization=self.organization,
             role=Membership.Role.ACCOUNTANT,
         )
         BranchAssignment.objects.create(membership=membership, branch=self.branch)
         expense = record_expense(
-            organization=self.organization, branch=second_branch, actor=self.user,
-            category="Utilities", description="Second branch electricity",
-            amount="50.00", expense_date=date(2026, 11, 18), method="cash",
+            organization=self.organization,
+            branch=second_branch,
+            actor=self.user,
+            category="Utilities",
+            description="Second branch electricity",
+            amount="50.00",
+            expense_date=date(2026, 11, 18),
+            method="cash",
         )
         with self.assertRaises(PermissionDenied):
-            approve_expense(
-                expense_id=expense.pk, organization=self.organization, actor=accountant
-            )
+            approve_expense(expense_id=expense.pk, organization=self.organization, actor=accountant)
         expense.refresh_from_db()
         self.assertEqual(expense.status, Expense.Status.PENDING)
 
     def test_record_expense_rejects_suspended_or_inaccessible_context(self):
         from django.utils import timezone
+
         from apps.organizations.models import Membership
 
         membership = Membership.objects.get(user=self.user, organization=self.organization)
@@ -117,15 +144,19 @@ class ExpenseWorkflowTests(TestCase):
             owner=self.user, name="Unrelated Expense Dairy", slug="unrelated-expense-dairy"
         )
         outsider = User.objects.create_user(
-            username="expense-other-tenant", email="expense-other-tenant@example.test",
+            username="expense-other-tenant",
+            email="expense-other-tenant@example.test",
             password="LongDemoPass!123",
         )
-        Membership.objects.create(
-            user=outsider, organization=other_org, role=Membership.Role.OWNER
-        )
+        Membership.objects.create(user=outsider, organization=other_org, role=Membership.Role.OWNER)
 
-        for scenario in ("foreign_tenant_membership", "suspended_membership",
-                         "suspended_organization", "inactive_branch", "soft_deleted_branch"):
+        for scenario in (
+            "foreign_tenant_membership",
+            "suspended_membership",
+            "suspended_organization",
+            "inactive_branch",
+            "soft_deleted_branch",
+        ):
             with self.subTest(scenario=scenario):
                 self.organization.status = Organization.Status.ACTIVE
                 self.organization.save(update_fields=["status", "updated_at"])
@@ -151,36 +182,50 @@ class ExpenseWorkflowTests(TestCase):
                     self.branch.deleted_at = timezone.now()
                     self.branch.save(update_fields=["deleted_at", "updated_at"])
 
-                expected_error = ValidationError if scenario == "inactive_branch" else PermissionDenied
+                expected_error = (
+                    ValidationError if scenario == "inactive_branch" else PermissionDenied
+                )
                 with self.assertRaises(expected_error):
                     record_expense(
-                        organization=self.organization, branch=self.branch, actor=actor,
-                        category="Utilities", description="Denied write",
-                        amount="10.00", expense_date=date(2026, 11, 18), method="cash",
+                        organization=self.organization,
+                        branch=self.branch,
+                        actor=actor,
+                        category="Utilities",
+                        description="Denied write",
+                        amount="10.00",
+                        expense_date=date(2026, 11, 18),
+                        method="cash",
                     )
                 self.assertEqual(Expense.objects.count(), 0)
+
+
 def test_record_expense_rejects_unassigned_branch(self):
-        from apps.organizations.models import BranchAssignment
+    from apps.organizations.models import BranchAssignment
 
-        other_branch = Branch.objects.create(
-            organization=self.organization, code="SECOND", name="Second"
-        )
-        accountant = User.objects.create_user(
-            username="expense-branch-accountant",
-            email="expense-branch-accountant@example.test",
-            password="LongDemoPass!123",
-        )
-        membership = Membership.objects.create(
-            user=accountant, organization=self.organization,
-            role=Membership.Role.ACCOUNTANT,
-        )
-        BranchAssignment.objects.create(membership=membership, branch=self.branch)
+    other_branch = Branch.objects.create(
+        organization=self.organization, code="SECOND", name="Second"
+    )
+    accountant = User.objects.create_user(
+        username="expense-branch-accountant",
+        email="expense-branch-accountant@example.test",
+        password="LongDemoPass!123",
+    )
+    membership = Membership.objects.create(
+        user=accountant,
+        organization=self.organization,
+        role=Membership.Role.ACCOUNTANT,
+    )
+    BranchAssignment.objects.create(membership=membership, branch=self.branch)
 
-        with self.assertRaises(PermissionDenied):
-            record_expense(
-                organization=self.organization, branch=other_branch, actor=accountant,
-                category="Utilities", description="Unassigned branch",
-                amount="10.00", expense_date=date(2026, 11, 18), method="cash",
-            )
-        self.assertEqual(Expense.objects.count(), 0)
-
+    with self.assertRaises(PermissionDenied):
+        record_expense(
+            organization=self.organization,
+            branch=other_branch,
+            actor=accountant,
+            category="Utilities",
+            description="Unassigned branch",
+            amount="10.00",
+            expense_date=date(2026, 11, 18),
+            method="cash",
+        )
+    self.assertEqual(Expense.objects.count(), 0)

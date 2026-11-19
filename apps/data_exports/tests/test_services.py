@@ -10,9 +10,15 @@ from apps.data_exports.services import build_csv, export_queryset
 class ExportServiceTests(SimpleTestCase):
     def test_csv_has_utf8_bom_headers_and_unicode_values(self):
         farmer = SimpleNamespace(
-            pk="farmer-id", code="F-001", full_name="कृष्ण केवट", phone="9800000000",
-            email="farmer@example.com", address="रामग्राम", branch=SimpleNamespace(name="मुख्य शाखा"),
-            is_active=True, created_at=__import__("datetime").datetime(2026, 1, 2, 10, 30),
+            pk="farmer-id",
+            code="F-001",
+            full_name="कृष्ण केवट",
+            phone="9800000000",
+            email="farmer@example.com",
+            address="रामग्राम",
+            branch=SimpleNamespace(name="मुख्य शाखा"),
+            is_active=True,
+            created_at=__import__("datetime").datetime(2026, 1, 2, 10, 30),
             user_id=None,
         )
         queryset = Mock()
@@ -28,9 +34,15 @@ class ExportServiceTests(SimpleTestCase):
 
     def test_csv_escapes_formula_like_untrusted_text(self):
         farmer = SimpleNamespace(
-            pk="farmer-id", code="=HYPERLINK(\"https://bad.example\")", full_name="+cmd",
-            phone="", email="", address="@SUM(A1:A2)", branch=None,
-            is_active=True, created_at=__import__("datetime").datetime(2026, 1, 2),
+            pk="farmer-id",
+            code='=HYPERLINK("https://bad.example")',
+            full_name="+cmd",
+            phone="",
+            email="",
+            address="@SUM(A1:A2)",
+            branch=None,
+            is_active=True,
+            created_at=__import__("datetime").datetime(2026, 1, 2),
             user_id=None,
         )
         queryset = Mock()
@@ -45,8 +57,15 @@ class ExportServiceTests(SimpleTestCase):
 
     def test_instant_export_limit_is_enforced(self):
         farmer = SimpleNamespace(
-            pk="farmer-id", code="F", full_name="Farmer", phone="", email="", address="",
-            branch=None, is_active=True, created_at=__import__("datetime").datetime(2026, 1, 2),
+            pk="farmer-id",
+            code="F",
+            full_name="Farmer",
+            phone="",
+            email="",
+            address="",
+            branch=None,
+            is_active=True,
+            created_at=__import__("datetime").datetime(2026, 1, 2),
             user_id=None,
         )
         queryset = Mock()
@@ -70,9 +89,15 @@ class ExportServiceTests(SimpleTestCase):
 class ExportFormatTests(SimpleTestCase):
     def setUp(self):
         self.farmer = SimpleNamespace(
-            pk="farmer-id", code="F-001", full_name="Example Farmer", phone="9800000000",
-            email="farmer@example.com", address="Parasi", branch=SimpleNamespace(name="Main"),
-            is_active=True, created_at=__import__("datetime").datetime(2026, 1, 2, 10, 30),
+            pk="farmer-id",
+            code="F-001",
+            full_name="Example Farmer",
+            phone="9800000000",
+            email="farmer@example.com",
+            address="Parasi",
+            branch=SimpleNamespace(name="Main"),
+            is_active=True,
+            created_at=__import__("datetime").datetime(2026, 1, 2, 10, 30),
             user_id=None,
         )
         self.queryset = Mock()
@@ -80,7 +105,9 @@ class ExportFormatTests(SimpleTestCase):
 
     def test_excel_export_is_valid_xlsx(self):
         from io import BytesIO
+
         from openpyxl import load_workbook
+
         from apps.data_exports.formats import build_xlsx
 
         payload, count = build_xlsx("farmers", self.queryset)

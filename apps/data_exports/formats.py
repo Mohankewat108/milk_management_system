@@ -7,7 +7,7 @@ from openpyxl.utils import get_column_letter
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import A4, landscape
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
@@ -77,25 +77,46 @@ def build_pdf(module, queryset, organization_name):
     muted = colors.HexColor("#64748B")
 
     title_style = ParagraphStyle(
-        "ExportTitle", parent=styles["Title"], fontName="Helvetica-Bold",
-        fontSize=20, leading=24, textColor=navy, alignment=TA_CENTER,
+        "ExportTitle",
+        parent=styles["Title"],
+        fontName="Helvetica-Bold",
+        fontSize=20,
+        leading=24,
+        textColor=navy,
+        alignment=TA_CENTER,
         spaceAfter=3 * mm,
     )
     subtitle_style = ParagraphStyle(
-        "ExportSubtitle", parent=styles["Normal"], fontName="Helvetica",
-        fontSize=9, leading=12, textColor=muted, alignment=TA_CENTER,
+        "ExportSubtitle",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=9,
+        leading=12,
+        textColor=muted,
+        alignment=TA_CENTER,
     )
     header_style = ParagraphStyle(
-        "ExportTableHeader", parent=styles["BodyText"], fontName="Helvetica-Bold",
-        fontSize=7, leading=8, textColor=colors.white, wordWrap="CJK",
+        "ExportTableHeader",
+        parent=styles["BodyText"],
+        fontName="Helvetica-Bold",
+        fontSize=7,
+        leading=8,
+        textColor=colors.white,
+        wordWrap="CJK",
     )
     cell_style = ParagraphStyle(
-        "ExportTableCell", parent=styles["BodyText"], fontName="Helvetica",
-        fontSize=7, leading=9, textColor=colors.HexColor("#172B3A"),
+        "ExportTableCell",
+        parent=styles["BodyText"],
+        fontName="Helvetica",
+        fontSize=7,
+        leading=9,
+        textColor=colors.HexColor("#172B3A"),
         wordWrap="CJK",
     )
     summary_style = ParagraphStyle(
-        "ExportSummaryCell", parent=cell_style, fontName="Helvetica-Bold",
+        "ExportSummaryCell",
+        parent=cell_style,
+        fontName="Helvetica-Bold",
         textColor=colors.HexColor("#0F3D3A"),
     )
 
@@ -118,28 +139,39 @@ def build_pdf(module, queryset, organization_name):
 
     summary_rows = _export_summary_rows(module, headers, totals)
     for summary_row in summary_rows:
-        table_data.append([Paragraph(escape(str(_safe_cell(value))), summary_style) for value in summary_row])
+        table_data.append(
+            [Paragraph(escape(str(_safe_cell(value))), summary_style) for value in summary_row]
+        )
     total_index = len(table_data) - 2
     average_index = len(table_data) - 1
 
     widths = [doc.width / len(headers)] * len(headers)
     table = Table(table_data, colWidths=widths, repeatRows=1, hAlign="LEFT", splitByRow=1)
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), navy),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("LINEBELOW", (0, 0), (-1, 0), 1.2, teal),
-        ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#CBD5E1")),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("ROWBACKGROUNDS", (0, 1), (-1, average_index - 1), [colors.white, colors.HexColor("#F3F7FB")]),
-        ("BACKGROUND", (0, average_index), (-1, average_index), colors.HexColor("#E8F1F8")),
-        ("BACKGROUND", (0, total_index), (-1, total_index), colors.HexColor("#DCEFEA")),
-        ("LINEABOVE", (0, average_index), (-1, total_index), 1, teal),
-        ("FONTSIZE", (0, 0), (-1, -1), 7),
-        ("LEFTPADDING", (0, 0), (-1, -1), 4),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-        ("TOPPADDING", (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-    ]))
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), navy),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("LINEBELOW", (0, 0), (-1, 0), 1.2, teal),
+                ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#CBD5E1")),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                (
+                    "ROWBACKGROUNDS",
+                    (0, 1),
+                    (-1, average_index - 1),
+                    [colors.white, colors.HexColor("#F3F7FB")],
+                ),
+                ("BACKGROUND", (0, average_index), (-1, average_index), colors.HexColor("#E8F1F8")),
+                ("BACKGROUND", (0, total_index), (-1, total_index), colors.HexColor("#DCEFEA")),
+                ("LINEABOVE", (0, average_index), (-1, total_index), 1, teal),
+                ("FONTSIZE", (0, 0), (-1, -1), 7),
+                ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ]
+        )
+    )
     story.append(table)
     doc.build(story)
     return output.getvalue(), count
@@ -152,6 +184,7 @@ def build_export_file(module, queryset, file_format, organization_name):
         return build_pdf(module, queryset, organization_name)
     if file_format == "csv":
         from .services import build_csv
+
         content, count = build_csv(module, queryset)
         return content.encode("utf-8"), count
     raise ValueError("Unsupported export format.")

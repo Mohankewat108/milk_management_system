@@ -3,7 +3,6 @@ from django.contrib.auth import get_user_model
 
 from apps.organizations.models import Organization
 
-
 User = get_user_model()
 
 
@@ -18,8 +17,16 @@ class PlatformOrganizationCreateForm(forms.ModelForm):
     class Meta:
         model = Organization
         fields = (
-            "name", "legal_name", "registration_number", "business_type",
-            "email", "phone", "country", "currency", "timezone", "address",
+            "name",
+            "legal_name",
+            "registration_number",
+            "business_type",
+            "email",
+            "phone",
+            "country",
+            "currency",
+            "timezone",
+            "address",
         )
         widgets = {"address": forms.Textarea(attrs={"rows": 3})}
 

@@ -30,16 +30,16 @@ class TenantAccessTests(TestCase):
 
     def test_member_can_access_own_workspace(self):
         self.client.force_login(self.user)
-        response = self.client.get(reverse(
-            "business:dashboard", kwargs={"organization_slug": self.org_a.slug}
-        ))
+        response = self.client.get(
+            reverse("business:dashboard", kwargs={"organization_slug": self.org_a.slug})
+        )
         self.assertEqual(response.status_code, 200)
 
     def test_member_cannot_access_another_tenant_workspace_by_slug(self):
         self.client.force_login(self.user)
-        response = self.client.get(reverse(
-            "business:dashboard", kwargs={"organization_slug": self.org_b.slug}
-        ))
+        response = self.client.get(
+            reverse("business:dashboard", kwargs={"organization_slug": self.org_b.slug})
+        )
         self.assertEqual(response.status_code, 404)
 
     def test_suspended_membership_cannot_access_workspace(self):
@@ -47,7 +47,7 @@ class TenantAccessTests(TestCase):
             status=Membership.Status.SUSPENDED
         )
         self.client.force_login(self.user)
-        response = self.client.get(reverse(
-            "business:dashboard", kwargs={"organization_slug": self.org_a.slug}
-        ))
+        response = self.client.get(
+            reverse("business:dashboard", kwargs={"organization_slug": self.org_a.slug})
+        )
         self.assertEqual(response.status_code, 404)

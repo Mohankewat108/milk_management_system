@@ -7,6 +7,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.audit.services import record_event
+
 from .formats import build_export_file
 from .models import ExportJob
 from .services import export_queryset
@@ -17,8 +18,11 @@ def queue_export(*, module, file_format, organization, membership, actor, filter
         raise ValueError("Choose CSV, Excel or PDF.")
     export_queryset(module=module, organization=organization, membership=membership, params=filters)
     job = ExportJob.objects.create(
-        organization=organization, requested_by=actor, module=module,
-        file_format=file_format, status=ExportJob.Status.QUEUED,
+        organization=organization,
+        requested_by=actor,
+        module=module,
+        file_format=file_format,
+        status=ExportJob.Status.QUEUED,
         filters={
             "branch": filters.get("branch", ""),
             "status": filters.get("status", ""),
@@ -27,14 +31,23 @@ def queue_export(*, module, file_format, organization, membership, actor, filter
         },
         expires_at=timezone.now() + timedelta(days=7),
     )
-    record_event(actor=actor, organization=organization, action="export.queued",
-                 target=job, changes={"module": module, "format": file_format})
+    record_event(
+        actor=actor,
+        organization=organization,
+        action="export.queued",
+        target=job,
+        changes={"module": module, "format": file_format},
+    )
     return job
 
 
 def process_export_job(job_id):
     with transaction.atomic():
-        job = ExportJob.objects.select_for_update().select_related("organization", "requested_by").get(pk=job_id)
+        job = (
+            ExportJob.objects.select_for_update()
+            .select_related("organization", "requested_by")
+            .get(pk=job_id)
+        )
         if job.status != ExportJob.Status.QUEUED:
             return job
         job.status = ExportJob.Status.PROCESSING
@@ -42,27 +55,42 @@ def process_export_job(job_id):
     try:
         membership = job.organization.memberships.get(user=job.requested_by, status="active")
         queryset = export_queryset(
-            module=job.module, organization=job.organization, membership=membership,
+            module=job.module,
+            organization=job.organization,
+            membership=membership,
             params=_FilterParams(job.filters),
         )
-        payload, count = build_export_file(job.module, queryset, job.file_format, job.organization.name)
+        payload, count = build_export_file(
+            job.module, queryset, job.file_format, job.organization.name
+        )
         extension = job.file_format
-        filename = f"{job.organization.slug}-{job.module}-{timezone.now():%Y%m%d-%H%M%S}.{extension}"
+        filename = (
+            f"{job.organization.slug}-{job.module}-{timezone.now():%Y%m%d-%H%M%S}.{extension}"
+        )
         job.file.save(filename, ContentFile(payload), save=False)
         job.record_count = count
         job.file_size = len(payload)
         job.status = ExportJob.Status.COMPLETED
         job.error_message = ""
         job.save()
-        record_event(actor=job.requested_by, organization=job.organization,
-                     action="export.completed", target=job,
-                     changes={"module": job.module, "format": job.file_format, "record_count": count})
+        record_event(
+            actor=job.requested_by,
+            organization=job.organization,
+            action="export.completed",
+            target=job,
+            changes={"module": job.module, "format": job.file_format, "record_count": count},
+        )
     except Exception as exc:
         job.status = ExportJob.Status.FAILED
         job.error_message = str(exc)[:500]
         job.save(update_fields=["status", "error_message", "updated_at"])
-        record_event(actor=job.requested_by, organization=job.organization,
-                     action="export.failed", target=job, changes={"reason": str(exc)[:300]})
+        record_event(
+            actor=job.requested_by,
+            organization=job.organization,
+            action="export.failed",
+            target=job,
+            changes={"reason": str(exc)[:300]},
+        )
     _notify_export_ready(job)
     return job
 
@@ -70,8 +98,10 @@ def process_export_job(job_id):
 class _FilterParams:
     def __init__(self, values):
         self.values = values
+
     def get(self, key, default=""):
         return self.values.get(key, default)
+
     def getlist(self, key):
         return self.values.get(key, [])
 
@@ -88,7 +118,13 @@ def _notify_export_ready(job):
         f"Files expire after seven days."
     )
     try:
-        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [job.requested_by.email], fail_silently=False)
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [job.requested_by.email],
+            fail_silently=False,
+        )
         job.notification_sent_at = timezone.now()
         job.save(update_fields=["notification_sent_at", "updated_at"])
     except Exception:

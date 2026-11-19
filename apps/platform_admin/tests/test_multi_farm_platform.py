@@ -10,8 +10,15 @@ from apps.organizations.models import Branch, Membership, Organization
 from apps.parties.models import Customer
 from apps.platform_admin.models import FarmOwnerInvitation
 
-
 User = get_user_model()
+
+
+def invitation_path_from_email(body):
+    """Extract the path from an invitation URL, regardless of its host."""
+    match = re.search(r"https?://[^\s<>]+", body)
+    if not match:
+        raise AssertionError(f"No absolute invitation URL found in email body:\n{body}")
+    return urlparse(match.group(0)).path
 
 
 class PlatformMultiFarmTests(TestCase):
@@ -82,14 +89,19 @@ class PlatformMultiFarmTests(TestCase):
         self.assertEqual(membership.status, Membership.Status.INVITED)
         self.assertEqual(len(mail.outbox), 1)
 
-        invitation_path = urlparse(re.search(r"http://testserver(\S+)", mail.outbox[0].body).group(0)).path
+        invitation_path = urlparse(
+            re.search(r"http://testserver(\S+)", mail.outbox[0].body).group(0)
+        ).path
         self.client.logout()
         response = self.client.get(invitation_path)
         self.assertEqual(response.status_code, 200)
-        response = self.client.post(invitation_path, {
-            "new_password1": "A-Strong-Owner-Password-2026!",
-            "new_password2": "A-Strong-Owner-Password-2026!",
-        })
+        response = self.client.post(
+            invitation_path,
+            {
+                "new_password1": "A-Strong-Owner-Password-2026!",
+                "new_password2": "A-Strong-Owner-Password-2026!",
+            },
+        )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, reverse("business:workspace"))
 
@@ -172,17 +184,22 @@ class PlatformMultiFarmTests(TestCase):
         )
         self.client.force_login(self.platform_owner)
         response = self.client.post(
-            reverse("platform:organization_set_status", kwargs={"organization_id": organization.pk}),
+            reverse(
+                "platform:organization_set_status", kwargs={"organization_id": organization.pk}
+            ),
             {"status": Organization.Status.SUSPENDED, "reason": "Outstanding subscription invoice"},
         )
         self.assertRedirects(response, reverse("platform:dashboard"))
         organization.refresh_from_db()
         self.assertEqual(organization.status, Organization.Status.SUSPENDED)
         from apps.audit.models import AuditEvent
-        self.assertTrue(AuditEvent.objects.filter(
-            organization=organization,
-            action="platform.organization.status_changed",
-        ).exists())
+
+        self.assertTrue(
+            AuditEvent.objects.filter(
+                organization=organization,
+                action="platform.organization.status_changed",
+            ).exists()
+        )
 
     def test_platform_owner_status_change_requires_a_reason(self):
         organization = Organization.objects.create(
@@ -190,15 +207,17 @@ class PlatformMultiFarmTests(TestCase):
         )
         self.client.force_login(self.platform_owner)
         self.client.post(
-            reverse("platform:organization_set_status", kwargs={"organization_id": organization.pk}),
+            reverse(
+                "platform:organization_set_status", kwargs={"organization_id": organization.pk}
+            ),
             {"status": Organization.Status.SUSPENDED, "reason": ""},
         )
         organization.refresh_from_db()
         self.assertEqual(organization.status, Organization.Status.TRIAL)
 
-
     def test_expired_invitation_cannot_be_accepted(self):
         from datetime import timedelta
+
         from django.utils import timezone
 
         self.client.force_login(self.platform_owner)
@@ -224,11 +243,12 @@ class PlatformMultiFarmTests(TestCase):
             self.farm_form_data("Hashed Token Dairy", "hashed.owner@example.test"),
         )
         invitation = FarmOwnerInvitation.objects.get(organization__name="Hashed Token Dairy")
-        invitation_path = urlparse(re.search(r"http://testserver(\S+)", mail.outbox[0].body).group(0)).path
+        invitation_path = urlparse(
+            re.search(r"http://testserver(\S+)", mail.outbox[0].body).group(0)
+        ).path
         raw_token = invitation_path.rstrip("/").split("/")[-1]
         self.assertNotEqual(invitation.token_hash, raw_token)
         self.assertEqual(len(invitation.token_hash), 64)
-
 
     def test_platform_owner_can_resend_pending_invitation_and_revoke_old_link(self):
         self.client.force_login(self.platform_owner)
@@ -241,18 +261,22 @@ class PlatformMultiFarmTests(TestCase):
             re.search(r"http://testserver(\S+)", mail.outbox[0].body).group(0)
         ).path
 
-        response = self.client.post(reverse(
-            "platform:organization_resend_invitation",
-            kwargs={"organization_id": first_invitation.organization_id},
-        ))
+        response = self.client.post(
+            reverse(
+                "platform:organization_resend_invitation",
+                kwargs={"organization_id": first_invitation.organization_id},
+            )
+        )
         self.assertRedirects(response, reverse("platform:dashboard"))
         self.assertEqual(len(mail.outbox), 2)
         first_invitation.refresh_from_db()
         self.assertIsNotNone(first_invitation.revoked_at)
 
-        second_invitation = FarmOwnerInvitation.objects.filter(
-            organization=first_invitation.organization
-        ).exclude(pk=first_invitation.pk).get()
+        second_invitation = (
+            FarmOwnerInvitation.objects.filter(organization=first_invitation.organization)
+            .exclude(pk=first_invitation.pk)
+            .get()
+        )
         second_path = urlparse(
             re.search(r"http://testserver(\S+)", mail.outbox[1].body).group(0)
         ).path
@@ -260,7 +284,6 @@ class PlatformMultiFarmTests(TestCase):
         self.client.logout()
         self.assertEqual(self.client.get(second_path).status_code, 200)
         self.assertIsNone(second_invitation.revoked_at)
-
 
     @override_settings(DJANGO_SITE_URL="https://dairynexus-test.app.github.dev")
     def test_new_owner_invitation_uses_configured_canonical_site_url(self):
@@ -287,10 +310,12 @@ class PlatformMultiFarmTests(TestCase):
         organization = Organization.objects.get(name="Canonical Resend Dairy")
         mail.outbox.clear()
 
-        response = self.client.post(reverse(
-            "platform:organization_resend_invitation",
-            kwargs={"organization_id": organization.pk},
-        ))
+        response = self.client.post(
+            reverse(
+                "platform:organization_resend_invitation",
+                kwargs={"organization_id": organization.pk},
+            )
+        )
 
         self.assertRedirects(response, reverse("platform:dashboard"))
         self.assertEqual(len(mail.outbox), 1)

@@ -1,18 +1,17 @@
+import calendar
 import csv
 import io
-import calendar
 from datetime import timedelta
 
-from django.core.exceptions import ValidationError
-from django.core.management.base import BaseCommand
-from django.core.mail import send_mail
 from django.conf import settings
-from django.db import transaction
+from django.core.exceptions import ValidationError
+from django.core.mail import send_mail
+from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from apps.audit.services import record_event
 from apps.data_exports.models import ExportJob, ImportBatch, ScheduledExport
-from apps.data_exports.queue import process_export_job, queue_export, _notify_export_ready
+from apps.data_exports.queue import _notify_export_ready, process_export_job, queue_export
 from apps.organizations.models import Membership
 from apps.parties.models import Customer, Farmer
 
@@ -46,10 +45,15 @@ def process_import_batch(batch):
                 branch = None
                 branch_code = row.get("branch_code", "")
                 if branch_code:
-                    branch = batch.organization.branches.get(code=branch_code, deleted_at__isnull=True, is_active=True)
+                    branch = batch.organization.branches.get(
+                        code=branch_code, deleted_at__isnull=True, is_active=True
+                    )
                 values = {
-                    "organization": batch.organization, "code": code, "full_name": name,
-                    "phone": row.get("phone", "")[:30], "email": row.get("email", ""),
+                    "organization": batch.organization,
+                    "code": code,
+                    "full_name": name,
+                    "phone": row.get("phone", "")[:30],
+                    "email": row.get("email", ""),
                     "address": row.get("address", ""),
                 }
                 if branch:
@@ -74,36 +78,62 @@ def process_import_batch(batch):
         batch.row_errors = [{"row": 0, "error": str(exc)[:250]}]
         batch.failed_rows = max(total, 1)
     batch.processed_at = timezone.now()
-    batch.save(update_fields=["total_rows", "imported_rows", "failed_rows", "row_errors", "status", "processed_at", "updated_at"])
+    batch.save(
+        update_fields=[
+            "total_rows",
+            "imported_rows",
+            "failed_rows",
+            "row_errors",
+            "status",
+            "processed_at",
+            "updated_at",
+        ]
+    )
     record_event(
-        actor=batch.uploaded_by, organization=batch.organization,
-        action="import.completed" if batch.status == ImportBatch.Status.COMPLETED else "import.failed",
-        target=batch, changes={"imported_rows": batch.imported_rows, "failed_rows": batch.failed_rows},
+        actor=batch.uploaded_by,
+        organization=batch.organization,
+        action="import.completed"
+        if batch.status == ImportBatch.Status.COMPLETED
+        else "import.failed",
+        target=batch,
+        changes={"imported_rows": batch.imported_rows, "failed_rows": batch.failed_rows},
     )
     if batch.uploaded_by.email:
         send_mail(
             f"DairyNexus import {batch.status}: {batch.get_module_display()}",
             f"Imported: {batch.imported_rows}; failed rows: {batch.failed_rows}. Review Import Centre for row-level errors.",
-            settings.DEFAULT_FROM_EMAIL, [batch.uploaded_by.email], fail_silently=True,
+            settings.DEFAULT_FROM_EMAIL,
+            [batch.uploaded_by.email],
+            fail_silently=True,
         )
     return batch
 
 
 class Command(BaseCommand):
-    help = "Process queued exports, CSV imports and due scheduled exports. Run from cron or a worker."
+    help = (
+        "Process queued exports, CSV imports and due scheduled exports. Run from cron or a worker."
+    )
 
     def add_arguments(self, parser):
         parser.add_argument("--limit", type=int, default=20)
 
     def handle(self, *args, **options):
         limit = max(1, min(options["limit"], 100))
-        for job in ExportJob.objects.filter(status=ExportJob.Status.QUEUED).order_by("created_at")[:limit]:
+        for job in ExportJob.objects.filter(status=ExportJob.Status.QUEUED).order_by("created_at")[
+            :limit
+        ]:
             process_export_job(job.pk)
             self.stdout.write(f"Export {job.pk}: processed")
-        remaining = max(0, limit - ExportJob.objects.filter(status=ExportJob.Status.PROCESSING).count())
-        for batch in ImportBatch.objects.filter(status=ImportBatch.Status.UPLOADED).order_by("created_at")[:remaining]:
+        remaining = max(
+            0, limit - ExportJob.objects.filter(status=ExportJob.Status.PROCESSING).count()
+        )
+        for batch in ImportBatch.objects.filter(status=ImportBatch.Status.UPLOADED).order_by(
+            "created_at"
+        )[:remaining]:
             process_import_batch(batch)
-            self.stdout.write(f"Import {batch.pk}: {batch.status} ({batch.imported_rows} imported, {batch.failed_rows} failed)")
+            self.stdout.write(
+                f"Import {batch.pk}: {batch.status} ({batch.imported_rows} imported, {batch.failed_rows} failed)"
+            )
         for pending_notice in ExportJob.objects.filter(
             status__in=[ExportJob.Status.COMPLETED, ExportJob.Status.FAILED],
             notification_sent_at__isnull=True,
@@ -115,22 +145,38 @@ class Command(BaseCommand):
                 old_import.file.delete(save=False)
                 old_import.file = ""
                 old_import.save(update_fields=["file", "updated_at"])
-        for expired in ExportJob.objects.filter(expires_at__lte=now).exclude(status=ExportJob.Status.EXPIRED):
+        for expired in ExportJob.objects.filter(expires_at__lte=now).exclude(
+            status=ExportJob.Status.EXPIRED
+        ):
             if expired.file:
                 expired.file.delete(save=False)
             expired.status = ExportJob.Status.EXPIRED
             expired.save(update_fields=["status", "updated_at"])
-        for schedule in ScheduledExport.objects.filter(is_active=True, next_run_at__lte=now).select_related("organization", "created_by")[:limit]:
+        for schedule in ScheduledExport.objects.filter(
+            is_active=True, next_run_at__lte=now
+        ).select_related("organization", "created_by")[:limit]:
             try:
-                membership = Membership.objects.get(organization=schedule.organization, user=schedule.created_by, status=Membership.Status.ACTIVE)
+                membership = Membership.objects.get(
+                    organization=schedule.organization,
+                    user=schedule.created_by,
+                    status=Membership.Status.ACTIVE,
+                )
+
                 class Params:
                     def get(self, key, default=""):
                         return schedule.filters.get(key, default)
+
                     def getlist(self, key):
                         return []
-                job = queue_export(module=schedule.module, file_format=schedule.file_format,
-                                   organization=schedule.organization, membership=membership,
-                                   actor=schedule.created_by, filters=Params())
+
+                job = queue_export(
+                    module=schedule.module,
+                    file_format=schedule.file_format,
+                    organization=schedule.organization,
+                    membership=membership,
+                    actor=schedule.created_by,
+                    filters=Params(),
+                )
                 schedule.last_run_at = now
                 if schedule.frequency == ScheduledExport.Frequency.DAILY:
                     schedule.next_run_at += timedelta(days=1)

@@ -1,4 +1,5 @@
 """Locale-aware date formatting for application templates."""
+
 from datetime import date, datetime
 
 from django import template
