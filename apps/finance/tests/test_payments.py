@@ -62,8 +62,6 @@ class PaymentServiceTests(TestCase):
             )
 
     def test_record_payment_rejects_suspended_or_inaccessible_context(self):
-        from datetime import date
-        from django.core.exceptions import PermissionDenied
         from django.utils import timezone
 
         membership = Membership.objects.get(user=self.user, organization=self.org)
@@ -105,7 +103,8 @@ class PaymentServiceTests(TestCase):
                     self.branch.deleted_at = timezone.now()
                     self.branch.save(update_fields=["deleted_at", "updated_at"])
 
-                with self.assertRaises(PermissionDenied):
+                expected_error = ValidationError if scenario == "inactive_branch" else PermissionDenied
+                with self.assertRaises(expected_error):
                     record_payment(
                         organization=self.org, branch=self.branch, actor=actor,
                         direction=Payment.Direction.INCOMING, amount="10.00",
