@@ -1,11 +1,12 @@
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import PermissionDenied
 from django.test import TestCase
 
 from apps.finance.models import Payment
 from apps.finance.services import record_payment
-from apps.organizations.models import Branch, Organization
+from apps.organizations.models import Branch, Membership, Organization
 from apps.parties.models import Customer
 
 User = get_user_model()
@@ -18,9 +19,25 @@ class PaymentServiceTests(TestCase):
         )
         self.org = Organization.objects.create(owner=self.user, name="Payments Dairy", slug="payments-dairy")
         self.branch = Branch.objects.create(organization=self.org, code="MAIN", name="Main")
+        Membership.objects.create(
+            user=self.user, organization=self.org, role=Membership.Role.OWNER
+        )
         self.customer = Customer.objects.create(
             organization=self.org, code="C001", full_name="Test Customer"
         )
+
+    def test_record_payment_requires_active_branch_membership(self):
+        outsider = User.objects.create_user(
+            username="payment-outsider", email="payment-outsider@example.test",
+            password="LongDemoPass!123",
+        )
+        with self.assertRaises(PermissionDenied):
+            record_payment(
+                organization=self.org, branch=self.branch, actor=outsider,
+                direction=Payment.Direction.INCOMING, amount="10.00",
+                method=Payment.Method.CASH, customer=self.customer,
+            )
+        self.assertEqual(Payment.objects.count(), 0)
 
     def test_payment_is_pending_until_explicitly_verified(self):
         payment = record_payment(

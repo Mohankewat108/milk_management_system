@@ -2,7 +2,7 @@ from decimal import Decimal
 from datetime import date
 
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.test import TestCase
 
 from apps.finance.models import Expense
@@ -44,6 +44,19 @@ class ExpenseWorkflowTests(TestCase):
         self.assertEqual(approved.status, Expense.Status.APPROVED)
         self.assertEqual(approved.approved_by, self.user)
         self.assertIsNotNone(approved.approved_at)
+
+    def test_record_expense_requires_active_branch_membership(self):
+        outsider = User.objects.create_user(
+            username="expense-outsider", email="expense-outsider@example.test",
+            password="LongDemoPass!123",
+        )
+        with self.assertRaises(PermissionDenied):
+            record_expense(
+                organization=self.organization, branch=self.branch, actor=outsider,
+                category="Utilities", description="Unauthorised",
+                amount="10.00", expense_date=date(2026, 11, 18), method="cash",
+            )
+        self.assertEqual(Expense.objects.count(), 0)
 
     def test_negative_expense_is_rejected(self):
         with self.assertRaises(ValidationError):

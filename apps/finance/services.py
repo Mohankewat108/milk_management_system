@@ -15,6 +15,7 @@ def record_expense(*, organization, branch, actor, category, description,
                    amount, expense_date, method, supplier_name="", notes=""):
     if branch.organization_id != organization.id or not branch.is_active:
         raise ValidationError("Select an active branch belonging to this organisation.")
+    require_actor_branch_access(actor=actor, organization=organization, branch=branch)
     value = Decimal(str(amount))
     if value <= 0:
         raise ValidationError("Expense amount must be greater than zero.")
@@ -57,6 +58,7 @@ def record_payment(*, organization, branch, actor, direction, amount, method,
                    transaction_reference=""):
     if branch.organization_id != organization.id or not branch.is_active:
         raise ValidationError("Select an active branch belonging to this organisation.")
+    require_actor_branch_access(actor=actor, organization=organization, branch=branch)
     if bool(customer) == bool(farmer):
         raise ValidationError("Select exactly one customer or farmer.")
     party = customer or farmer

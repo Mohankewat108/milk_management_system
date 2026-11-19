@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+from apps.organizations.permissions import require_actor_branch_access
 from apps.pricing.services import (
     calculate_milk_rate,
     pricing_for_collection,
@@ -24,6 +25,7 @@ def create_collection(
 ):
     if branch.organization_id != organization.id or not branch.is_active:
         raise ValidationError("Select an active branch belonging to this organisation.")
+    require_actor_branch_access(actor=actor, organization=organization, branch=branch)
     if bool(farmer) == bool(customer):
         raise ValidationError("Select exactly one farmer or customer.")
     party = farmer or customer
