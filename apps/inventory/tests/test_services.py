@@ -114,3 +114,63 @@ class InventoryMovementTests(TestCase):
                 item_id=foreign_item.pk, organization=self.organization, actor=self.user,
                 kind=StockMovement.Kind.PURCHASE, quantity="2", reason="Cross-tenant attempt",
             )
+
+    def test_stock_writes_reject_suspended_or_inaccessible_context(self):
+        from django.utils import timezone
+
+        membership = Membership.objects.get(
+            user=self.user, organization=self.organization
+        )
+        other_org = Organization.objects.create(
+            owner=self.user, name="Unrelated Inventory Dairy", slug="unrelated-inventory-dairy"
+        )
+        outsider = User.objects.create_user(
+            username="inventory-other-tenant", email="inventory-other-tenant@example.test",
+            password="LongDemoPass!123",
+        )
+        Membership.objects.create(
+            user=outsider, organization=other_org, role=Membership.Role.OWNER
+        )
+
+        for scenario in ("foreign_tenant_membership", "suspended_membership",
+                         "suspended_organization", "inactive_branch", "soft_deleted_branch"):
+            with self.subTest(scenario=scenario):
+                self.organization.status = Organization.Status.ACTIVE
+                self.organization.save(update_fields=["status", "updated_at"])
+                self.branch.is_active = True
+                self.branch.deleted_at = None
+                self.branch.save(update_fields=["is_active", "deleted_at", "updated_at"])
+                membership.status = Membership.Status.ACTIVE
+                membership.save(update_fields=["status", "updated_at"])
+                actor = self.user
+
+                if scenario == "foreign_tenant_membership":
+                    actor = outsider
+                elif scenario == "suspended_membership":
+                    membership.status = Membership.Status.SUSPENDED
+                    membership.save(update_fields=["status", "updated_at"])
+                elif scenario == "suspended_organization":
+                    self.organization.status = Organization.Status.SUSPENDED
+                    self.organization.save(update_fields=["status", "updated_at"])
+                elif scenario == "inactive_branch":
+                    self.branch.is_active = False
+                    self.branch.save(update_fields=["is_active", "updated_at"])
+                elif scenario == "soft_deleted_branch":
+                    self.branch.deleted_at = timezone.now()
+                    self.branch.save(update_fields=["deleted_at", "updated_at"])
+
+                with self.assertRaises(PermissionDenied):
+                    move_stock(
+                        item_id=self.item.pk, organization=self.organization, actor=actor,
+                        kind=StockMovement.Kind.PURCHASE, quantity="2", reason="Denied write",
+                    )
+                with self.assertRaises(PermissionDenied):
+                    adjust_stock(
+                        item_id=self.item.pk, organization=self.organization, actor=actor,
+                        signed_delta="2", reason="Denied adjustment",
+                    )
+
+                self.item.refresh_from_db()
+                self.assertEqual(self.item.current_stock, Decimal("0.000"))
+                self.assertEqual(self.item.movements.count(), 0)
+
