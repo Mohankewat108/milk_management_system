@@ -121,7 +121,7 @@ jobs:
         run: coverage run --branch manage.py test --verbosity 2
 
       - name: Generate coverage reports
-        if: always()
+        if: success()
         run: |
           coverage report
           coverage xml -o coverage.xml
