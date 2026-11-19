@@ -159,4 +159,28 @@ class ExpenseWorkflowTests(TestCase):
                         amount="10.00", expense_date=date(2026, 11, 18), method="cash",
                     )
                 self.assertEqual(Expense.objects.count(), 0)
+def test_record_expense_rejects_unassigned_branch(self):
+        from apps.organizations.models import BranchAssignment
+
+        other_branch = Branch.objects.create(
+            organization=self.organization, code="SECOND", name="Second"
+        )
+        accountant = User.objects.create_user(
+            username="expense-branch-accountant",
+            email="expense-branch-accountant@example.test",
+            password="LongDemoPass!123",
+        )
+        membership = Membership.objects.create(
+            user=accountant, organization=self.organization,
+            role=Membership.Role.ACCOUNTANT,
+        )
+        BranchAssignment.objects.create(membership=membership, branch=self.branch)
+
+        with self.assertRaises(PermissionDenied):
+            record_expense(
+                organization=self.organization, branch=other_branch, actor=accountant,
+                category="Utilities", description="Unassigned branch",
+                amount="10.00", expense_date=date(2026, 11, 18), method="cash",
+            )
+        self.assertEqual(Expense.objects.count(), 0)
 
