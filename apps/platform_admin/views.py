@@ -286,7 +286,7 @@ def organization_resend_invitation(request, organization_id):
     organization = get_object_or_404(
         Organization.objects.select_related("owner"), pk=organization_id
     )
-    membership = get_object_or_404(
+    get_object_or_404(
         Membership,
         organization=organization,
         user=organization.owner,

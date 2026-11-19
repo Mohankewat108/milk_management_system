@@ -119,7 +119,7 @@ class OrganizationWideRateTests(TestCase):
         )
 
     def test_unapproved_common_rate_is_not_used(self):
-        pending = PricingConfiguration.objects.create(
+        PricingConfiguration.objects.create(
             organization=self.organization,
             version=2,
             snf_rate=Decimal("6.00"),

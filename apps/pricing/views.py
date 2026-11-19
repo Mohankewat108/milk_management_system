@@ -60,7 +60,8 @@ def settings_view(request, organization_slug):
                     pricing.organization = organization
                     pricing.version = version
                     pricing.created_by = request.user
-                    # Owner-created rates are approved immediately; admin-created rates require owner approval.
+                    # Owner-created rates are approved immediately.
+                    # Admin-created rates require owner approval.
                     pricing.is_approved = request.membership.role == Membership.Role.OWNER
                     if pricing.is_approved:
                         pricing.approved_by = request.user
@@ -79,7 +80,10 @@ def settings_view(request, organization_slug):
                     request,
                     "Dairy-wide rate schedule published for all customers."
                     if created_pricing.is_approved and created_pricing.branch_id is None
-                    else "Rate schedule saved. It will apply after owner approval and its start date.",
+                    else (
+                        "Rate schedule saved. It will apply after owner approval "
+                        "and its start date."
+                    ),
                 )
                 return redirect("pricing:settings", organization_slug=organization_slug)
     history = PricingConfiguration.objects.filter(

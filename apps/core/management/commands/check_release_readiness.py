@@ -36,7 +36,6 @@ class Command(BaseCommand):
                 self.stderr.write(f" - {problem}")
             raise CommandError("Resolve every release blocker before deployment.")
         pending = loader.graph.leaf_nodes()
-        executor = loader
         if not pending:
             raise CommandError("No migration graph exists.")
         self.stdout.write(

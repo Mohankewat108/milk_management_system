@@ -171,7 +171,8 @@ def collection_edit(request, organization_slug, collection_id):
         if entry.status in {MilkCollection.Status.REVERSED, MilkCollection.Status.APPROVED}:
             messages.error(
                 request,
-                "Approved or reversed collections cannot be edited; reverse an approved record with a reason.",
+                "Approved or reversed collections cannot be edited; "
+                "reverse an approved record with a reason.",
             )
             return redirect("collections:list", organization_slug=organization_slug)
         form = CollectionEditForm(request.POST or None, instance=entry)

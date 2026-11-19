@@ -1,4 +1,13 @@
-from .base import *  # noqa: F403
+from . import base as _base
+
+for _setting_name, _setting_value in vars(_base).items():
+    if _setting_name.isupper():
+        globals()[_setting_name] = _setting_value
+
+env = _base.env
+ALLOWED_HOSTS = _base.ALLOWED_HOSTS
+CSRF_TRUSTED_ORIGINS = _base.CSRF_TRUSTED_ORIGINS
+REDIS_URL = _base.REDIS_URL
 
 DEBUG = True
 

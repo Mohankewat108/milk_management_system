@@ -80,8 +80,8 @@ def queue_export_view(request, organization_slug, module):
             actor=request.user,
             filters=request.POST,
         )
-    except PermissionDenied:
-        raise Http404
+    except PermissionDenied as exc:
+        raise Http404 from exc
     except (ValueError, ValidationError) as exc:
         messages.error(request, str(exc))
         return redirect("data_exports:centre", organization_slug=organization_slug)
@@ -111,8 +111,8 @@ def download_export(request, organization_slug, job_id):
         raise Http404
     try:
         stream = job.file.open("rb")
-    except (FileNotFoundError, OSError):
-        raise Http404
+    except (FileNotFoundError, OSError) as exc:
+        raise Http404 from exc
     record_event(
         actor=request.user,
         organization=request.organization,

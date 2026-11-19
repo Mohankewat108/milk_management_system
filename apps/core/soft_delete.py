@@ -47,7 +47,8 @@ def soft_delete_record(*, key, record, actor):
     if isinstance(record, PricingConfiguration):
         if record.is_approved or record.collections.exists():
             raise ValidationError(
-                "Approved or referenced rate schedules are retained for historical pricing and cannot be deleted."
+                "Approved or referenced rate schedules are retained for historical pricing "
+                "and cannot be deleted."
             )
     if isinstance(record, Expense) and record.status == Expense.Status.APPROVED:
         raise ValidationError("Approved expenses are retained for audit and cannot be deleted.")
@@ -58,7 +59,8 @@ def soft_delete_record(*, key, record, actor):
             )
         if record.movements.exists():
             raise ValidationError(
-                "This item has stock movement history. Deactivate it instead of deleting its history."
+                "This item has stock movement history. "
+                "Deactivate it instead of deleting its history."
             )
     if isinstance(record, Branch):
         if (
@@ -70,7 +72,8 @@ def soft_delete_record(*, key, record, actor):
             or record.inventory_items.exists()
         ):
             raise ValidationError(
-                "This branch has operational history. Deactivate it instead of deleting its history."
+                "This branch has operational history. "
+                "Deactivate it instead of deleting its history."
             )
 
     record.deleted_at = timezone.now()

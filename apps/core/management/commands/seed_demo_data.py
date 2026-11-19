@@ -401,6 +401,7 @@ class Command(BaseCommand):
         Organization.objects.filter(id__in=organization_ids).delete()
         self.stdout.write(
             self.style.WARNING(
-                f"Cleared {len(organization_ids)} demo organisations and their demo business records only."
+                f"Cleared {len(organization_ids)} demo organisations and "
+                "their demo business records only."
             )
         )

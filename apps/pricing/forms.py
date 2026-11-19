@@ -25,7 +25,10 @@ class PricingConfigurationForm(forms.ModelForm):
             ),
         }
         help_texts = {
-            "branch": "Leave blank to apply this exact rate schedule to every customer and every branch in this dairy.",
+            "branch": (
+                "Leave blank to apply this exact rate schedule to every customer "
+                "and every branch in this dairy."
+            ),
             "snf_rate": "Coefficient multiplied by the measured SNF value.",
             "fat_rate": "Coefficient multiplied by the measured fat value.",
             "lactose_rate": "Coefficient multiplied by the measured lactose value.",

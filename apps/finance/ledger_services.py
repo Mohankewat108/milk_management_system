@@ -390,7 +390,7 @@ def post_approved_farmer_collection(*, collection, actor):
 
 @transaction.atomic
 def post_approved_customer_collection_sale(*, collection, actor):
-    """Optional sale posting; enabled only after the dairy confirms customer-collection semantics."""
+    """Post an approved customer-collection sale when customer posting is enabled."""
     configuration = _enabled_ledger_configuration(collection.organization)
     if configuration is None or not configuration.enable_customer_sales_posting:
         return None

@@ -15,7 +15,7 @@ def parse_local_date(value: str, language_code: str) -> date | None:
             year, month, day = (int(part) for part in value.split("-"))
             return nepali_datetime.date(year, month, day).to_datetime_date()
         except (TypeError, ValueError):
-            raise ValueError("Enter a valid Bikram Sambat date in YYYY-MM-DD format.")
+            raise ValueError("Enter a valid Bikram Sambat date in YYYY-MM-DD format.") from None
     try:
         return date.fromisoformat(value)
     except ValueError as exc:

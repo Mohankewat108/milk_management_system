@@ -1,6 +1,14 @@
 from django.contrib import admin
 
-from .models import Expense, Payment
+from .models import (
+    Account,
+    AccountingPeriod,
+    Expense,
+    JournalEntry,
+    JournalLine,
+    LedgerConfiguration,
+    Payment,
+)
 
 
 @admin.register(Payment)
@@ -49,9 +57,6 @@ class ExpenseAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
-
-
-from .models import Account, AccountingPeriod, JournalEntry, JournalLine, LedgerConfiguration
 
 
 @admin.register(Account)

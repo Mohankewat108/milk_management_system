@@ -89,9 +89,7 @@ class PlatformMultiFarmTests(TestCase):
         self.assertEqual(membership.status, Membership.Status.INVITED)
         self.assertEqual(len(mail.outbox), 1)
 
-        invitation_path = urlparse(
-            re.search(r"http://testserver(\S+)", mail.outbox[0].body).group(0)
-        ).path
+        invitation_path = invitation_path_from_email(mail.outbox[0].body)
         self.client.logout()
         response = self.client.get(invitation_path)
         self.assertEqual(response.status_code, 200)
@@ -126,7 +124,7 @@ class PlatformMultiFarmTests(TestCase):
         )
         invitation = FarmOwnerInvitation.objects.get(organization__name="Existing Owner Dairy")
         body = mail.outbox[0].body
-        invitation_path = urlparse(re.search(r"http://testserver(\S+)", body).group(0)).path
+        invitation_path = invitation_path_from_email(body)
 
         self.client.logout()
         response = self.client.get(invitation_path)
@@ -152,9 +150,8 @@ class PlatformMultiFarmTests(TestCase):
             reverse("platform:organization_create"),
             self.farm_form_data("Private Invite Dairy", "new.invitee@example.test"),
         )
-        invitation = FarmOwnerInvitation.objects.get(organization__name="Private Invite Dairy")
         body = mail.outbox[0].body
-        invitation_path = urlparse(re.search(r"http://testserver(\S+)", body).group(0)).path
+        invitation_path = invitation_path_from_email(body)
         self.client.force_login(self.farm_owner)
         response = self.client.get(invitation_path)
         self.assertEqual(response.status_code, 403)
@@ -227,25 +224,20 @@ class PlatformMultiFarmTests(TestCase):
         )
         invitation = FarmOwnerInvitation.objects.get(organization__name="Expired Invite Dairy")
         body = mail.outbox[0].body
-        invitation_path = urlparse(re.search(r"http://testserver(\S+)", body).group(0)).path
+        invitation_path = invitation_path_from_email(body)
         invitation.expires_at = timezone.now() - timedelta(minutes=1)
         invitation.save(update_fields=["expires_at", "updated_at"])
         response = self.client.get(invitation_path)
         self.assertEqual(response.status_code, 410)
 
     def test_invitation_token_is_stored_as_a_hash_not_plaintext(self):
-        import re
-        from urllib.parse import urlparse
-
         self.client.force_login(self.platform_owner)
         self.client.post(
             reverse("platform:organization_create"),
             self.farm_form_data("Hashed Token Dairy", "hashed.owner@example.test"),
         )
         invitation = FarmOwnerInvitation.objects.get(organization__name="Hashed Token Dairy")
-        invitation_path = urlparse(
-            re.search(r"http://testserver(\S+)", mail.outbox[0].body).group(0)
-        ).path
+        invitation_path = invitation_path_from_email(mail.outbox[0].body)
         raw_token = invitation_path.rstrip("/").split("/")[-1]
         self.assertNotEqual(invitation.token_hash, raw_token)
         self.assertEqual(len(invitation.token_hash), 64)
@@ -257,9 +249,7 @@ class PlatformMultiFarmTests(TestCase):
             self.farm_form_data("Resend Dairy", "resend.owner@example.test"),
         )
         first_invitation = FarmOwnerInvitation.objects.get(organization__name="Resend Dairy")
-        first_path = urlparse(
-            re.search(r"http://testserver(\S+)", mail.outbox[0].body).group(0)
-        ).path
+        first_path = invitation_path_from_email(mail.outbox[0].body)
 
         response = self.client.post(
             reverse(
@@ -277,9 +267,7 @@ class PlatformMultiFarmTests(TestCase):
             .exclude(pk=first_invitation.pk)
             .get()
         )
-        second_path = urlparse(
-            re.search(r"http://testserver(\S+)", mail.outbox[1].body).group(0)
-        ).path
+        second_path = invitation_path_from_email(mail.outbox[1].body)
         self.assertEqual(self.client.get(first_path).status_code, 410)
         self.client.logout()
         self.assertEqual(self.client.get(second_path).status_code, 200)

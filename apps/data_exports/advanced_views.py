@@ -1,10 +1,12 @@
+from datetime import timedelta
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import Avg, Count, Sum
 from django.db.models.functions import TruncMonth
 from django.http import HttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -304,7 +306,8 @@ def import_sample(request, organization_slug, module):
     if module not in {"farmers", "customers"}:
         raise PermissionDenied
     response = HttpResponse(
-        "code,full_name,phone,email,address,branch_code\r\nF-1001,Example Farmer,9800000000,farmer@example.com,Parasi,MAIN\r\n",
+        "code,full_name,phone,email,address,branch_code\r\n"
+        "F-1001,Example Farmer,9800000000,farmer@example.com,Parasi,MAIN\r\n",
         content_type="text/csv; charset=utf-8",
     )
     response["Content-Disposition"] = 'attachment; filename="' + module + '-import-template.csv"'

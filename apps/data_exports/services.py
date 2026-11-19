@@ -419,7 +419,8 @@ def build_csv(module, queryset):
         count += 1
         if count > MAX_SYNC_EXPORT_ROWS:
             raise ValidationError(
-                "This export is larger than the safe instant-export limit. Background exports will be available in a later phase."
+                "This export is larger than the safe instant-export limit. "
+                "Background exports will be available in a later phase."
             )
         _accumulate_export_totals(module, row, totals)
         writer.writerow([_safe_cell(value) for value in row])

@@ -101,7 +101,10 @@ def process_import_batch(batch):
     if batch.uploaded_by.email:
         send_mail(
             f"DairyNexus import {batch.status}: {batch.get_module_display()}",
-            f"Imported: {batch.imported_rows}; failed rows: {batch.failed_rows}. Review Import Centre for row-level errors.",
+            (
+                f"Imported: {batch.imported_rows}; failed rows: {batch.failed_rows}. "
+                "Review Import Centre for row-level errors."
+            ),
             settings.DEFAULT_FROM_EMAIL,
             [batch.uploaded_by.email],
             fail_silently=True,
@@ -132,7 +135,8 @@ class Command(BaseCommand):
         )[:remaining]:
             process_import_batch(batch)
             self.stdout.write(
-                f"Import {batch.pk}: {batch.status} ({batch.imported_rows} imported, {batch.failed_rows} failed)"
+                f"Import {batch.pk}: {batch.status} "
+                f"({batch.imported_rows} imported, {batch.failed_rows} failed)"
             )
         for pending_notice in ExportJob.objects.filter(
             status__in=[ExportJob.Status.COMPLETED, ExportJob.Status.FAILED],
@@ -163,7 +167,7 @@ class Command(BaseCommand):
                 )
 
                 class Params:
-                    def get(self, key, default=""):
+                    def get(self, key, default="", schedule=schedule):
                         return schedule.filters.get(key, default)
 
                     def getlist(self, key):

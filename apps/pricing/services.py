@@ -17,7 +17,9 @@ def calculate_milk_rate(*, snf, fat, lactose, pricing):
         (
             value * coefficient
             for value, coefficient in zip(
-                values, (pricing.snf_rate, pricing.fat_rate, pricing.lactose_rate)
+                values,
+                (pricing.snf_rate, pricing.fat_rate, pricing.lactose_rate),
+                strict=True,
             )
         ),
         Decimal("0"),

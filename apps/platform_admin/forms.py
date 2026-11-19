@@ -11,7 +11,10 @@ class PlatformOrganizationCreateForm(forms.ModelForm):
     owner_last_name = forms.CharField(max_length=150, required=False, label="Owner last name")
     owner_email = forms.EmailField(
         label="Farm owner's email",
-        help_text="We will send a secure invitation to this address. The owner will set their own password.",
+        help_text=(
+            "We will send a secure invitation to this address. "
+            "The owner will set their own password."
+        ),
     )
 
     class Meta:
