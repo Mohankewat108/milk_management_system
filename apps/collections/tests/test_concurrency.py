@@ -83,9 +83,7 @@ class CollectionConcurrencyTests(TransactionTestCase):
             close_old_connections()
 
             try:
-                organization = Organization.objects.get(
-                    pk=organization_id
-                )
+                organization = Organization.objects.get(pk=organization_id)
                 branch = Branch.objects.get(pk=branch_id)
                 farmer = Farmer.objects.get(pk=farmer_id)
                 actor = User.objects.get(pk=user_id)
@@ -97,9 +95,7 @@ class CollectionConcurrencyTests(TransactionTestCase):
                     organization=organization,
                     branch=branch,
                     actor=actor,
-                    collected_at=datetime(
-                        2026, 11, 19, 6, tzinfo=UTC
-                    ),
+                    collected_at=datetime(2026, 11, 19, 6, tzinfo=UTC),
                     quantity_litres="2.500",
                     snf="8.0",
                     fat="4.0",
@@ -114,9 +110,7 @@ class CollectionConcurrencyTests(TransactionTestCase):
                 close_old_connections()
 
         with ThreadPoolExecutor(max_workers=2) as executor:
-            results = list(
-                executor.map(lambda _: submit(), range(2))
-            )
+            results = list(executor.map(lambda _: submit(), range(2)))
 
         # Both requests must return the same collection record.
         self.assertEqual(results[0], results[1])
