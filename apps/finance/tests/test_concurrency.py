@@ -13,6 +13,7 @@ from apps.inventory.models import InventoryItem
 from apps.inventory.services import move_stock
 from apps.organizations.models import Branch, Membership, Organization
 from apps.parties.models import Customer
+
 User = get_user_model()
 
 
