@@ -135,3 +135,55 @@ class CollectionServiceTests(TestCase):
         self.assertEqual(entry.quantity_litres, Decimal("3.000"))
         self.assertEqual(entry.total_amount, Decimal("217.50"))
         self.assertEqual(AuditEvent.objects.filter(action="milk_collection.updated", target_id=str(entry.pk)).count(), 1)
+
+    def test_collection_creation_rejects_suspended_or_inaccessible_context(self):
+        from django.utils import timezone
+
+        membership = Membership.objects.get(user=self.user, organization=self.org)
+        other_org = Organization.objects.create(
+            owner=self.user, name="Unrelated Dairy", slug="unrelated-dairy", is_demo=True
+        )
+        outsider = User.objects.create_user(
+            username="other-tenant-user", email="other-tenant@example.test",
+            password="LongDemoPass!123",
+        )
+        Membership.objects.create(
+            user=outsider, organization=other_org, role=Membership.Role.OWNER
+        )
+
+        for scenario in ("foreign_tenant_membership", "suspended_membership",
+                         "suspended_organization", "inactive_branch", "soft_deleted_branch"):
+            with self.subTest(scenario=scenario):
+                self.org.status = Organization.Status.ACTIVE
+                self.org.save(update_fields=["status", "updated_at"])
+                self.branch.is_active = True
+                self.branch.deleted_at = None
+                self.branch.save(update_fields=["is_active", "deleted_at", "updated_at"])
+                membership.status = Membership.Status.ACTIVE
+                membership.save(update_fields=["status", "updated_at"])
+                actor = self.user
+
+                if scenario == "foreign_tenant_membership":
+                    actor = outsider
+                elif scenario == "suspended_membership":
+                    membership.status = Membership.Status.SUSPENDED
+                    membership.save(update_fields=["status", "updated_at"])
+                elif scenario == "suspended_organization":
+                    self.org.status = Organization.Status.SUSPENDED
+                    self.org.save(update_fields=["status", "updated_at"])
+                elif scenario == "inactive_branch":
+                    self.branch.is_active = False
+                    self.branch.save(update_fields=["is_active", "updated_at"])
+                elif scenario == "soft_deleted_branch":
+                    self.branch.deleted_at = timezone.now()
+                    self.branch.save(update_fields=["deleted_at", "updated_at"])
+
+                with self.assertRaises(PermissionDenied):
+                    create_collection(
+                        organization=self.org, branch=self.branch, actor=actor,
+                        collected_at=datetime(2026, 11, 18, 6, 0, tzinfo=dt_timezone.utc),
+                        quantity_litres="1.000", snf="8.0", fat="4.0", lactose="4.5",
+                        farmer=self.farmer,
+                    )
+                self.assertEqual(MilkCollection.objects.count(), 0)
+
