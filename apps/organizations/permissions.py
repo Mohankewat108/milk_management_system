@@ -1,4 +1,4 @@
-from .models import Membership
+from .models import Membership, Organization
 
 
 ORGANISATION_WIDE_ROLES = {
@@ -23,8 +23,16 @@ def can_access_branch(membership, branch):
 
 
 def require_actor_branch_access(*, actor, organization, branch):
-    """Reject service-layer writes unless the actor has active access to this branch."""
+    """Require active tenant membership and access to an active tenant branch."""
     from django.core.exceptions import PermissionDenied
+
+    if (
+        organization.status not in {Organization.Status.TRIAL, Organization.Status.ACTIVE}
+        or branch.organization_id != organization.pk
+        or not branch.is_active
+        or getattr(branch, "deleted_at", None) is not None
+    ):
+        raise PermissionDenied("You are not authorised to access this branch.")
 
     membership = Membership.objects.filter(
         user=actor,

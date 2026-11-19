@@ -41,7 +41,7 @@ def trash_list(request, organization_slug):
 
 
 @login_required
-@organization_access(*MANAGERS)
+@organization_access()
 @require_POST
 def trash_delete(request, organization_slug, model_key, object_id):
     model = get_registered_model(model_key)

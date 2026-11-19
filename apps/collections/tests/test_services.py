@@ -2,12 +2,12 @@ from datetime import datetime, timezone as dt_timezone
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.test import TestCase
 
 from apps.collections.models import MilkCollection
 from apps.collections.services import create_collection
-from apps.organizations.models import Branch, Organization
+from apps.organizations.models import Branch, Membership, Organization
 from apps.parties.models import Farmer
 from apps.pricing.models import PricingConfiguration
 
@@ -25,6 +25,9 @@ class CollectionServiceTests(TestCase):
         self.branch = Branch.objects.create(
             organization=self.org, code="MAIN", name="Main"
         )
+        Membership.objects.create(
+            user=self.user, organization=self.org, role=Membership.Role.OWNER
+        )
         self.farmer = Farmer.objects.create(
             organization=self.org, branch=self.branch, code="F001", full_name="Test Farmer"
         )
@@ -34,6 +37,19 @@ class CollectionServiceTests(TestCase):
             lactose_rate=Decimal("1.0000"), effective_from=datetime(2026, 1, 1).date(),
             is_approved=True, created_by=self.user,
         )
+
+    def test_collection_creation_requires_active_tenant_membership(self):
+        outsider = User.objects.create_user(
+            username="outsider", email="outsider@example.test", password="LongDemoPass!123"
+        )
+        with self.assertRaises(PermissionDenied):
+            create_collection(
+                organization=self.org, branch=self.branch, actor=outsider,
+                collected_at=datetime(2026, 11, 18, 6, 0, tzinfo=dt_timezone.utc),
+                quantity_litres="1.000", snf="8.0", fat="4.0", lactose="4.5",
+                farmer=self.farmer,
+            )
+        self.assertEqual(MilkCollection.objects.count(), 0)
 
     def test_collection_uses_pricing_snapshot_and_decimal_total(self):
         entry = create_collection(
@@ -102,8 +118,6 @@ class CollectionServiceTests(TestCase):
             quantity_litres="2.000", snf="8.0", fat="4.0", lactose="4.5",
             farmer=self.farmer,
         )
-        from apps.organizations.models import Membership
-        Membership.objects.create(user=self.user, organization=self.org, role=Membership.Role.OWNER)
         self.client.force_login(self.user)
         response = self.client.get(reverse("collections:edit", kwargs={
             "organization_slug": self.org.slug, "collection_id": entry.pk,
