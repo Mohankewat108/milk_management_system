@@ -91,9 +91,7 @@ class DairyManagerPermissionTests(TestCase):
         other = Organization.objects.create(
             owner=other_owner, name="Other Dairy", slug="other-manager-dairy"
         )
-        Membership.objects.create(
-            user=other_owner, organization=other, role=Membership.Role.OWNER
-        )
+        Membership.objects.create(user=other_owner, organization=other, role=Membership.Role.OWNER)
         self.grant("dashboard.view")
         self.client.force_login(self.manager_user)
 
