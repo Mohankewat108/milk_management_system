@@ -84,9 +84,11 @@ class FarmerInvitationTests(TestCase):
             kwargs={"invitation_id": invitation.pk, "token": token},
         )
 
+        # Invitation links are public entry points. Simulate the farmer opening
+        # the link in a clean browser session, not the dairy owner's session.
+        self.client.logout()
         response = self.client.get(invitation_url)
         self.assertEqual(response.status_code, 200)
-        self.client.logout()
         response = self.client.post(
             invitation_url,
             {
