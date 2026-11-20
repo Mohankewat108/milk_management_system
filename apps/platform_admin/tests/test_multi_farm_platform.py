@@ -313,7 +313,6 @@ class PlatformMultiFarmTests(TestCase):
         )
         self.assertNotIn("http://testserver/", mail.outbox[0].body)
 
-
     def test_platform_dashboard_renders_all_returned_farms_and_controls(self):
         organizations = [
             Organization.objects.create(
