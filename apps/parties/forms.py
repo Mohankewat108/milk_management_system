@@ -1,8 +1,22 @@
 from django import forms
+from django.contrib.auth import get_user_model
+from django.db.models import Q
 
 from apps.organizations.models import Branch
 
 from .models import Customer, Farmer
+
+User = get_user_model()
+
+
+def _available_portal_users(instance):
+    users = User.objects.filter(is_active=True, is_superuser=False).filter(
+        customer_profile__isnull=True,
+        farmer_profile__isnull=True,
+    )
+    if instance.pk and instance.user_id:
+        users = User.objects.filter(Q(pk=instance.user_id) | Q(pk__in=users.values("pk")))
+    return users.order_by("email")
 
 
 class CustomerForm(forms.ModelForm):
@@ -18,6 +32,7 @@ class CustomerForm(forms.ModelForm):
             "city",
             "village",
             "ward",
+            "user",
         )
 
     def __init__(self, *args, organization, membership=None, **kwargs):
@@ -29,6 +44,12 @@ class CustomerForm(forms.ModelForm):
         self.fields["branch"].required = bool(
             membership and membership.role not in {"owner", "admin"}
         )
+        self.fields["user"].required = False
+        self.fields["user"].label = "Portal login account"
+        self.fields["user"].help_text = (
+            "Optional: link an existing account so this customer can sign in to the customer portal."
+        )
+        self.fields["user"].queryset = _available_portal_users(self.instance)
 
     def clean_code(self):
         code = self.cleaned_data["code"].strip()
@@ -53,6 +74,7 @@ class FarmerForm(forms.ModelForm):
             "bank_account_name",
             "bank_account_number",
             "bank_name",
+            "user",
         )
 
     def __init__(self, *args, organization, membership=None, **kwargs):
@@ -64,6 +86,12 @@ class FarmerForm(forms.ModelForm):
         self.fields["branch"].required = bool(
             membership and membership.role not in {"owner", "admin"}
         )
+        self.fields["user"].required = False
+        self.fields["user"].label = "Farmer login account"
+        self.fields["user"].help_text = (
+            "Optional: link an existing account to enable the farmer self-service portal."
+        )
+        self.fields["user"].queryset = _available_portal_users(self.instance)
 
     def clean_code(self):
         code = self.cleaned_data["code"].strip()
