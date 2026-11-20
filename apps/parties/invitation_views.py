@@ -216,9 +216,11 @@ def accept_invitation(request, invitation_id, token):
                 {"invitation": invitation, "form": form, "requires_password": True},
             )
         with transaction.atomic():
-            locked = FarmerInvitation.objects.select_for_update().select_related(
-                "organization", "farmer"
-            ).get(pk=invitation.pk)
+            locked = (
+                FarmerInvitation.objects.select_for_update()
+                .select_related("organization", "farmer")
+                .get(pk=invitation.pk)
+            )
             if not valid_invitation(locked, token):
                 return render(
                     request,
