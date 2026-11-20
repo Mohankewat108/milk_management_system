@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Edit staff access · {{ organization.name }}{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div><div class="eyebrow">{{ organization.name }}</div><h1>Edit staff access</h1><p class="muted">Change the staff member's role and permitted branches. Changes take effect immediately.</p></div>
+  <a class="button button-secondary" href="{% url 'business:staff' organization.slug %}">Back to staff</a>
+</div>
+<section class="panel">
+  <h2>{{ membership.user.get_full_name|default:membership.user.email }}</h2>
+  <p class="muted">{{ membership.user.email }}</p>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    {% for field in form %}
+      <div class="form-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<p class="small muted">{{ field.help_text }}</p>{% endif %}{{ field.errors }}</div>
+    {% endfor %}
+    <button class="button" type="submit">Save staff access</button>
+  </form>
+</section>
+{% endblock %}
