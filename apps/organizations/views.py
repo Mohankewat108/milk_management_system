@@ -88,6 +88,23 @@ def dashboard(request, organization_slug):
             Membership.Role.BRANCH_MANAGER,
             Membership.Role.COLLECTION_OPERATOR,
         },
+        "can_view_parties": membership.role
+        in {
+            Membership.Role.OWNER,
+            Membership.Role.ADMIN,
+            Membership.Role.BRANCH_MANAGER,
+            Membership.Role.SUPPORT,
+        },
+        "can_view_collections": membership.role
+        in {
+            Membership.Role.OWNER,
+            Membership.Role.ADMIN,
+            Membership.Role.BRANCH_MANAGER,
+            Membership.Role.COLLECTION_OPERATOR,
+            Membership.Role.QUALITY_OFFICER,
+        },
+        "can_approve_collections": membership.role
+        in {Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.QUALITY_OFFICER},
         "can_manage_staff": membership.role in {Membership.Role.OWNER, Membership.Role.ADMIN},
         "can_manage_finance": membership.role
         in {
