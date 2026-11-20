@@ -4,8 +4,8 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import SetPasswordForm
-from django.core.exceptions import ValidationError
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
@@ -129,7 +129,11 @@ def revoke_invitation(request, organization_slug, farmer_id):
         messages.error(request, "; ".join(exc.messages))
     else:
         messages.success(request, "The farmer invitation was revoked.")
-    return redirect("parties:farmer_detail", organization_slug=organization_slug, farmer_id=farmer.pk)
+    return redirect(
+        "parties:farmer_detail",
+        organization_slug=organization_slug,
+        farmer_id=farmer.pk,
+    )
 
 
 def _username_for_email(email):
