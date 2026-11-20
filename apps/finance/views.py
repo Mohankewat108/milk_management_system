@@ -16,7 +16,7 @@ from .services import approve_expense, complete_payment, record_expense, record_
 
 
 @login_required
-@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.ACCOUNTANT)
+@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.DAIRY_MANAGER, Membership.Role.ACCOUNTANT, permission="finance.view")
 def payment_list(request, organization_slug):
     records = (
         Payment.objects.filter(organization=request.organization, deleted_at__isnull=True)
@@ -39,7 +39,7 @@ def payment_list(request, organization_slug):
 
 
 @login_required
-@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.ACCOUNTANT)
+@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.DAIRY_MANAGER, Membership.Role.ACCOUNTANT, permission="finance.manage")
 @require_http_methods(["GET", "POST"])
 def payment_create(request, organization_slug):
     organization = request.organization
