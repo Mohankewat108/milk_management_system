@@ -17,11 +17,11 @@ from .services import approve_expense, complete_payment, record_expense, record_
 
 @login_required
 @organization_access(
-    Membership.Role.OWNER
-    Membership.Role.ADMIN
-    Membership.Role.DAIRY_MANAGER
-    Membership.Role.ACCOUNTANT
-    permission="finance.view"
+    Membership.Role.OWNER,
+    Membership.Role.ADMIN,
+    Membership.Role.DAIRY_MANAGER,
+    Membership.Role.ACCOUNTANT,
+    permission="finance.view",
 )
 def payment_list(request, organization_slug):
     records = (
@@ -46,11 +46,11 @@ def payment_list(request, organization_slug):
 
 @login_required
 @organization_access(
-    Membership.Role.OWNER
-    Membership.Role.ADMIN
-    Membership.Role.DAIRY_MANAGER
-    Membership.Role.ACCOUNTANT
-    permission="finance.manage"
+    Membership.Role.OWNER,
+    Membership.Role.ADMIN,
+    Membership.Role.DAIRY_MANAGER,
+    Membership.Role.ACCOUNTANT,
+    permission="finance.manage",
 )
 @require_http_methods(["GET", "POST"])
 def payment_create(request, organization_slug):
@@ -94,10 +94,10 @@ def payment_create(request, organization_slug):
 
 @login_required
 @organization_access(
-    Membership.Role.OWNER
-    Membership.Role.DAIRY_MANAGER
-    Membership.Role.ACCOUNTANT
-    permission="finance.manage"
+    Membership.Role.OWNER,
+    Membership.Role.DAIRY_MANAGER,
+    Membership.Role.ACCOUNTANT,
+    permission="finance.manage",
 )
 @require_POST
 def payment_complete(request, organization_slug, payment_id):
@@ -126,11 +126,11 @@ def payment_complete(request, organization_slug, payment_id):
 
 @login_required
 @organization_access(
-    Membership.Role.OWNER
-    Membership.Role.ADMIN
-    Membership.Role.DAIRY_MANAGER
-    Membership.Role.ACCOUNTANT
-    permission="finance.view"
+    Membership.Role.OWNER,
+    Membership.Role.ADMIN,
+    Membership.Role.DAIRY_MANAGER,
+    Membership.Role.ACCOUNTANT,
+    permission="finance.view",
 )
 def expense_list(request, organization_slug):
     records = (
@@ -155,11 +155,11 @@ def expense_list(request, organization_slug):
 
 @login_required
 @organization_access(
-    Membership.Role.OWNER
-    Membership.Role.ADMIN
-    Membership.Role.DAIRY_MANAGER
-    Membership.Role.ACCOUNTANT
-    permission="finance.manage"
+    Membership.Role.OWNER,
+    Membership.Role.ADMIN,
+    Membership.Role.DAIRY_MANAGER,
+    Membership.Role.ACCOUNTANT,
+    permission="finance.manage",
 )
 @require_http_methods(["GET", "POST"])
 def expense_create(request, organization_slug):
@@ -201,10 +201,10 @@ def expense_create(request, organization_slug):
 
 @login_required
 @organization_access(
-    Membership.Role.OWNER
-    Membership.Role.DAIRY_MANAGER
-    Membership.Role.ACCOUNTANT
-    permission="finance.manage"
+    Membership.Role.OWNER,
+    Membership.Role.DAIRY_MANAGER,
+    Membership.Role.ACCOUNTANT,
+    permission="finance.manage",
 )
 @require_POST
 def expense_approve(request, organization_slug, expense_id):
@@ -233,11 +233,11 @@ def expense_approve(request, organization_slug, expense_id):
 
 @login_required
 @organization_access(
-    Membership.Role.OWNER
-    Membership.Role.ADMIN
-    Membership.Role.DAIRY_MANAGER
-    Membership.Role.ACCOUNTANT
-    permission="finance.view"
+    Membership.Role.OWNER,
+    Membership.Role.ADMIN,
+    Membership.Role.DAIRY_MANAGER,
+    Membership.Role.ACCOUNTANT,
+    permission="finance.view",
 )
 @require_http_methods(["GET", "POST"])
 def payment_edit(request, organization_slug, payment_id):
@@ -284,11 +284,11 @@ def payment_edit(request, organization_slug, payment_id):
 
 @login_required
 @organization_access(
-    Membership.Role.OWNER
-    Membership.Role.ADMIN
-    Membership.Role.DAIRY_MANAGER
-    Membership.Role.ACCOUNTANT
-    permission="finance.view"
+    Membership.Role.OWNER,
+    Membership.Role.ADMIN,
+    Membership.Role.DAIRY_MANAGER,
+    Membership.Role.ACCOUNTANT,
+    permission="finance.view",
 )
 @require_http_methods(["GET", "POST"])
 def expense_edit(request, organization_slug, expense_id):

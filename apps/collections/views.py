@@ -134,11 +134,11 @@ def collection_create(request, organization_slug):
 
 @login_required
 @organization_access(
-    Membership.Role.OWNER
-    Membership.Role.ADMIN
-    Membership.Role.DAIRY_MANAGER
-    Membership.Role.QUALITY_OFFICER
-    permission="collections.approve"
+    Membership.Role.OWNER,
+    Membership.Role.ADMIN,
+    Membership.Role.DAIRY_MANAGER,
+    Membership.Role.QUALITY_OFFICER,
+    permission="collections.approve",
 )
 @require_POST
 def approve_collection(request, organization_slug, collection_id):
@@ -273,8 +273,8 @@ def collection_edit(request, organization_slug, collection_id):
 
 @login_required
 @organization_access(
-    Membership.Role.OWNER
-    Membership.Role.ADMIN
+    Membership.Role.OWNER,
+    Membership.Role.ADMIN,
 )
 @require_POST
 def collection_reverse(request, organization_slug, collection_id):

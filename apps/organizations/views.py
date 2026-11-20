@@ -157,8 +157,8 @@ def dashboard(request, organization_slug):
 
 @login_required
 @organization_access(
-    Membership.Role.OWNER
-    Membership.Role.ADMIN
+    Membership.Role.OWNER,
+    Membership.Role.ADMIN,
 )
 @require_http_methods(["GET", "POST"])
 def branches(request, organization_slug):
@@ -190,8 +190,8 @@ def branches(request, organization_slug):
 
 @login_required
 @organization_access(
-    Membership.Role.OWNER
-    Membership.Role.ADMIN
+    Membership.Role.OWNER,
+    Membership.Role.ADMIN,
 )
 @require_http_methods(["GET", "POST"])
 def branch_edit(request, organization_slug, branch_id):
@@ -228,8 +228,8 @@ def branch_edit(request, organization_slug, branch_id):
 
 @login_required
 @organization_access(
-    Membership.Role.OWNER
-    Membership.Role.ADMIN
+    Membership.Role.OWNER,
+    Membership.Role.ADMIN,
 )
 @require_http_methods(["GET", "POST"])
 def organization_edit(request, organization_slug):
