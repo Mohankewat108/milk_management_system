@@ -32,7 +32,11 @@ def organization_access(*allowed_roles, permission=None):
                 raise Http404
             if allowed_roles and membership.role not in allowed_roles:
                 raise Http404
-            if permission and not has_organization_permission(membership, permission):
+            if (
+                membership.role == Membership.Role.DAIRY_MANAGER
+                and permission
+                and not has_organization_permission(membership, permission)
+            ):
                 raise Http404
             request.membership = membership
             request.organization = membership.organization
