@@ -1,13 +1,11 @@
 import re
 from datetime import timedelta
-from urllib.parse import urlparse
 
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.http import url_has_allowed_host_and_scheme
 
 from apps.audit.models import AuditEvent
 from apps.organizations.models import Membership, Organization
