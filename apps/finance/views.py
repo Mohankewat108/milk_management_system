@@ -126,7 +126,7 @@ def expense_list(request, organization_slug):
 
 
 @login_required
-@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.DAIRY_MANAGER, Membership.Role.ACCOUNTANT, permission="finance.view")
+@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.DAIRY_MANAGER, Membership.Role.ACCOUNTANT, permission="finance.manage")
 @require_http_methods(["GET", "POST"])
 def expense_create(request, organization_slug):
     organization = request.organization
