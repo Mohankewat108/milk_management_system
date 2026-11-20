@@ -23,9 +23,11 @@ from .services import create_collection
 @organization_access(
     Membership.Role.OWNER,
     Membership.Role.ADMIN,
+    Membership.Role.DAIRY_MANAGER,
     Membership.Role.BRANCH_MANAGER,
     Membership.Role.COLLECTION_OPERATOR,
     Membership.Role.QUALITY_OFFICER,
+    permission="collections.view",
 )
 def collection_list(request, organization_slug):
     organization = request.organization
@@ -81,8 +83,10 @@ def collection_list(request, organization_slug):
 @organization_access(
     Membership.Role.OWNER,
     Membership.Role.ADMIN,
+    Membership.Role.DAIRY_MANAGER,
     Membership.Role.BRANCH_MANAGER,
     Membership.Role.COLLECTION_OPERATOR,
+    permission="collections.create",
 )
 @require_http_methods(["GET", "POST"])
 def collection_create(request, organization_slug):
@@ -129,7 +133,7 @@ def collection_create(request, organization_slug):
 
 
 @login_required
-@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.QUALITY_OFFICER)
+@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.DAIRY_MANAGER, Membership.Role.QUALITY_OFFICER, permission="collections.approve")
 @require_POST
 def approve_collection(request, organization_slug, collection_id):
     try:
@@ -154,9 +158,11 @@ def approve_collection(request, organization_slug, collection_id):
 @organization_access(
     Membership.Role.OWNER,
     Membership.Role.ADMIN,
+    Membership.Role.DAIRY_MANAGER,
     Membership.Role.BRANCH_MANAGER,
     Membership.Role.COLLECTION_OPERATOR,
     Membership.Role.QUALITY_OFFICER,
+    permission="collections.create",
 )
 @require_http_methods(["GET", "POST"])
 def collection_edit(request, organization_slug, collection_id):
