@@ -483,8 +483,10 @@ def farmer_create(request, organization_slug):
                 except Exception:
                     messages.warning(
                         request,
-                        "Farmer created successfully, but the invitation email could not be delivered. "
-                        "Open the farmer profile to review the invitation and retry.",
+                        (
+                            "Farmer created successfully, but the invitation email could not be "
+                            "delivered. Open the farmer profile to review the invitation and retry."
+                        ),
                     )
                 else:
                     messages.success(
