@@ -76,6 +76,7 @@ class Membership(UUIDModel, TimeStampedModel):
     class Role(models.TextChoices):
         OWNER = "owner", "Dairy owner"
         ADMIN = "admin", "Organisation admin"
+        DAIRY_MANAGER = "dairy_manager", "Dairy manager"
         BRANCH_MANAGER = "branch_manager", "Branch manager"
         COLLECTION_OPERATOR = "collection_operator", "Milk collection operator"
         QUALITY_OFFICER = "quality_officer", "Quality officer"
@@ -98,6 +99,11 @@ class Membership(UUIDModel, TimeStampedModel):
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACTIVE)
     invited_email = models.EmailField(blank=True)
     joined_at = models.DateTimeField(null=True, blank=True)
+    permissions = models.ManyToManyField(
+        "OrganizationPermission",
+        blank=True,
+        related_name="memberships",
+    )
 
     class Meta:
         constraints = [
@@ -142,6 +148,11 @@ class StaffInvitation(UUIDModel, TimeStampedModel):
     last_name = models.CharField(max_length=150, blank=True)
     role = models.CharField(max_length=32, choices=Membership.Role.choices)
     branches = models.ManyToManyField(Branch, blank=True, related_name="staff_invitations")
+    permissions = models.ManyToManyField(
+        "OrganizationPermission",
+        blank=True,
+        related_name="staff_invitations",
+    )
     token_hash = models.CharField(max_length=64, unique=True)
     expires_at = models.DateTimeField(db_index=True)
     accepted_at = models.DateTimeField(null=True, blank=True)
@@ -160,3 +171,33 @@ class StaffInvitation(UUIDModel, TimeStampedModel):
             and self.revoked_at is None
             and self.expires_at > timezone.now()
         )
+
+
+class OrganizationPermission(UUIDModel, TimeStampedModel):
+    """A tenant-scoped capability that an owner explicitly grants to a membership."""
+
+    class Key(models.TextChoices):
+        DASHBOARD_VIEW = "dashboard.view", "View dashboard"
+        COLLECTIONS_VIEW = "collections.view", "View milk collections"
+        COLLECTIONS_CREATE = "collections.create", "Record milk collections"
+        COLLECTIONS_APPROVE = "collections.approve", "Approve milk collections"
+        PARTIES_VIEW = "parties.view", "View farmers and customers"
+        PARTIES_MANAGE = "parties.manage", "Manage farmers and customers"
+        FINANCE_VIEW = "finance.view", "View financial records"
+        FINANCE_MANAGE = "finance.manage", "Manage payments and accounts"
+        INVENTORY_VIEW = "inventory.view", "View inventory"
+        INVENTORY_MANAGE = "inventory.manage", "Manage inventory"
+        STAFF_MANAGE = "staff.manage", "Manage organisation staff"
+        REPORTS_VIEW = "reports.view", "View reports"
+        EXPORTS_CREATE = "exports.create", "Create data exports"
+        SETTINGS_MANAGE = "settings.manage", "Manage organisation settings"
+
+    key = models.CharField(max_length=64, choices=Key.choices, unique=True)
+    name = models.CharField(max_length=100)
+    description = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ["key"]
+
+    def __str__(self):
+        return self.name

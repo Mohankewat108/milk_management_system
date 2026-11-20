@@ -23,9 +23,11 @@ from .services import create_collection
 @organization_access(
     Membership.Role.OWNER,
     Membership.Role.ADMIN,
+    Membership.Role.DAIRY_MANAGER,
     Membership.Role.BRANCH_MANAGER,
     Membership.Role.COLLECTION_OPERATOR,
     Membership.Role.QUALITY_OFFICER,
+    permission="collections.view",
 )
 def collection_list(request, organization_slug):
     organization = request.organization
@@ -81,8 +83,10 @@ def collection_list(request, organization_slug):
 @organization_access(
     Membership.Role.OWNER,
     Membership.Role.ADMIN,
+    Membership.Role.DAIRY_MANAGER,
     Membership.Role.BRANCH_MANAGER,
     Membership.Role.COLLECTION_OPERATOR,
+    permission="collections.create",
 )
 @require_http_methods(["GET", "POST"])
 def collection_create(request, organization_slug):
@@ -129,9 +133,20 @@ def collection_create(request, organization_slug):
 
 
 @login_required
-@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.QUALITY_OFFICER)
+@organization_access(
+    Membership.Role.OWNER,
+    Membership.Role.ADMIN,
+    Membership.Role.DAIRY_MANAGER,
+    Membership.Role.QUALITY_OFFICER,
+    permission="collections.approve",
+)
 @require_POST
 def approve_collection(request, organization_slug, collection_id):
+    branch_ids = accessible_branch_ids(request.membership)
+    scoped = MilkCollection.objects.filter(organization=request.organization)
+    if branch_ids is not None:
+        scoped = scoped.filter(branch_id__in=branch_ids)
+    get_object_or_404(scoped, pk=collection_id)
     try:
         entry = approve_collection_service(
             collection_id=collection_id, organization=request.organization, actor=request.user
@@ -154,9 +169,11 @@ def approve_collection(request, organization_slug, collection_id):
 @organization_access(
     Membership.Role.OWNER,
     Membership.Role.ADMIN,
+    Membership.Role.DAIRY_MANAGER,
     Membership.Role.BRANCH_MANAGER,
     Membership.Role.COLLECTION_OPERATOR,
     Membership.Role.QUALITY_OFFICER,
+    permission="collections.create",
 )
 @require_http_methods(["GET", "POST"])
 def collection_edit(request, organization_slug, collection_id):
@@ -255,7 +272,10 @@ def collection_edit(request, organization_slug, collection_id):
 
 
 @login_required
-@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN)
+@organization_access(
+    Membership.Role.OWNER,
+    Membership.Role.ADMIN,
+)
 @require_POST
 def collection_reverse(request, organization_slug, collection_id):
     reason = request.POST.get("reason", "").strip()

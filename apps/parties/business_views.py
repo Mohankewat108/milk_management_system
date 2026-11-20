@@ -25,6 +25,7 @@ OWNER_ROLES = (Membership.Role.OWNER, Membership.Role.ADMIN)
 PARTY_VIEW_ROLES = (
     Membership.Role.OWNER,
     Membership.Role.ADMIN,
+    Membership.Role.DAIRY_MANAGER,
     Membership.Role.BRANCH_MANAGER,
     Membership.Role.SUPPORT,
 )
@@ -174,7 +175,10 @@ def _party_profile_context(*, party, kind, request):
 
 
 @login_required
-@organization_access(*PARTY_VIEW_ROLES)
+@organization_access(
+    *PARTY_VIEW_ROLES,
+    permission="parties.view",
+)
 def customer_list(request, organization_slug):
     org = request.organization
     records = (
@@ -242,7 +246,10 @@ def customer_list(request, organization_slug):
 
 
 @login_required
-@organization_access(*PARTY_VIEW_ROLES)
+@organization_access(
+    *PARTY_VIEW_ROLES,
+    permission="parties.view",
+)
 def customer_detail(request, organization_slug, customer_id):
     party = get_object_or_404(
         _party_scope(
@@ -263,7 +270,10 @@ def customer_detail(request, organization_slug, customer_id):
 
 
 @login_required
-@organization_access(*PARTY_VIEW_ROLES)
+@organization_access(
+    *PARTY_VIEW_ROLES,
+    permission="parties.view",
+)
 def farmer_list(request, organization_slug):
     org = request.organization
     records = (
@@ -333,7 +343,10 @@ def farmer_list(request, organization_slug):
 
 
 @login_required
-@organization_access(*PARTY_VIEW_ROLES)
+@organization_access(
+    *PARTY_VIEW_ROLES,
+    permission="parties.view",
+)
 def farmer_detail(request, organization_slug, farmer_id):
     party = get_object_or_404(
         _party_scope(
@@ -354,7 +367,13 @@ def farmer_detail(request, organization_slug, farmer_id):
 
 
 @login_required
-@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.BRANCH_MANAGER)
+@organization_access(
+    Membership.Role.OWNER,
+    Membership.Role.ADMIN,
+    Membership.Role.DAIRY_MANAGER,
+    Membership.Role.BRANCH_MANAGER,
+    permission="parties.manage",
+)
 @require_http_methods(["GET", "POST"])
 def customer_create(request, organization_slug):
     org = request.organization
@@ -393,7 +412,11 @@ def farmer_list_placeholder(request, organization_slug):
 
 
 @login_required
-@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.BRANCH_MANAGER)
+@organization_access(
+    Membership.Role.OWNER,
+    Membership.Role.ADMIN,
+    Membership.Role.BRANCH_MANAGER,
+)
 @require_http_methods(["GET", "POST"])
 def farmer_create(request, organization_slug):
     org = request.organization

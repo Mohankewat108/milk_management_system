@@ -7,10 +7,24 @@ ORGANISATION_WIDE_ROLES = {
 
 
 def accessible_branch_ids(membership):
-    """Return restricted branch IDs; organisation-wide roles get None."""
+    """Return restricted branch IDs; only owner/admin have organisation-wide scope."""
     if membership.role in ORGANISATION_WIDE_ROLES:
         return None
     return list(membership.branch_assignments.values_list("branch_id", flat=True))
+
+
+def has_organization_permission(membership, permission):
+    """Check a capability; write grants imply the matching read capability."""
+    if membership.role in ORGANISATION_WIDE_ROLES:
+        return True
+    implied = {
+        "collections.view": {"collections.create", "collections.approve"},
+        "parties.view": {"parties.manage"},
+        "finance.view": {"finance.manage"},
+        "inventory.view": {"inventory.manage"},
+    }
+    granted_keys = {permission, *implied.get(permission, set())}
+    return membership.permissions.filter(key__in=granted_keys).exists()
 
 
 def can_access_branch(membership, branch):
