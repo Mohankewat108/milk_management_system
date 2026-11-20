@@ -139,3 +139,29 @@ body.nav-open{overflow:hidden}
   .site-header .brand{overflow:hidden}
   .top-actions .language-form{display:block}
 }
+
+
+/* Workspace sidebar: compact, consistently themed navigation. */
+.workspace-shell .app-sidebar {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
+}
+.workspace-shell .sidebar-nav { gap: .12rem; }
+.workspace-shell .sidebar-nav a {
+  min-height: 38px;
+  padding: .48rem .7rem;
+  color: var(--color-text-secondary);
+}
+.workspace-shell .sidebar-nav a:hover,
+.workspace-shell .sidebar-nav a:focus-visible,
+.workspace-shell .sidebar-nav a[aria-current="page"],
+.workspace-shell .sidebar-nav a.active {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+}
+.workspace-shell .sidebar-title { margin: .8rem .7rem .35rem; }
+.workspace-shell .sidebar-footer {
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
+}
