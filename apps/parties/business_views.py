@@ -25,6 +25,7 @@ OWNER_ROLES = (Membership.Role.OWNER, Membership.Role.ADMIN)
 PARTY_VIEW_ROLES = (
     Membership.Role.OWNER,
     Membership.Role.ADMIN,
+    Membership.Role.DAIRY_MANAGER,
     Membership.Role.BRANCH_MANAGER,
     Membership.Role.SUPPORT,
 )
