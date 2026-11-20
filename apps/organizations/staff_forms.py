@@ -43,10 +43,7 @@ class StaffMembershipForm(forms.Form):
         cleaned = super().clean()
         if not cleaned.get("branches"):
             self.add_error("branches", "Assign at least one active branch to this staff role.")
-        if (
-            cleaned.get("role") == Membership.Role.DAIRY_MANAGER
-            and not cleaned.get("permissions")
-        ):
+        if cleaned.get("role") == Membership.Role.DAIRY_MANAGER and not cleaned.get("permissions"):
             self.add_error("permissions", "Select at least one permission for the dairy manager.")
         return cleaned
 
@@ -75,9 +72,6 @@ class StaffAccessUpdateForm(forms.Form):
         cleaned = super().clean()
         if not cleaned.get("branches"):
             self.add_error("branches", "Assign at least one active branch to this staff member.")
-        if (
-            cleaned.get("role") == Membership.Role.DAIRY_MANAGER
-            and not cleaned.get("permissions")
-        ):
+        if cleaned.get("role") == Membership.Role.DAIRY_MANAGER and not cleaned.get("permissions"):
             self.add_error("permissions", "Select at least one permission for the dairy manager.")
         return cleaned
