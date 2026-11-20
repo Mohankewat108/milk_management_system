@@ -312,3 +312,36 @@ class PlatformMultiFarmTests(TestCase):
             mail.outbox[0].body,
         )
         self.assertNotIn("http://testserver/", mail.outbox[0].body)
+
+    def test_platform_dashboard_renders_all_returned_farms_and_controls(self):
+        organizations = [
+            Organization.objects.create(
+                owner=self.farm_owner,
+                name=f"Visible Dairy {index}",
+                slug=f"visible-dairy-{index}",
+            )
+            for index in range(1, 4)
+        ]
+        self.client.force_login(self.platform_owner)
+
+        response = self.client.get(reverse("platform:dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Visible Dairy 1")
+        self.assertContains(response, "Visible Dairy 2")
+        self.assertContains(response, "Visible Dairy 3")
+        self.assertContains(response, 'class="platform-table-scroll"')
+        self.assertContains(response, "Suspend")
+        self.assertContains(response, "Farm controls")
+        self.assertEqual(len(response.context["organizations"]), len(organizations))
+
+    def test_platform_dashboard_empty_state_only_when_no_farms_exist(self):
+        self.client.force_login(self.platform_owner)
+
+        response = self.client.get(reverse("platform:dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "No dairy farms have been registered yet. Create the first farm to get started.",
+        )
