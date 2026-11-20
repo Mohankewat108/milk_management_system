@@ -112,7 +112,7 @@ def dashboard(request, organization_slug):
         },
         "can_approve_collections": (membership.role == Membership.Role.DAIRY_MANAGER and has_organization_permission(membership, "collections.approve")) or membership.role
         in {Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.QUALITY_OFFICER},
-        "can_manage_staff": membership.role in {Membership.Role.OWNER, Membership.Role.ADMIN} or (membership.role == Membership.Role.DAIRY_MANAGER and has_organization_permission(membership, "staff.manage")),
+        "can_manage_staff": membership.role in {Membership.Role.OWNER, Membership.Role.ADMIN},
         "can_manage_finance": (membership.role == Membership.Role.DAIRY_MANAGER and has_organization_permission(membership, "finance.manage")) or membership.role
         in {
             Membership.Role.OWNER,
