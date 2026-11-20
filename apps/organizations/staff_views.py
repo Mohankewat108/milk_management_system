@@ -74,6 +74,7 @@ def staff_list(request, organization_slug):
                     expires_at=timezone.now() + timedelta(hours=48),
                 )
                 invitation.branches.set(data["branches"])
+                invitation.permissions.set(data["permissions"])
                 invite_path = reverse(
                     "accounts:staff_invitation_accept",
                     kwargs={"invitation_id": invitation.pk, "token": token},
@@ -149,6 +150,7 @@ def staff_membership_edit(request, organization_slug, membership_id):
     initial = {
         "role": membership.role,
         "branches": [item.branch_id for item in membership.branch_assignments.all()],
+        "permissions": list(membership.permissions.values_list("pk", flat=True)),
     }
     form = StaffAccessUpdateForm(
         request.POST or None,
@@ -164,6 +166,7 @@ def staff_membership_edit(request, organization_slug, membership_id):
             before_branches = list(locked.branch_assignments.values_list("branch_id", flat=True))
             locked.role = form.cleaned_data["role"]
             locked.save(update_fields=["role", "updated_at"])
+            locked.permissions.set(form.cleaned_data["permissions"])
             locked.branch_assignments.all().delete()
             BranchAssignment.objects.bulk_create(
                 [
@@ -179,6 +182,7 @@ def staff_membership_edit(request, organization_slug, membership_id):
                 changes={
                     "before_role": before_role,
                     "after_role": locked.role,
+                    "permission_keys": list(locked.permissions.values_list("key", flat=True)),
                     "before_branch_ids": [str(value) for value in before_branches],
                     "after_branch_ids": [
                         str(branch.pk) for branch in form.cleaned_data["branches"]
@@ -325,6 +329,7 @@ def staff_invitation_accept(request, invitation_id, token):
                     for branch in locked.branches.all()
                 ]
             )
+            membership.permissions.set(locked.permissions.all())
             locked.accepted_at = timezone.now()
             locked.save(update_fields=["accepted_at", "updated_at"])
             record_event(
