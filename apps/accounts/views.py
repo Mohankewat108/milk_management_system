@@ -10,6 +10,8 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods, require_POST
 
+from apps.parties.models import Customer, Farmer
+
 from .forms import EmailAuthenticationForm, UserRegistrationForm
 
 
@@ -26,8 +28,13 @@ class AccountLoginView(LoginView):
         Send platform administrators to the central control centre.
         Django's get_success_url() still honours a safe ?next= URL first.
         """
-        if self.request.user.is_superuser:
+        user = self.request.user
+        if user.is_superuser:
             return reverse("platform:dashboard")
+        if Farmer.objects.filter(user=user, is_active=True, deleted_at__isnull=True).exists():
+            return reverse("farmer_portal:home")
+        if Customer.objects.filter(user=user, is_active=True, deleted_at__isnull=True).exists():
+            return reverse("customer_portal:home")
         return super().get_default_redirect_url()
 
     def rate_key(self):

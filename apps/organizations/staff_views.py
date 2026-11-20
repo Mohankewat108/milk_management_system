@@ -21,7 +21,7 @@ from apps.core.site_urls import build_site_absolute_uri
 
 from .decorators import organization_access
 from .models import BranchAssignment, Membership, StaffInvitation
-from .staff_forms import StaffMembershipForm
+from .staff_forms import StaffAccessUpdateForm, StaffMembershipForm
 
 User = get_user_model()
 MANAGER_ROLES = (Membership.Role.OWNER, Membership.Role.ADMIN)
@@ -132,6 +132,66 @@ def staff_list(request, organization_slug):
             "memberships": memberships,
             "invitations": invitations,
         },
+    )
+
+
+@login_required
+@organization_access(*MANAGER_ROLES)
+@require_http_methods(["GET", "POST"])
+def staff_membership_edit(request, organization_slug, membership_id):
+    membership = get_object_or_404(
+        Membership.objects.filter(organization=request.organization)
+        .exclude(role=Membership.Role.OWNER)
+        .select_related("user")
+        .prefetch_related("branch_assignments__branch"),
+        pk=membership_id,
+    )
+    initial = {
+        "role": membership.role,
+        "branches": [item.branch_id for item in membership.branch_assignments.all()],
+    }
+    form = StaffAccessUpdateForm(
+        request.POST or None,
+        initial=initial,
+        organization=request.organization,
+    )
+    if request.method == "POST" and form.is_valid():
+        with transaction.atomic():
+            locked = Membership.objects.select_for_update().get(
+                pk=membership.pk, organization=request.organization
+            )
+            before_role = locked.role
+            before_branches = list(locked.branch_assignments.values_list("branch_id", flat=True))
+            locked.role = form.cleaned_data["role"]
+            locked.save(update_fields=["role", "updated_at"])
+            locked.branch_assignments.all().delete()
+            BranchAssignment.objects.bulk_create(
+                [
+                    BranchAssignment(membership=locked, branch=branch)
+                    for branch in form.cleaned_data["branches"]
+                ]
+            )
+            record_event(
+                actor=request.user,
+                organization=request.organization,
+                action="staff.access_updated",
+                target=locked,
+                changes={
+                    "before_role": before_role,
+                    "after_role": locked.role,
+                    "before_branch_ids": [str(value) for value in before_branches],
+                    "after_branch_ids": [
+                        str(branch.pk) for branch in form.cleaned_data["branches"]
+                    ],
+                },
+                request=request,
+            )
+        messages.success(request, f"Access updated for {membership.user.email}.")
+        return redirect("business:staff", organization_slug=organization_slug)
+    return render(
+        request,
+        "organizations/staff_edit.html",
+        {"organization": request.organization, "membership": membership, "form": form},
     )
 
 

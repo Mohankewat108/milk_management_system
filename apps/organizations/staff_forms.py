@@ -33,3 +33,29 @@ class StaffMembershipForm(forms.Form):
         if not cleaned.get("branches"):
             self.add_error("branches", "Assign at least one branch to this staff role.")
         return cleaned
+
+
+class StaffAccessUpdateForm(forms.Form):
+    role = forms.ChoiceField(
+        choices=[
+            (Membership.Role.BRANCH_MANAGER, "Branch manager"),
+            (Membership.Role.COLLECTION_OPERATOR, "Milk collection operator"),
+            (Membership.Role.QUALITY_OFFICER, "Quality officer"),
+            (Membership.Role.ACCOUNTANT, "Accountant"),
+            (Membership.Role.INVENTORY_MANAGER, "Inventory manager"),
+            (Membership.Role.SUPPORT, "Customer support"),
+        ]
+    )
+    branches = forms.ModelMultipleChoiceField(queryset=Branch.objects.none())
+
+    def __init__(self, *args, organization, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["branches"].queryset = Branch.objects.filter(
+            organization=organization, is_active=True, deleted_at__isnull=True
+        )
+
+    def clean(self):
+        cleaned = super().clean()
+        if not cleaned.get("branches"):
+            self.add_error("branches", "Assign at least one active branch to this staff member.")
+        return cleaned

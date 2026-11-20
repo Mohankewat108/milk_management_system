@@ -3,7 +3,12 @@ from django.urls import path
 from apps.core import management_views
 
 from . import views
-from .staff_views import staff_invitation_revoke, staff_list, staff_membership_status
+from .staff_views import (
+    staff_invitation_revoke,
+    staff_list,
+    staff_membership_edit,
+    staff_membership_status,
+)
 
 app_name = "business"
 
@@ -30,6 +35,11 @@ urlpatterns = [
         name="branch_edit",
     ),
     path("<slug:organization_slug>/staff/", staff_list, name="staff"),
+    path(
+        "<slug:organization_slug>/staff/<uuid:membership_id>/edit/",
+        staff_membership_edit,
+        name="staff_edit",
+    ),
     path(
         "<slug:organization_slug>/staff/<uuid:membership_id>/status/",
         staff_membership_status,

@@ -17,6 +17,8 @@
   <nav class="top-actions" aria-label="{% translate 'Primary navigation' %}">
     {% if user.is_authenticated %}
       <a href="{% url 'business:workspace' %}">{% translate "Workspaces" %}</a>
+      {% if user.farmer_profile %}<a href="{% url 'farmer_portal:home' %}">My farmer account</a>{% endif %}
+      {% if user.customer_profile %}<a href="{% url 'customer_portal:home' %}">My customer account</a>{% endif %}
       {% if user.is_superuser %}<a href="{% url 'platform:dashboard' %}">{% translate "Platform" %}</a>{% endif %}
       <a href="{% url 'accounts:password_change' %}">{% translate "Security" %}</a>
       <label class="toolbar-select"><span class="visually-hidden">{% translate "Theme" %}</span><select id="theme-select" aria-label="{% translate 'Theme' %}"><option value="system">{% translate "System" %}</option><option value="light">{% translate "Light" %}</option><option value="dark">{% translate "Dark" %}</option></select></label>
@@ -33,9 +35,13 @@
       <a href="{% url 'business:workspace' %}">▦ <span>{% translate "Workspaces" %}</span></a>
       {% if request.organization %}<a href="{% url 'business:dashboard' request.organization.slug %}">⌂ <span>{% translate "Dashboard" %}</span></a>
       <div class="sidebar-title">{% translate "Farm management" %}</div>
+      {% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'branch_manager' or request.membership.role == 'support' %}
       <a href="{% url 'parties:farmers' request.organization.slug %}">♙ <span>{% translate "Farmers" %}</span></a>
       <a href="{% url 'parties:customers' request.organization.slug %}">♧ <span>{% translate "Customers" %}</span></a>
+      {% endif %}
+      {% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'branch_manager' or request.membership.role == 'collection_operator' or request.membership.role == 'quality_officer' %}
       <a href="{% url 'collections:list' request.organization.slug %}">◉ <span>{% translate "Milk collection" %}</span></a>
+      {% endif %}
       {% if request.membership.role == 'owner' or request.membership.role == 'admin' %}<a href="{% url 'business:staff' request.organization.slug %}">♟ <span>{% translate "Staff & access" %}</span></a>{% endif %}
       <div class="sidebar-title">{% translate "Finance & operations" %}</div>
       {% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'accountant' %}<a href="{% url 'finance:list' request.organization.slug %}">▤ <span>{% translate "Payments" %}</span></a><a href="{% url 'finance:expenses' request.organization.slug %}">↗ <span>{% translate "Expenses" %}</span></a>{% endif %}

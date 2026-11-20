@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Farmer account not linked | DairyNexus{% endblock %}
+{% block content %}
+<section class="panel">
+  <div class="eyebrow">FARMER ACCOUNT</div>
+  <h1>Your login is not linked to an active farmer profile</h1>
+  <p class="muted">Ask your dairy administrator to link this login to your farmer record. Your account cannot view collection or payment information until the link is verified.</p>
+  <p><strong>Signed in as:</strong> {{ request.user.email }}</p>
+  <a class="button button-secondary" href="{% url 'accounts:password_change' %}">Account security</a>
+</section>
+{% endblock %}
