@@ -21,12 +21,12 @@
   <div class="kpi"><span>Customers across farms</span><strong>{{ customer_count }}</strong></div>
   <div class="kpi"><span>Subscriptions</span><strong>{{ subscription_count }}</strong></div>
 </div>
-<section class="panel table-wrap">
+<section class="panel platform-farms-panel">
   <div class="row-between">
     <div><h2>Dairy farms</h2><p class="muted">Each row represents an independent tenant workspace.</p></div>
     <a class="button button-secondary" href="{% url 'platform:organization_create' %}">Add a farm</a>
   </div>
-  <div class="table-responsive">
+  <div class="platform-table-scroll" role="region" aria-label="Dairy farms" tabindex="0">
     <table>
       <thead><tr><th>Farm / business</th><th>Owner</th><th>Status</th><th>Customers</th><th>Farmers</th><th>Team members</th><th>Registered</th><th>Farm controls</th></tr></thead>
       <tbody>
