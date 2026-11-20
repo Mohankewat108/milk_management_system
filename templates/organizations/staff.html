@@ -8,6 +8,7 @@
 </section>
 <section class="panel"><h2>Current staff</h2><div class="table-wrap"><table><thead><tr><th>Staff member</th><th>Role</th><th>Status</th><th>Branches</th><th>Access</th></tr></thead><tbody>
 {% for m in memberships %}<tr><td>{{ m.user.get_full_name|default:m.user.email }}<br><small>{{ m.user.email }}</small></td><td>{{ m.get_role_display }}</td><td>{{ m.get_status_display }}</td><td>{% for assignment in m.branch_assignments.all %}{{ assignment.branch.name }}{% if not forloop.last %}, {% endif %}{% empty %}No branch assignment{% endfor %}</td><td>
+<a class="button button-secondary" href="{% url 'business:staff_edit' organization.slug m.pk %}">Edit role / branches</a>
 {% if m.status == 'active' %}<form method="post" action="{% url 'business:staff_status' organization.slug m.pk %}">{% csrf_token %}<input type="hidden" name="status" value="suspended"><button class="button button-danger" type="submit">Suspend</button></form>{% else %}<form method="post" action="{% url 'business:staff_status' organization.slug m.pk %}">{% csrf_token %}<input type="hidden" name="status" value="active"><button class="button button-secondary" type="submit">Reactivate</button></form>{% endif %}
 </td></tr>{% empty %}<tr><td colspan="5">No staff memberships yet.</td></tr>{% endfor %}
 </tbody></table></div></section>
