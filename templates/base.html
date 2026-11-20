@@ -5,11 +5,21 @@
   <meta name="theme-color" content="#f3f7fc"><meta name="color-scheme" content="light dark">
   <title>{% block title %}DairyNexus{% endblock %}</title>
   <script>
-    document.documentElement.dataset.theme = 'light';
+    (function () {
+      var preference = 'system';
+      try {
+        var saved = localStorage.getItem('dairynexus-theme');
+        if (saved === 'light' || saved === 'dark' || saved === 'system') preference = saved;
+      } catch (error) {}
+      var dark = preference === 'dark' || (preference === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    }());
   </script>
-  <link rel="stylesheet" href="{% static 'css/app.css' %}">{% block extra_head %}{% endblock %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/responsive.css' %}">
+  {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body{% block body_attributes %}{% endblock %}>
 <a class="skip-link" href="#main-content">{% translate "Skip to main content" %}</a>
 <header class="site-header">
   <button class="icon-button mobile-menu-button" type="button" id="sidebar-toggle" aria-label="{% translate 'Toggle navigation' %}" aria-expanded="false">☰</button>
@@ -27,6 +37,7 @@
     {% else %}<a href="{% url 'accounts:login' %}">{% translate "Sign in" %}</a><a class="button button-small" href="{% url 'accounts:register' %}">{% translate "Create account" %}</a>{% endif %}
   </nav>
 </header>
+{% block workspace_navigation %}
 {% if user.is_authenticated %}
 <div class="workspace-shell">
   <aside class="app-sidebar" id="app-sidebar" aria-label="{% translate 'Application navigation' %}">
@@ -53,6 +64,7 @@
   </aside>
   <div class="workspace-main">
 {% endif %}
+{% endblock %}
 <main id="main-content" class="page-shell">
   {% localize on %}
   {% if user.is_authenticated %}<div class="shell-context"><span class="context-dot" aria-hidden="true"></span>{% translate "Secure dairy workspace" %}</div>{% endif %}
@@ -60,7 +72,9 @@
   {% block content %}{% endblock %}
   {% endlocalize %}
 </main>
+{% block workspace_navigation_end %}
 {% if user.is_authenticated %}</div></div>{% endif %}
+{% endblock %}
 <footer class="footer"><span class="footer-brand">DairyNexus</span><span>{% translate "Dairy operations, made accountable." %}</span></footer>
 <script>
 (function(){
@@ -81,14 +95,11 @@
  function apply(value){const dark=value==='dark'||(value==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);root.dataset.theme=dark?'dark':'light';if(theme)theme.value=value;try{localStorage.setItem('dairynexus-theme',value);}catch(e){}}
  const saved=(()=>{
    try{
-     const preferenceVersion='2';
-     if(localStorage.getItem('dairynexus-theme-version')!==preferenceVersion){
-       localStorage.setItem('dairynexus-theme','light');
-       localStorage.setItem('dairynexus-theme-version',preferenceVersion);
-       return 'light';
-     }
-     return localStorage.getItem('dairynexus-theme')||'light';
-   }catch(e){return 'light';}
+     const preference=localStorage.getItem('dairynexus-theme');
+     return preference==='light'||preference==='dark'||preference==='system'
+       ? preference
+       : 'system';
+   }catch(e){return 'system';}
  })();
  apply(saved);
  if(theme)theme.addEventListener('change',()=>apply(theme.value));

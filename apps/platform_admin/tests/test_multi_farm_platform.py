@@ -34,6 +34,66 @@ class PlatformMultiFarmTests(TestCase):
             password="VeryStrongFarmPass!2026",
         )
 
+    def test_platform_dashboard_loads_for_authorized_owner(self):
+        self.client.force_login(self.platform_owner)
+        response = self.client.get(reverse("platform:dashboard"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "platform/dashboard.html")
+        self.assertContains(response, "Platform control centre")
+        self.assertContains(response, "Create dairy farm")
+
+    def test_platform_dashboard_redirects_unauthorized_user(self):
+        self.client.force_login(self.farm_owner)
+        response = self.client.get(reverse("platform:dashboard"))
+        self.assertEqual(response.status_code, 302)
+
+    def test_platform_dashboard_renders_all_organizations(self):
+        Organization.objects.create(
+            owner=self.farm_owner,
+            name="Alpha Dairy",
+            slug="alpha-dairy",
+        )
+        Organization.objects.create(
+            owner=self.farm_owner,
+            name="Beta Dairy",
+            slug="beta-dairy",
+        )
+        self.client.force_login(self.platform_owner)
+        response = self.client.get(reverse("platform:dashboard"))
+
+        organizations = list(response.context["organizations"])
+        self.assertEqual(len(organizations), 2)
+        self.assertContains(response, "Alpha Dairy")
+        self.assertContains(response, "Beta Dairy")
+        self.assertContains(response, "Farm controls")
+
+    def test_platform_dashboard_does_not_truncate_large_farm_list(self):
+        Organization.objects.bulk_create(
+            [
+                Organization(
+                    owner=self.farm_owner,
+                    name=f"Farm {index}",
+                    slug=f"farm-{index}",
+                )
+                for index in range(51)
+            ]
+        )
+        self.client.force_login(self.platform_owner)
+        response = self.client.get(reverse("platform:dashboard"))
+
+        self.assertEqual(len(list(response.context["organizations"])), 51)
+        self.assertContains(response, "Farm 50")
+
+    def test_platform_dashboard_empty_state_is_rendered(self):
+        Organization.objects.all().delete()
+        self.client.force_login(self.platform_owner)
+        response = self.client.get(reverse("platform:dashboard"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "No dairy farms have been registered yet.",
+        )
+
     def farm_form_data(self, farm_name, email=None):
         return {
             "owner_first_name": "Farm",
