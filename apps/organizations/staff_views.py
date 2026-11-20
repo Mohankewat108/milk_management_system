@@ -135,15 +135,15 @@ def staff_list(request, organization_slug):
     )
 
 
-
 @login_required
 @organization_access(*MANAGER_ROLES)
 @require_http_methods(["GET", "POST"])
 def staff_membership_edit(request, organization_slug, membership_id):
     membership = get_object_or_404(
-        Membership.objects.filter(organization=request.organization).exclude(
-            role=Membership.Role.OWNER
-        ).select_related("user").prefetch_related("branch_assignments__branch"),
+        Membership.objects.filter(organization=request.organization)
+        .exclude(role=Membership.Role.OWNER)
+        .select_related("user")
+        .prefetch_related("branch_assignments__branch"),
         pk=membership_id,
     )
     initial = {
@@ -161,16 +161,16 @@ def staff_membership_edit(request, organization_slug, membership_id):
                 pk=membership.pk, organization=request.organization
             )
             before_role = locked.role
-            before_branches = list(
-                locked.branch_assignments.values_list("branch_id", flat=True)
-            )
+            before_branches = list(locked.branch_assignments.values_list("branch_id", flat=True))
             locked.role = form.cleaned_data["role"]
             locked.save(update_fields=["role", "updated_at"])
             locked.branch_assignments.all().delete()
-            BranchAssignment.objects.bulk_create([
-                BranchAssignment(membership=locked, branch=branch)
-                for branch in form.cleaned_data["branches"]
-            ])
+            BranchAssignment.objects.bulk_create(
+                [
+                    BranchAssignment(membership=locked, branch=branch)
+                    for branch in form.cleaned_data["branches"]
+                ]
+            )
             record_event(
                 actor=request.user,
                 organization=request.organization,
