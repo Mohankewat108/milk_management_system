@@ -748,6 +748,29 @@ label { color: var(--color-text-secondary); }
 :root[data-theme="dark"] .export-hero{background:linear-gradient(125deg,#192b3e,#142235)}
 :root[data-theme="dark"] .export-module-card{background:#142538}
 :root[data-theme="dark"] .export-stats article{background:#192b3e}
+
+/* Platform Control Centre: platform pages use the full application header
+   and page shell, not the tenant workspace sidebar. */
+.platform-page .page-shell{
+  width:min(1600px,calc(100% - 3rem));
+  max-width:1600px;
+  margin:2rem auto 4rem;
+}
+.platform-page .table-wrap{
+  overflow-x:auto;
+  max-width:100%;
+  overscroll-behavior-inline:contain;
+  -webkit-overflow-scrolling:touch;
+}
+.platform-page .table-wrap table{
+  min-width:980px;
+}
+@media(max-width:850px){
+  .platform-page .page-shell{
+    width:calc(100% - 1.5rem);
+    margin:1.25rem auto 2.5rem;
+  }
+}
 @media(max-width:1050px){.export-module-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.export-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.export-module-grid{grid-template-columns:1fr}.export-hero{padding:1rem}.export-hero-icon{width:44px;height:44px;font-size:1.5rem}.export-panel{padding:.85rem}.export-module-card>p{min-height:0}}
 

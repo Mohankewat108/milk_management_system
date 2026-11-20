@@ -1,131 +1,694 @@
-{% load static i18n l10n %}<!doctype html>
-<html lang="{{ LANGUAGE_CODE|default:'en' }}" data-nepali-calendar-api="{% url 'nepali_calendar_month' %}">
+
+{% load static i18n l10n %}
+<!doctype html>
+<html lang="{{ LANGUAGE_CODE|default:'en' }}"
+      data-nepali-calendar-api="{% url 'nepali_calendar_month' %}">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f3f7fc"><meta name="color-scheme" content="light dark">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <meta name="theme-color" content="#f3f7fc">
+  <meta name="color-scheme" content="light dark">
+
   <title>{% block title %}DairyNexus{% endblock %}</title>
+
+  <!-- Theme initialization: run before styles to prevent theme flashing -->
   <script>
     (function () {
       const root = document.documentElement;
       let preference = "system";
+
       try {
-        const stored = localStorage.getItem("dairynexus-theme");
-        if (stored === "light" || stored === "dark" || stored === "system") {
-          preference = stored;
+        const saved = localStorage.getItem("dairynexus-theme");
+
+        if (["system", "light", "dark"].includes(saved)) {
+          preference = saved;
         }
       } catch (error) {
-        // Storage can be unavailable in private browsing or restricted contexts.
+          // Continue using system preference if storage is unavailable.
       }
+
       const media = window.matchMedia("(prefers-color-scheme: dark)");
+      const resolvedTheme =
+        preference === "system"
+          ? (media.matches ? "dark" : "light")
+          : preference;
+
       root.dataset.themePreference = preference;
-      root.dataset.theme = preference === "system"
-        ? (media.matches ? "dark" : "light")
-        : preference;
+      root.dataset.theme = resolvedTheme;
     })();
   </script>
-  <link rel="stylesheet" href="{% static 'css/app.css' %}">{% block extra_head %}{% endblock %}
+
+  <!-- Global application styles -->
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/responsive.css' %}">
+
+  {% block extra_head %}{% endblock %}
 </head>
-<body>
-<a class="skip-link" href="#main-content">{% translate "Skip to main content" %}</a>
+
+<body{% block body_attributes %}{% endblock %}>
+
+<a class="skip-link" href="#main-content">
+  {% translate "Skip to main content" %}
+</a>
+
+<!-- ================= HEADER ================= -->
 <header class="site-header">
-  <button class="icon-button mobile-menu-button" type="button" id="sidebar-toggle" aria-label="{% translate 'Toggle navigation' %}" aria-expanded="false">☰</button>
-  <a class="brand" href="{% url 'home' %}" aria-label="{% translate 'DairyNexus home' %}"><span class="brand-mark" aria-hidden="true">D</span><span class="brand-copy"><strong>DairyNexus</strong><small>{% translate "DAIRY OPERATIONS" %}</small></span></a>
+
+  <button
+    class="icon-button mobile-menu-button"
+    type="button"
+    id="sidebar-toggle"
+    aria-label="{% translate 'Toggle navigation' %}"
+    aria-expanded="false">
+    ☰
+  </button>
+
+  <a
+    class="brand"
+    href="{% url 'home' %}"
+    aria-label="{% translate 'DairyNexus home' %}">
+
+    <span class="brand-mark" aria-hidden="true">D</span>
+
+    <span class="brand-copy">
+      <strong>DairyNexus</strong>
+      <small>{% translate "DAIRY OPERATIONS" %}</small>
+    </span>
+  </a>
+
   <nav class="top-actions" aria-label="{% translate 'Primary navigation' %}">
+
     {% if user.is_authenticated %}
-      <a href="{% url 'business:workspace' %}">{% translate "Workspaces" %}</a>
-      {% if user.farmer_profile %}<a href="{% url 'farmer_portal:home' %}">My farmer account</a>{% endif %}
-      {% if user.customer_profile %}<a href="{% url 'customer_portal:home' %}">My customer account</a>{% endif %}
-      {% if user.is_superuser %}<a href="{% url 'platform:dashboard' %}">{% translate "Platform" %}</a>{% endif %}
-      <a href="{% url 'accounts:password_change' %}">{% translate "Security" %}</a>
-      <label class="toolbar-select"><span class="visually-hidden">{% translate "Theme" %}</span><select id="theme-select" aria-label="{% translate 'Theme' %}"><option value="system">{% translate "System" %}</option><option value="light">{% translate "Light" %}</option><option value="dark">{% translate "Dark" %}</option></select></label>
-      <label class="toolbar-select"><span class="visually-hidden">{% translate "Language" %}</span><form method="post" action="{% url 'set_language' %}" class="language-form">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><select name="language" aria-label="{% translate 'Language' %}" onchange="this.form.submit()">{% get_current_language as CURRENT_LANGUAGE %}{% get_available_languages as LANGUAGES %}{% for code,name in LANGUAGES %}<option value="{{ code }}" {% if code == CURRENT_LANGUAGE %}selected{% endif %}>{{ name }}</option>{% endfor %}</select></form></label>
-      <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="link-button" type="submit">{% translate "Sign out" %}</button></form>
-    {% else %}<a href="{% url 'accounts:login' %}">{% translate "Sign in" %}</a><a class="button button-small" href="{% url 'accounts:register' %}">{% translate "Create account" %}</a>{% endif %}
+
+      <a href="{% url 'business:workspace' %}">
+        {% translate "Workspaces" %}
+      </a>
+
+      {% if user.farmer_profile %}
+        <a href="{% url 'farmer_portal:home' %}">
+          {% translate "My farmer account" %}
+        </a>
+      {% endif %}
+
+      {% if user.customer_profile %}
+        <a href="{% url 'customer_portal:home' %}">
+          {% translate "My customer account" %}
+        </a>
+      {% endif %}
+
+      {% if user.is_superuser %}
+        <a href="{% url 'platform:dashboard' %}">
+          {% translate "Platform" %}
+        </a>
+      {% endif %}
+
+      <a href="{% url 'accounts:password_change' %}">
+        {% translate "Security" %}
+      </a>
+
+      <!-- Theme selector -->
+      <label class="toolbar-select">
+        <span class="visually-hidden">
+          {% translate "Theme" %}
+        </span>
+
+        <select
+          id="theme-select"
+          aria-label="{% translate 'Theme' %}">
+
+          <option value="system">
+            {% translate "System" %}
+          </option>
+
+          <option value="light">
+            {% translate "Light" %}
+          </option>
+
+          <option value="dark">
+            {% translate "Dark" %}
+          </option>
+        </select>
+      </label>
+
+      <!-- Language selector -->
+      <label class="toolbar-select">
+        <span class="visually-hidden">
+          {% translate "Language" %}
+        </span>
+
+        <form
+          method="post"
+          action="{% url 'set_language' %}"
+          class="language-form">
+
+          {% csrf_token %}
+
+          <input
+            type="hidden"
+            name="next"
+            value="{{ request.get_full_path }}">
+
+          <select
+            name="language"
+            aria-label="{% translate 'Language' %}"
+            onchange="this.form.submit()">
+
+            {% get_current_language as CURRENT_LANGUAGE %}
+            {% get_available_languages as LANGUAGES %}
+
+            {% for code, name in LANGUAGES %}
+              <option
+                value="{{ code }}"
+                {% if code == CURRENT_LANGUAGE %}selected{% endif %}>
+                {{ name }}
+              </option>
+            {% endfor %}
+          </select>
+        </form>
+      </label>
+
+      <!-- Logout -->
+      <form method="post" action="{% url 'accounts:logout' %}">
+        {% csrf_token %}
+
+        <button class="link-button" type="submit">
+          {% translate "Sign out" %}
+        </button>
+      </form>
+
+    {% else %}
+
+      <a href="{% url 'accounts:login' %}">
+        {% translate "Sign in" %}
+      </a>
+
+      <a
+        class="button button-small"
+        href="{% url 'accounts:register' %}">
+        {% translate "Create account" %}
+      </a>
+
+    {% endif %}
   </nav>
 </header>
-{% if user.is_authenticated %}
-<div class="workspace-shell">
-  <aside class="app-sidebar" id="app-sidebar" aria-label="{% translate 'Application navigation' %}">
-    <div class="sidebar-tenant"><span class="context-dot"></span><span>{% translate "Workspace navigation" %}</span></div>
-    <div class="sidebar-title">{% translate "Main menu" %}</div><nav class="sidebar-nav">
-      <a href="{% url 'business:workspace' %}">▦ <span>{% translate "Workspaces" %}</span></a>
-      {% if request.organization %}<a href="{% url 'business:dashboard' request.organization.slug %}">⌂ <span>{% translate "Dashboard" %}</span></a>
-      <div class="sidebar-title">{% translate "Farm management" %}</div>
-      {% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'branch_manager' or request.membership.role == 'support' %}
-      <a href="{% url 'parties:farmers' request.organization.slug %}">♙ <span>{% translate "Farmers" %}</span></a>
-      <a href="{% url 'parties:customers' request.organization.slug %}">♧ <span>{% translate "Customers" %}</span></a>
-      {% endif %}
-      {% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'branch_manager' or request.membership.role == 'collection_operator' or request.membership.role == 'quality_officer' %}
-      <a href="{% url 'collections:list' request.organization.slug %}">◉ <span>{% translate "Milk collection" %}</span></a>
-      {% endif %}
-      {% if request.membership.role == 'owner' or request.membership.role == 'admin' %}<a href="{% url 'business:staff' request.organization.slug %}">♟ <span>{% translate "Staff & access" %}</span></a>{% endif %}
-      <div class="sidebar-title">{% translate "Finance & operations" %}</div>
-      {% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'accountant' %}<a href="{% url 'finance:list' request.organization.slug %}">▤ <span>{% translate "Payments" %}</span></a><a href="{% url 'finance:expenses' request.organization.slug %}">↗ <span>{% translate "Expenses" %}</span></a>{% endif %}
-      {% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'inventory_manager' %}<a href="{% url 'inventory:items' request.organization.slug %}">▣ <span>{% translate "Inventory" %}</span></a>{% endif %}
-      {% if request.membership.role in "owner admin branch_manager collection_operator quality_officer accountant inventory_manager support" %}<a href="{% url 'data_exports:centre' request.organization.slug %}">⇩ <span>{% translate "Export centre" %}</span></a>{% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'branch_manager' or request.membership.role == 'accountant' %}<a href="{% url 'data_exports:reports' request.organization.slug %}">▥ <span>{% translate "Reports" %}</span></a>{% endif %}{% endif %}{% if request.membership.role == 'owner' or request.membership.role == 'admin' %}<a href="{% url 'business:trash' request.organization.slug %}">▱ <span>{% translate "Central Trash" %}</span></a><div class="sidebar-title">{% translate "Configuration" %}</div><a href="{% url 'business:branches' request.organization.slug %}">⌖ <span>{% translate "Branches" %}</span></a><a href="{% url 'pricing:settings' request.organization.slug %}">₹ <span>{% translate "Milk rates" %}</span></a><a href="{% url 'pricing:quality' request.organization.slug %}">◇ <span>{% translate "Quality settings" %}</span></a>{% endif %}
-      {% endif %}
-    </nav>
-    <div class="sidebar-footer"><span class="small muted">{% translate "Signed in as" %}</span><strong>{{ request.user.get_full_name|default:request.user.username }}</strong></div>
-  </aside>
-  <div class="workspace-main">
-{% endif %}
+
+<!-- ================= WORKSPACE NAVIGATION ================= -->
+
+{% block workspace_navigation %}
+
+  {% if user.is_authenticated %}
+
+    <div class="workspace-shell">
+
+      <aside
+        class="app-sidebar"
+        id="app-sidebar"
+        aria-label="{% translate 'Application navigation' %}">
+
+        <div class="sidebar-tenant">
+          <span class="context-dot"></span>
+          <span>{% translate "Workspace navigation" %}</span>
+        </div>
+
+        <div class="sidebar-title">
+          {% translate "Main menu" %}
+        </div>
+
+        <nav class="sidebar-nav">
+
+          <a href="{% url 'business:workspace' %}">
+            ▦
+            <span>{% translate "Workspaces" %}</span>
+          </a>
+
+          {% if request.organization %}
+
+            <a href="{% url 'business:dashboard' request.organization.slug %}">
+              ⌂
+              <span>{% translate "Dashboard" %}</span>
+            </a>
+
+            <div class="sidebar-title">
+              {% translate "Farm management" %}
+            </div>
+
+            {% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'branch_manager' or request.membership.role == 'support' %}
+
+              <a href="{% url 'parties:farmers' request.organization.slug %}">
+                ♙
+                <span>{% translate "Farmers" %}</span>
+              </a>
+
+              <a href="{% url 'parties:customers' request.organization.slug %}">
+                ♧
+                <span>{% translate "Customers" %}</span>
+              </a>
+
+            {% endif %}
+
+            {% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'branch_manager' or request.membership.role == 'collection_operator' or request.membership.role == 'quality_officer' %}
+
+              <a href="{% url 'collections:list' request.organization.slug %}">
+                ◉
+                <span>{% translate "Milk collection" %}</span>
+              </a>
+
+            {% endif %}
+
+            {% if request.membership.role == 'owner' or request.membership.role == 'admin' %}
+
+              <a href="{% url 'business:staff' request.organization.slug %}">
+                ♟
+                <span>{% translate "Staff & access" %}</span>
+              </a>
+
+            {% endif %}
+
+            <div class="sidebar-title">
+              {% translate "Finance & operations" %}
+            </div>
+
+            {% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'accountant' %}
+
+              <a href="{% url 'finance:list' request.organization.slug %}">
+                ▤
+                <span>{% translate "Payments" %}</span>
+              </a>
+
+              <a href="{% url 'finance:expenses' request.organization.slug %}">
+                ↗
+                <span>{% translate "Expenses" %}</span>
+              </a>
+
+            {% endif %}
+
+            {% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'inventory_manager' %}
+
+              <a href="{% url 'inventory:items' request.organization.slug %}">
+                ▣
+                <span>{% translate "Inventory" %}</span>
+              </a>
+
+            {% endif %}
+
+            {% if request.membership.role in "owner admin branch_manager collection_operator quality_officer accountant inventory_manager support" %}
+
+              <a href="{% url 'data_exports:centre' request.organization.slug %}">
+                ⇩
+                <span>{% translate "Export centre" %}</span>
+              </a>
+
+              {% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'branch_manager' or request.membership.role == 'accountant' %}
+
+                <a href="{% url 'data_exports:reports' request.organization.slug %}">
+                  ▥
+                  <span>{% translate "Reports" %}</span>
+                </a>
+
+              {% endif %}
+
+            {% endif %}
+
+            {% if request.membership.role == 'owner' or request.membership.role == 'admin' %}
+
+              <a href="{% url 'business:trash' request.organization.slug %}">
+                ▱
+                <span>{% translate "Central Trash" %}</span>
+              </a>
+
+              <div class="sidebar-title">
+                {% translate "Configuration" %}
+              </div>
+
+              <a href="{% url 'business:branches' request.organization.slug %}">
+                ⌖
+                <span>{% translate "Branches" %}</span>
+              </a>
+
+              <a href="{% url 'pricing:settings' request.organization.slug %}">
+                ₹
+                <span>{% translate "Milk rates" %}</span>
+              </a>
+
+              <a href="{% url 'pricing:quality' request.organization.slug %}">
+                ◇
+                <span>{% translate "Quality settings" %}</span>
+              </a>
+
+            {% endif %}
+
+          {% endif %}
+
+        </nav>
+
+        <div class="sidebar-footer">
+          <span class="small muted">
+            {% translate "Signed in as" %}
+          </span>
+
+          <strong>
+            {{ request.user.get_full_name|default:request.user.username }}
+          </strong>
+        </div>
+
+      </aside>
+
+      <div class="workspace-main">
+
+  {% endif %}
+
+{% endblock %}
+
+<!-- ================= MAIN CONTENT ================= -->
+
 <main id="main-content" class="page-shell">
+
   {% localize on %}
-  {% if user.is_authenticated %}<div class="shell-context"><span class="context-dot" aria-hidden="true"></span>{% translate "Secure dairy workspace" %}</div>{% endif %}
-  {% if messages %}<div class="messages" role="status" aria-live="polite">{% for message in messages %}<div class="alert {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
-  {% block content %}{% endblock %}
+
+    {% if user.is_authenticated %}
+      <div class="shell-context">
+        <span class="context-dot" aria-hidden="true"></span>
+        {% translate "Secure dairy workspace" %}
+      </div>
+    {% endif %}
+
+    <!-- Django messages -->
+    {% if messages %}
+      <div
+        class="messages"
+        role="status"
+        aria-live="polite">
+
+        {% for message in messages %}
+          <div class="alert {{ message.tags }}">
+            {{ message }}
+          </div>
+        {% endfor %}
+
+      </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+
   {% endlocalize %}
+
 </main>
-{% if user.is_authenticated %}</div></div>{% endif %}
-<footer class="footer"><span class="footer-brand">DairyNexus</span><span>{% translate "Dairy operations, made accountable." %}</span></footer>
+
+<!-- ================= WORKSPACE CLOSING ================= -->
+
+{% block workspace_navigation_end %}
+
+  {% if user.is_authenticated %}
+      </div>
+    </div>
+  {% endif %}
+
+{% endblock %}
+
+<!-- ================= FOOTER ================= -->
+
+<footer class="footer">
+  <span class="footer-brand">DairyNexus</span>
+  <span>
+    {% translate "Dairy operations, made accountable." %}
+  </span>
+</footer>
+
+<!-- ================= GLOBAL JAVASCRIPT ================= -->
+
 <script>
-(function(){
- const root=document.documentElement, theme=document.getElementById('theme-select'), toggle=document.getElementById('sidebar-toggle'), sidebar=document.getElementById('app-sidebar');
- // Display native Devanagari digits in Nepali and Hindi without changing form values or stored data.
- const lang=(root.lang||'en').toLowerCase().split('-')[0];
- if(lang==='ne'||lang==='hi'){
-   const devanagari='०१२३४५६७८९';
-   const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode(node){
-     const parent=node.parentElement;
-     if(!parent||parent.closest('script,style,textarea,input,select,option,code,pre,[data-no-digit-localize]')) return NodeFilter.FILTER_REJECT;
-     return /[0-9]/.test(node.nodeValue)?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT;
-   }});
-   const nodes=[]; while(walker.nextNode()) nodes.push(walker.currentNode);
-   nodes.forEach(node=>{node.nodeValue=node.nodeValue.replace(/[0-9]/g,d=>devanagari[Number(d)]);});
-   document.querySelectorAll('input[data-calendar-date]').forEach(input=>{input.value=input.value.replace(/[0-9]/g,d=>devanagari[Number(d)]);input.addEventListener('input',()=>{const ascii=input.value.replace(/[०-९]/g,d=>String('०१२३४५६७८९'.indexOf(d)));input.setCustomValidity(input.value && !/^\d{4}-\d{2}-\d{2}$/.test(ascii)?'Use YYYY-MM-DD format.':'');});input.form?.addEventListener('submit',()=>{input.value=input.value.replace(/[०-९]/g,d=>String('०१२३४५६७८९'.indexOf(d)));});});
- }
- function apply(value){
-   const preference=['system','light','dark'].includes(value)?value:'system';
-   const dark=preference==='dark'||(preference==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);
-   root.dataset.themePreference=preference;
-   root.dataset.theme=dark?'dark':'light';
-   if(theme)theme.value=preference;
-   try{localStorage.setItem('dairynexus-theme',preference);}catch(e){}
- }
- const savedPreference=(()=>{
-   try{
-     const value=localStorage.getItem('dairynexus-theme');
-     return ['system','light','dark'].includes(value)?value:'system';
-   }catch(e){return 'system';}
- })();
- apply(savedPreference);
- if(theme)theme.addEventListener('change',()=>apply(theme.value));
- if(toggle&&!sidebar)toggle.hidden=true;
- if(toggle&&sidebar){
-   const backdrop=document.createElement('button');
-   backdrop.type='button';backdrop.className='mobile-nav-backdrop';backdrop.setAttribute('aria-label','Close navigation');backdrop.setAttribute('tabindex','-1');
-   document.body.appendChild(backdrop);
-   const closeSidebar=()=>{sidebar.classList.remove('is-open');backdrop.classList.remove('is-visible');toggle.setAttribute('aria-expanded','false');document.body.classList.remove('nav-open');};
-   const openSidebar=()=>{sidebar.classList.add('is-open');backdrop.classList.add('is-visible');toggle.setAttribute('aria-expanded','true');document.body.classList.add('nav-open');const first=sidebar.querySelector('a');first?.focus({preventScroll:true});};
-   toggle.addEventListener('click',()=>sidebar.classList.contains('is-open')?closeSidebar():openSidebar());
-   backdrop.addEventListener('click',closeSidebar);
-   sidebar.querySelectorAll('a').forEach(link=>link.addEventListener('click',closeSidebar));
-   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&sidebar.classList.contains('is-open')){closeSidebar();toggle.focus();}});
-   window.addEventListener('resize',()=>{if(window.innerWidth>850)closeSidebar();});
- }
- if(window.matchMedia){window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{if(root.dataset.themePreference==='system'){const dark=window.matchMedia('(prefers-color-scheme: dark)').matches;root.dataset.theme=dark?'dark':'light';}});}
-}());
+(function () {
+  "use strict";
+
+  const root = document.documentElement;
+  const themeSelect = document.getElementById("theme-select");
+  const sidebarToggle = document.getElementById("sidebar-toggle");
+  const sidebar = document.getElementById("app-sidebar");
+
+  const themeMedia = window.matchMedia(
+    "(prefers-color-scheme: dark)"
+  );
+
+  /* ================= THEME SYSTEM ================= */
+
+  function getPreference() {
+    try {
+      const value = localStorage.getItem("dairynexus-theme");
+
+      return ["system", "light", "dark"].includes(value)
+        ? value
+        : "system";
+    } catch (error) {
+      return "system";
+    }
+  }
+
+  function resolveTheme(preference) {
+    if (preference === "dark") {
+      return "dark";
+    }
+
+    if (preference === "light") {
+      return "light";
+    }
+
+    return themeMedia.matches ? "dark" : "light";
+  }
+
+  function applyTheme(preference, persist = false) {
+    const validPreference = [
+      "system",
+      "light",
+      "dark"
+    ].includes(preference)
+      ? preference
+      : "system";
+
+    root.dataset.themePreference = validPreference;
+    root.dataset.theme = resolveTheme(validPreference);
+
+    if (themeSelect) {
+      themeSelect.value = validPreference;
+    }
+
+    if (persist) {
+      try {
+        localStorage.setItem(
+          "dairynexus-theme",
+          validPreference
+        );
+      } catch (error) {
+        // Theme remains active for the current session.
+      }
+    }
+  }
+
+  // Initialize without overwriting the user's stored preference.
+  applyTheme(getPreference(), false);
+
+  if (themeSelect) {
+    themeSelect.addEventListener("change", function () {
+      applyTheme(themeSelect.value, true);
+    });
+  }
+
+  // React to OS preference changes only in System mode.
+  function handleSystemThemeChange() {
+    if (root.dataset.themePreference === "system") {
+      root.dataset.theme = resolveTheme("system");
+    }
+  }
+
+  if (themeMedia.addEventListener) {
+    themeMedia.addEventListener(
+      "change",
+      handleSystemThemeChange
+    );
+  } else if (themeMedia.addListener) {
+    themeMedia.addListener(handleSystemThemeChange);
+  }
+
+  /* ================= SIDEBAR ================= */
+
+  if (sidebarToggle && !sidebar) {
+    sidebarToggle.hidden = true;
+  }
+
+  if (sidebarToggle && sidebar) {
+    const backdrop = document.createElement("button");
+
+    backdrop.type = "button";
+    backdrop.className = "mobile-nav-backdrop";
+    backdrop.setAttribute(
+      "aria-label",
+      "Close navigation"
+    );
+    backdrop.setAttribute("tabindex", "-1");
+
+    document.body.appendChild(backdrop);
+
+    function closeSidebar() {
+      sidebar.classList.remove("is-open");
+      backdrop.classList.remove("is-visible");
+
+      sidebarToggle.setAttribute(
+        "aria-expanded",
+        "false"
+      );
+
+      document.body.classList.remove("nav-open");
+    }
+
+    function openSidebar() {
+      sidebar.classList.add("is-open");
+      backdrop.classList.add("is-visible");
+
+      sidebarToggle.setAttribute(
+        "aria-expanded",
+        "true"
+      );
+
+      document.body.classList.add("nav-open");
+
+      const firstLink = sidebar.querySelector("a");
+
+      if (firstLink) {
+        firstLink.focus({
+          preventScroll: true
+        });
+      }
+    }
+
+    sidebarToggle.addEventListener("click", function () {
+      if (sidebar.classList.contains("is-open")) {
+        closeSidebar();
+      } else {
+        openSidebar();
+      }
+    });
+
+    backdrop.addEventListener("click", closeSidebar);
+
+    sidebar.querySelectorAll("a").forEach(function (link) {
+      link.addEventListener("click", closeSidebar);
+    });
+
+    document.addEventListener("keydown", function (event) {
+      if (
+        event.key === "Escape" &&
+        sidebar.classList.contains("is-open")
+      ) {
+        closeSidebar();
+        sidebarToggle.focus();
+      }
+    });
+
+    window.addEventListener("resize", function () {
+      if (window.innerWidth > 850) {
+        closeSidebar();
+      }
+    });
+  }
+
+  /* ================= NEPALI/HINDI DIGITS ================= */
+
+  const language = (root.lang || "en")
+    .toLowerCase()
+    .split("-")[0];
+
+  if (language === "ne" || language === "hi") {
+    const devanagariDigits = "०१२३४५६७८९";
+
+    const walker = document.createTreeWalker(
+      document.body,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode(node) {
+          const parent = node.parentElement;
+
+          if (
+            !parent ||
+            parent.closest(
+              "script,style,textarea,input,select,option,code,pre,[data-no-digit-localize]"
+            )
+          ) {
+            return NodeFilter.FILTER_REJECT;
+          }
+
+          return /[0-9]/.test(node.nodeValue)
+            ? NodeFilter.FILTER_ACCEPT
+            : NodeFilter.FILTER_REJECT;
+        }
+      }
+    );
+
+    const nodes = [];
+
+    while (walker.nextNode()) {
+      nodes.push(walker.currentNode);
+    }
+
+    nodes.forEach(function (node) {
+      node.nodeValue = node.nodeValue.replace(
+        /[0-9]/g,
+        function (digit) {
+          return devanagariDigits[Number(digit)];
+        }
+      );
+    });
+
+    document
+      .querySelectorAll("input[data-calendar-date]")
+      .forEach(function (input) {
+        input.value = input.value.replace(
+          /[0-9]/g,
+          function (digit) {
+            return devanagariDigits[Number(digit)];
+          }
+        );
+
+        input.addEventListener("input", function () {
+          const asciiValue = input.value.replace(
+            /[०-९]/g,
+            function (digit) {
+              return String(
+                "०१२३४५६७८९".indexOf(digit)
+              );
+            }
+          );
+
+          input.setCustomValidity(
+            input.value &&
+            !/^\d{4}-\d{2}-\d{2}$/.test(asciiValue)
+              ? "Use YYYY-MM-DD format."
+              : ""
+          );
+        });
+
+        if (input.form) {
+          input.form.addEventListener("submit", function () {
+            input.value = input.value.replace(
+              /[०-९]/g,
+              function (digit) {
+                return String(
+                  "०१२३४५६७८९".indexOf(digit)
+                );
+              }
+            );
+          });
+        }
+      });
+  }
+})();
 </script>
-<script src="{% static 'js/nepali-date-picker.js' %}" defer></script>
+
+<script
+  src="{% static 'js/nepali-date-picker.js' %}"
+  defer>
+</script>
+
 {% block scripts %}{% endblock %}
-</body></html>
+
+</body>
+</html>

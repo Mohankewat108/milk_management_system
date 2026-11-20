@@ -69,7 +69,7 @@ def dashboard(request):
             "total"
         ],
         "subscription_count": Subscription.objects.count(),
-        "organizations": organizations[:50],
+        "organizations": organizations,
     }
     return render(request, "platform/dashboard.html", context)
 
