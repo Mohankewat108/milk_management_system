@@ -125,8 +125,7 @@ def dashboard(request, organization_slug):
             Membership.Role.ADMIN,
             Membership.Role.INVENTORY_MANAGER,
         },
-        "can_manage_configuration": (membership.role == Membership.Role.DAIRY_MANAGER and has_organization_permission(membership, "settings.manage")) or membership.role
-        in {Membership.Role.OWNER, Membership.Role.ADMIN},
+        "can_manage_configuration": membership.role in {Membership.Role.OWNER, Membership.Role.ADMIN},
     }
     return render(request, "dashboard/business.html", context)
 
