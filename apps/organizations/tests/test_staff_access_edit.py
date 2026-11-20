@@ -84,17 +84,13 @@ class StaffAccessEditTests(TestCase):
         self.assertEqual(response.status_code, 404)
         self.membership.refresh_from_db()
         self.assertEqual(self.membership.role, Membership.Role.COLLECTION_OPERATOR)
-        self.assertTrue(
-            self.membership.branch_assignments.filter(branch=self.branch_a).exists()
-        )
+        self.assertTrue(self.membership.branch_assignments.filter(branch=self.branch_a).exists())
 
     def test_staff_access_form_rejects_branch_from_another_organisation(self):
         other = Organization.objects.create(
             owner=self.owner, name="Other Access Dairy", slug="other-access-dairy"
         )
-        foreign_branch = Branch.objects.create(
-            organization=other, code="X", name="Foreign Branch"
-        )
+        foreign_branch = Branch.objects.create(organization=other, code="X", name="Foreign Branch")
         self.client.force_login(self.owner)
         url = reverse(
             "business:staff_edit",
