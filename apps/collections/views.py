@@ -133,7 +133,13 @@ def collection_create(request, organization_slug):
 
 
 @login_required
-@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.DAIRY_MANAGER, Membership.Role.QUALITY_OFFICER, permission="collections.approve")
+@organization_access(
+    Membership.Role.OWNER
+    Membership.Role.ADMIN
+    Membership.Role.DAIRY_MANAGER
+    Membership.Role.QUALITY_OFFICER
+    permission="collections.approve"
+)
 @require_POST
 def approve_collection(request, organization_slug, collection_id):
     branch_ids = accessible_branch_ids(request.membership)
@@ -266,7 +272,10 @@ def collection_edit(request, organization_slug, collection_id):
 
 
 @login_required
-@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN)
+@organization_access(
+    Membership.Role.OWNER
+    Membership.Role.ADMIN
+)
 @require_POST
 def collection_reverse(request, organization_slug, collection_id):
     reason = request.POST.get("reason", "").strip()

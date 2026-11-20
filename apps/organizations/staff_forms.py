@@ -23,7 +23,10 @@ class StaffMembershipForm(forms.Form):
         queryset=OrganizationPermission.objects.none(),
         required=False,
         widget=forms.CheckboxSelectMultiple,
-        help_text="Choose only the capabilities this person needs. Branch access is always restricted to assigned branches.",
+        help_text=(
+            "Choose only the capabilities this person needs. "
+            "Branch access is always restricted to assigned branches."
+        ),
     )
 
     def __init__(self, *args, organization, **kwargs):
@@ -55,7 +58,10 @@ class StaffAccessUpdateForm(forms.Form):
         queryset=OrganizationPermission.objects.none(),
         required=False,
         widget=forms.CheckboxSelectMultiple,
-        help_text="Choose the capabilities this person needs. Branch access remains limited to these assigned branches.",
+        help_text=(
+            "Choose the capabilities this person needs. "
+            "Branch access remains limited to these assigned branches."
+        ),
     )
 
     def __init__(self, *args, organization, **kwargs):

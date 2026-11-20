@@ -18,7 +18,10 @@ from .services import move_stock
 
 @login_required
 @organization_access(
-    Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.DAIRY_MANAGER, Membership.Role.INVENTORY_MANAGER,
+    Membership.Role.OWNER,
+    Membership.Role.ADMIN,
+    Membership.Role.DAIRY_MANAGER,
+    Membership.Role.INVENTORY_MANAGER,
     permission="inventory.view",
 )
 def item_list(request, organization_slug):
@@ -37,7 +40,10 @@ def item_list(request, organization_slug):
 
 @login_required
 @organization_access(
-    Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.DAIRY_MANAGER, Membership.Role.INVENTORY_MANAGER,
+    Membership.Role.OWNER,
+    Membership.Role.ADMIN,
+    Membership.Role.DAIRY_MANAGER,
+    Membership.Role.INVENTORY_MANAGER,
     permission="inventory.manage",
 )
 @require_http_methods(["GET", "POST"])
@@ -64,7 +70,10 @@ def item_create(request, organization_slug):
 
 @login_required
 @organization_access(
-    Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.DAIRY_MANAGER, Membership.Role.INVENTORY_MANAGER,
+    Membership.Role.OWNER,
+    Membership.Role.ADMIN,
+    Membership.Role.DAIRY_MANAGER,
+    Membership.Role.INVENTORY_MANAGER,
     permission="inventory.manage",
 )
 @require_http_methods(["GET", "POST"])
@@ -103,7 +112,10 @@ def movement_create(request, organization_slug):
 
 
 @login_required
-@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN)
+@organization_access(
+    Membership.Role.OWNER
+    Membership.Role.ADMIN
+)
 @require_http_methods(["GET", "POST"])
 def supplier_list(request, organization_slug):
     organization = request.organization
@@ -137,7 +149,10 @@ def supplier_list(request, organization_slug):
 
 @login_required
 @organization_access(
-    Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.DAIRY_MANAGER, Membership.Role.INVENTORY_MANAGER,
+    Membership.Role.OWNER,
+    Membership.Role.ADMIN,
+    Membership.Role.DAIRY_MANAGER,
+    Membership.Role.INVENTORY_MANAGER,
     permission="inventory.manage",
 )
 @require_http_methods(["GET", "POST"])
@@ -181,7 +196,10 @@ def item_edit(request, organization_slug, item_id):
 
 
 @login_required
-@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN)
+@organization_access(
+    Membership.Role.OWNER
+    Membership.Role.ADMIN
+)
 @require_http_methods(["GET", "POST"])
 def supplier_edit(request, organization_slug, supplier_id):
     organization = request.organization

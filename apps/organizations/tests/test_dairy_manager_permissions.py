@@ -20,7 +20,9 @@ class DairyManagerPermissionTests(TestCase):
             username="dairy-owner", email="owner@manager-test.example", password="LongDemoPass!123"
         )
         self.manager_user = User.objects.create_user(
-            username="dairy-manager", email="manager@manager-test.example", password="LongDemoPass!123"
+            username="dairy-manager",
+            email="manager@manager-test.example",
+            password="LongDemoPass!123",
         )
         self.organization = Organization.objects.create(
             owner=self.owner, name="Manager Dairy", slug="manager-dairy"

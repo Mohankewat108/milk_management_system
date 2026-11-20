@@ -88,21 +88,33 @@ def dashboard(request, organization_slug):
         "collection_count": collections.count(),
         "active_rate": active_rate,
         "rate_date": today,
-        "can_record_collection": (membership.role == Membership.Role.DAIRY_MANAGER and has_organization_permission(membership, "collections.create")) or membership.role
+        "can_record_collection": (
+            membership.role == Membership.Role.DAIRY_MANAGER
+            and has_organization_permission(membership, "collections.create")
+        )
+        or membership.role
         in {
             Membership.Role.OWNER,
             Membership.Role.ADMIN,
             Membership.Role.BRANCH_MANAGER,
             Membership.Role.COLLECTION_OPERATOR,
         },
-        "can_view_parties": (membership.role == Membership.Role.DAIRY_MANAGER and has_organization_permission(membership, "parties.view")) or membership.role
+        "can_view_parties": (
+            membership.role == Membership.Role.DAIRY_MANAGER
+            and has_organization_permission(membership, "parties.view")
+        )
+        or membership.role
         in {
             Membership.Role.OWNER,
             Membership.Role.ADMIN,
             Membership.Role.BRANCH_MANAGER,
             Membership.Role.SUPPORT,
         },
-        "can_view_collections": (membership.role == Membership.Role.DAIRY_MANAGER and has_organization_permission(membership, "collections.view")) or membership.role
+        "can_view_collections": (
+            membership.role == Membership.Role.DAIRY_MANAGER
+            and has_organization_permission(membership, "collections.view")
+        )
+        or membership.role
         in {
             Membership.Role.OWNER,
             Membership.Role.ADMIN,
@@ -110,28 +122,44 @@ def dashboard(request, organization_slug):
             Membership.Role.COLLECTION_OPERATOR,
             Membership.Role.QUALITY_OFFICER,
         },
-        "can_approve_collections": (membership.role == Membership.Role.DAIRY_MANAGER and has_organization_permission(membership, "collections.approve")) or membership.role
+        "can_approve_collections": (
+            membership.role == Membership.Role.DAIRY_MANAGER
+            and has_organization_permission(membership, "collections.approve")
+        )
+        or membership.role
         in {Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.QUALITY_OFFICER},
         "can_manage_staff": membership.role in {Membership.Role.OWNER, Membership.Role.ADMIN},
-        "can_manage_finance": (membership.role == Membership.Role.DAIRY_MANAGER and has_organization_permission(membership, "finance.manage")) or membership.role
+        "can_manage_finance": (
+            membership.role == Membership.Role.DAIRY_MANAGER
+            and has_organization_permission(membership, "finance.manage")
+        )
+        or membership.role
         in {
             Membership.Role.OWNER,
             Membership.Role.ADMIN,
             Membership.Role.ACCOUNTANT,
         },
-        "can_manage_inventory": (membership.role == Membership.Role.DAIRY_MANAGER and has_organization_permission(membership, "inventory.manage")) or membership.role
+        "can_manage_inventory": (
+            membership.role == Membership.Role.DAIRY_MANAGER
+            and has_organization_permission(membership, "inventory.manage")
+        )
+        or membership.role
         in {
             Membership.Role.OWNER,
             Membership.Role.ADMIN,
             Membership.Role.INVENTORY_MANAGER,
         },
-        "can_manage_configuration": membership.role in {Membership.Role.OWNER, Membership.Role.ADMIN},
+        "can_manage_configuration": membership.role
+        in {Membership.Role.OWNER, Membership.Role.ADMIN},
     }
     return render(request, "dashboard/business.html", context)
 
 
 @login_required
-@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN)
+@organization_access(
+    Membership.Role.OWNER
+    Membership.Role.ADMIN
+)
 @require_http_methods(["GET", "POST"])
 def branches(request, organization_slug):
     organization = request.organization
@@ -161,7 +189,10 @@ def branches(request, organization_slug):
 
 
 @login_required
-@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN)
+@organization_access(
+    Membership.Role.OWNER
+    Membership.Role.ADMIN
+)
 @require_http_methods(["GET", "POST"])
 def branch_edit(request, organization_slug, branch_id):
     from django.shortcuts import get_object_or_404
@@ -196,7 +227,10 @@ def branch_edit(request, organization_slug, branch_id):
 
 
 @login_required
-@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN)
+@organization_access(
+    Membership.Role.OWNER
+    Membership.Role.ADMIN
+)
 @require_http_methods(["GET", "POST"])
 def organization_edit(request, organization_slug):
     organization = request.organization

@@ -99,7 +99,11 @@ class Membership(UUIDModel, TimeStampedModel):
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACTIVE)
     invited_email = models.EmailField(blank=True)
     joined_at = models.DateTimeField(null=True, blank=True)
-    permissions = models.ManyToManyField("OrganizationPermission", blank=True, related_name="memberships")
+    permissions = models.ManyToManyField(
+        "OrganizationPermission",
+        blank=True,
+        related_name="memberships",
+    )
 
     class Meta:
         constraints = [
@@ -144,7 +148,11 @@ class StaffInvitation(UUIDModel, TimeStampedModel):
     last_name = models.CharField(max_length=150, blank=True)
     role = models.CharField(max_length=32, choices=Membership.Role.choices)
     branches = models.ManyToManyField(Branch, blank=True, related_name="staff_invitations")
-    permissions = models.ManyToManyField("OrganizationPermission", blank=True, related_name="staff_invitations")
+    permissions = models.ManyToManyField(
+        "OrganizationPermission",
+        blank=True,
+        related_name="staff_invitations",
+    )
     token_hash = models.CharField(max_length=64, unique=True)
     expires_at = models.DateTimeField(db_index=True)
     accepted_at = models.DateTimeField(null=True, blank=True)
