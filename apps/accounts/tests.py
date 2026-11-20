@@ -29,3 +29,15 @@ class LoginCSRFCookieTests(TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
+    def test_login_page_explains_account_access_without_role_selector(self):
+        response = self.client.get(reverse("accounts:login"))
+
+        self.assertEqual(response.status_code, 200)
+        page = response.content.decode()
+        self.assertContains(response, "Dairy owners &amp; managers")
+        self.assertContains(response, "Staff members")
+        self.assertContains(response, "Farmers &amp; customers")
+        self.assertContains(response, "Platform administrators")
+        self.assertContains(response, "DairyNexus will securely identify your access")
+        self.assertNotContains(response, 'name="role"')
+        self.assertNotContains(response, 'name="account_type"')
