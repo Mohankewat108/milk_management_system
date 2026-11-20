@@ -64,6 +64,15 @@ class CustomerForm(forms.ModelForm):
 
 
 class FarmerForm(forms.ModelForm):
+    send_invitation = forms.BooleanField(
+        required=False,
+        initial=False,
+        label="Send portal invitation to this farmer",
+        help_text=(
+            "Send a secure email link so the farmer can set a password "
+            "and activate their farmer portal account."
+        ),
+    )
     class Meta:
         model = Farmer
         fields = (
@@ -87,6 +96,15 @@ class FarmerForm(forms.ModelForm):
         self.fields["branch"].required = bool(
             membership and membership.role not in {"owner", "admin"}
         )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get("send_invitation") and not cleaned_data.get("email"):
+            self.add_error(
+                "email",
+                "An email address is required when sending a portal invitation.",
+            )
+        return cleaned_data
 
     def clean_code(self):
         code = self.cleaned_data["code"].strip()
