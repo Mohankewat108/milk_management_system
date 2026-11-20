@@ -19,5 +19,6 @@ urlpatterns = [
     path("business/", include("apps.data_exports.urls")),
     path("platform/", include("apps.platform_admin.urls")),
     path("portal/", include("apps.parties.customer_urls")),
+    path("farmer/", include("apps.parties.farmer_urls")),
     path("", landing_page, name="home"),
 ]
