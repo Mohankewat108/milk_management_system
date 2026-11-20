@@ -11,6 +11,7 @@ from apps.pricing.services import active_pricing_on
 from .decorators import organization_access
 from .forms import BranchForm, OrganizationProfileForm, OrganizationRegistrationForm
 from .models import Membership
+from .permissions import has_organization_permission
 from .selectors import memberships_for_user
 from .services import register_organization
 
@@ -58,6 +59,12 @@ def dashboard(request, organization_slug):
     organization = request.organization
     membership = request.membership
     branch_ids = accessible_branch_ids(membership)
+    if membership.role == Membership.Role.DAIRY_MANAGER and not has_organization_permission(
+        membership, "dashboard.view"
+    ):
+        from django.http import Http404
+
+        raise Http404
     branches = organization.branches.filter(is_active=True, deleted_at__isnull=True)
     customers = organization.customers.filter(is_active=True, deleted_at__isnull=True)
     farmers = organization.farmers.filter(is_active=True, deleted_at__isnull=True)
@@ -81,21 +88,21 @@ def dashboard(request, organization_slug):
         "collection_count": collections.count(),
         "active_rate": active_rate,
         "rate_date": today,
-        "can_record_collection": membership.role
+        "can_record_collection": (membership.role == Membership.Role.DAIRY_MANAGER and has_organization_permission(membership, "collections.create")) or membership.role
         in {
             Membership.Role.OWNER,
             Membership.Role.ADMIN,
             Membership.Role.BRANCH_MANAGER,
             Membership.Role.COLLECTION_OPERATOR,
         },
-        "can_view_parties": membership.role
+        "can_view_parties": (membership.role == Membership.Role.DAIRY_MANAGER and has_organization_permission(membership, "parties.view")) or membership.role
         in {
             Membership.Role.OWNER,
             Membership.Role.ADMIN,
             Membership.Role.BRANCH_MANAGER,
             Membership.Role.SUPPORT,
         },
-        "can_view_collections": membership.role
+        "can_view_collections": (membership.role == Membership.Role.DAIRY_MANAGER and has_organization_permission(membership, "collections.view")) or membership.role
         in {
             Membership.Role.OWNER,
             Membership.Role.ADMIN,
@@ -103,22 +110,22 @@ def dashboard(request, organization_slug):
             Membership.Role.COLLECTION_OPERATOR,
             Membership.Role.QUALITY_OFFICER,
         },
-        "can_approve_collections": membership.role
+        "can_approve_collections": (membership.role == Membership.Role.DAIRY_MANAGER and has_organization_permission(membership, "collections.approve")) or membership.role
         in {Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.QUALITY_OFFICER},
-        "can_manage_staff": membership.role in {Membership.Role.OWNER, Membership.Role.ADMIN},
-        "can_manage_finance": membership.role
+        "can_manage_staff": membership.role in {Membership.Role.OWNER, Membership.Role.ADMIN} or (membership.role == Membership.Role.DAIRY_MANAGER and has_organization_permission(membership, "staff.manage")),
+        "can_manage_finance": (membership.role == Membership.Role.DAIRY_MANAGER and has_organization_permission(membership, "finance.manage")) or membership.role
         in {
             Membership.Role.OWNER,
             Membership.Role.ADMIN,
             Membership.Role.ACCOUNTANT,
         },
-        "can_manage_inventory": membership.role
+        "can_manage_inventory": (membership.role == Membership.Role.DAIRY_MANAGER and has_organization_permission(membership, "inventory.manage")) or membership.role
         in {
             Membership.Role.OWNER,
             Membership.Role.ADMIN,
             Membership.Role.INVENTORY_MANAGER,
         },
-        "can_manage_configuration": membership.role
+        "can_manage_configuration": (membership.role == Membership.Role.DAIRY_MANAGER and has_organization_permission(membership, "settings.manage")) or membership.role
         in {Membership.Role.OWNER, Membership.Role.ADMIN},
     }
     return render(request, "dashboard/business.html", context)
