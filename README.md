@@ -9,7 +9,7 @@ DairyNexus is the Python/Django replacement being developed for the original PHP
 - Django 5.2-compatible project structure and custom UUID user model.
 - Username/email login, Django sessions, password reset/change and login throttling.
 - Tenant organisations, branch memberships, roles and explicit branch assignments.
-- Separate Customer and Farmer domain models and customer portal.
+- Separate Customer and Farmer domain models with account linking, a customer portal and a farmer self-service portal.
 - Effective-dated SNF/FAT/Lactose pricing and configurable quality ranges.
 - Server-side Decimal pricing and collection calculations with historical snapshots.
 - Collection submission and approval workflow.
@@ -72,7 +72,7 @@ To clear only organisations already explicitly marked as demo and their dependen
 | /business/<slug>/pricing/ | Pricing configuration |
 | /business/<slug>/quality/ | Quality profiles |
 | /business/<slug>/payments/ | Payments |
-| /portal/ | Customer portal |
+| /portal/ | Customer portal (linked customer accounts) |\n| /farmer/ | Farmer self-service portal (linked farmer accounts) |
 | /platform/ | Superuser platform control centre and multi-farm onboarding |
 | /healthz/ | Database health check |
 
@@ -90,7 +90,7 @@ The old README references milk.sql, but that SQL dump is absent from the reposit
 
 ## Current limitations
 
-Advanced supplier purchasing/payables, double-entry accounting, invoice/statement generation, subscription charging and plan-limit enforcement, farmer portal, notification delivery, exports, richer reporting, background jobs, MFA, email verification, production SMTP credentials/provider setup, invitation revocation UI, database-level RLS and committed reviewed migrations remain outstanding. See docs/architecture.md, docs/security.md and docs/operations.md.
+Advanced supplier purchasing/payables, double-entry accounting, invoice/statement generation, subscription charging and plan-limit enforcement, farmer ordering and self-service profile edits, notification delivery, exports, richer reporting, background jobs, MFA, email verification, production SMTP credentials/provider setup, invitation revocation UI, database-level RLS and committed reviewed migrations remain outstanding. See docs/architecture.md, docs/security.md and docs/operations.md.
 
 ## Original source
 
@@ -160,7 +160,7 @@ Branch: `feature/full-crud-soft-delete`
 - Payments: create/read/update/soft-delete only while pending or failed. Completed and reversed payments are protected.
 - Expenses: create/read/update/soft-delete while pending or rejected. Approved expenses are protected.
 - Pricing schedules: create/read/approve; only unapproved schedules without linked collections may be edited or moved to Trash. Approved or referenced schedules are immutable.
-- Staff: invitation, membership status and invitation-revocation workflows remain in place.
+- Staff: invitation, account activation, role editing, branch reassignment, membership suspension/reactivation and invitation revocation.
 - Stock movements and approved quality/rate history remain append-only/versioned rather than being edited or erased.
 
 ### Central Trash
