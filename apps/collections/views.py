@@ -136,6 +136,11 @@ def collection_create(request, organization_slug):
 @organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.DAIRY_MANAGER, Membership.Role.QUALITY_OFFICER, permission="collections.approve")
 @require_POST
 def approve_collection(request, organization_slug, collection_id):
+    branch_ids = accessible_branch_ids(request.membership)
+    scoped = MilkCollection.objects.filter(organization=request.organization)
+    if branch_ids is not None:
+        scoped = scoped.filter(branch_id__in=branch_ids)
+    get_object_or_404(scoped, pk=collection_id)
     try:
         entry = approve_collection_service(
             collection_id=collection_id, organization=request.organization, actor=request.user
