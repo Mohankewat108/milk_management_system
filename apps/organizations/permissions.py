@@ -14,10 +14,17 @@ def accessible_branch_ids(membership):
 
 
 def has_organization_permission(membership, permission):
-    """Check an explicit organisation capability; owners/admins retain existing authority."""
+    """Check a capability; write grants imply the matching read capability."""
     if membership.role in ORGANISATION_WIDE_ROLES:
         return True
-    return membership.permissions.filter(key=permission).exists()
+    implied = {
+        "collections.view": {"collections.create", "collections.approve"},
+        "parties.view": {"parties.manage"},
+        "finance.view": {"finance.manage"},
+        "inventory.view": {"inventory.manage"},
+    }
+    granted_keys = {permission, *implied.get(permission, set())}
+    return membership.permissions.filter(key__in=granted_keys).exists()
 
 
 def can_access_branch(membership, branch):
