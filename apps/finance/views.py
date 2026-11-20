@@ -81,7 +81,7 @@ def payment_create(request, organization_slug):
 
 
 @login_required
-@organization_access(Membership.Role.OWNER, Membership.Role.ACCOUNTANT)
+@organization_access(Membership.Role.OWNER, Membership.Role.DAIRY_MANAGER, Membership.Role.ACCOUNTANT, permission="finance.manage")
 @require_POST
 def payment_complete(request, organization_slug, payment_id):
     try:
@@ -103,7 +103,7 @@ def payment_complete(request, organization_slug, payment_id):
 
 
 @login_required
-@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.ACCOUNTANT)
+@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.DAIRY_MANAGER, Membership.Role.ACCOUNTANT, permission="finance.view")
 def expense_list(request, organization_slug):
     records = (
         Expense.objects.filter(organization=request.organization, deleted_at__isnull=True)
@@ -126,7 +126,7 @@ def expense_list(request, organization_slug):
 
 
 @login_required
-@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.ACCOUNTANT)
+@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.DAIRY_MANAGER, Membership.Role.ACCOUNTANT, permission="finance.view")
 @require_http_methods(["GET", "POST"])
 def expense_create(request, organization_slug):
     organization = request.organization
@@ -166,7 +166,7 @@ def expense_create(request, organization_slug):
 
 
 @login_required
-@organization_access(Membership.Role.OWNER, Membership.Role.ACCOUNTANT)
+@organization_access(Membership.Role.OWNER, Membership.Role.DAIRY_MANAGER, Membership.Role.ACCOUNTANT, permission="finance.manage")
 @require_POST
 def expense_approve(request, organization_slug, expense_id):
     try:
@@ -188,7 +188,7 @@ def expense_approve(request, organization_slug, expense_id):
 
 
 @login_required
-@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.ACCOUNTANT)
+@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.DAIRY_MANAGER, Membership.Role.ACCOUNTANT, permission="finance.view")
 @require_http_methods(["GET", "POST"])
 def payment_edit(request, organization_slug, payment_id):
     payment = get_object_or_404(
@@ -233,7 +233,7 @@ def payment_edit(request, organization_slug, payment_id):
 
 
 @login_required
-@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.ACCOUNTANT)
+@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.DAIRY_MANAGER, Membership.Role.ACCOUNTANT, permission="finance.view")
 @require_http_methods(["GET", "POST"])
 def expense_edit(request, organization_slug, expense_id):
     expense = get_object_or_404(
