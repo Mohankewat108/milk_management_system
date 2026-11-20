@@ -4,8 +4,8 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import SetPasswordForm
-from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.core.cache import cache
 from django.db import transaction
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
@@ -91,7 +91,11 @@ def resend_invitation(request, organization_slug, farmer_id):
     farmer = _farmer_for_request(request, organization_slug, farmer_id)
     if not _rate_limit(request, farmer):
         messages.error(request, "Please wait one minute before resending this invitation.")
-        return redirect("parties:farmer_detail", organization_slug=organization_slug, farmer_id=farmer.pk)
+        return redirect(
+            "parties:farmer_detail",
+            organization_slug=organization_slug,
+            farmer_id=farmer.pk,
+        )
     try:
         resend_farmer_invitation(actor=request.user, farmer=farmer, request=request)
     except ValidationError as exc:
@@ -103,7 +107,11 @@ def resend_invitation(request, organization_slug, farmer_id):
         )
     else:
         messages.success(request, f"A fresh invitation was sent to {farmer.email}.")
-    return redirect("parties:farmer_detail", organization_slug=organization_slug, farmer_id=farmer.pk)
+    return redirect(
+        "parties:farmer_detail",
+        organization_slug=organization_slug,
+        farmer_id=farmer.pk,
+    )
 
 
 @login_required
