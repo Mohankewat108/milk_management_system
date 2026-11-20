@@ -47,7 +47,7 @@ class CustomerForm(forms.ModelForm):
         self.fields["user"].required = False
         self.fields["user"].label = "Portal login account"
         self.fields["user"].help_text = (
-            "Optional: link an existing account so this customer can sign in to the customer portal."
+            "Link an existing account so this customer can sign in to the customer portal."
         )
         self.fields["user"].queryset = _available_portal_users(self.instance)
 
