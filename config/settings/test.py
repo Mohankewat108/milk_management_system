@@ -1,10 +1,4 @@
-from . import base as _base
-
-for _setting_name, _setting_value in vars(_base).items():
-    if _setting_name.isupper():
-        globals()[_setting_name] = _setting_value
-
-env = _base.env
+from .base import env
 
 DEBUG = False
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]

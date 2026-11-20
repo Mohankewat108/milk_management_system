@@ -1,16 +1,12 @@
-from . import base as _base
-
-for _setting_name, _setting_value in vars(_base).items():
-    if _setting_name.isupper():
-        globals()[_setting_name] = _setting_value
-
-env = _base.env
-SECRET_KEY = _base.SECRET_KEY
-ALLOWED_HOSTS = _base.ALLOWED_HOSTS
-DJANGO_SITE_URL = _base.DJANGO_SITE_URL
-DATABASES = _base.DATABASES
-EMAIL_BACKEND = _base.EMAIL_BACKEND
-REDIS_URL = _base.REDIS_URL
+from .base import (
+    ALLOWED_HOSTS,
+    DATABASES,
+    DJANGO_SITE_URL,
+    EMAIL_BACKEND,
+    REDIS_URL,
+    SECRET_KEY,
+    env,
+)
 
 DEBUG = False
 
