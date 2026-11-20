@@ -13,14 +13,14 @@ from apps.organizations.permissions import accessible_branch_ids
 
 from .models import ExportJob, ImportBatch, SavedExportTemplate, ScheduledExport
 from .queue import queue_export
-from .services import MODULE_ROLES
+from .services import MODULE_ROLES, can_export_module
 
 
 @login_required
 @organization_access()
 def export_centre(request, organization_slug):
     membership = request.membership
-    allowed = [key for key, roles in MODULE_ROLES.items() if membership.role in roles]
+    allowed = [key for key in MODULE_ROLES if can_export_module(membership, key)]
     jobs = ExportJob.objects.filter(organization=request.organization, requested_by=request.user)
     if membership.role in {Membership.Role.OWNER, Membership.Role.ADMIN}:
         jobs = ExportJob.objects.filter(organization=request.organization)
@@ -100,7 +100,7 @@ def download_export(request, organization_slug, job_id):
         Membership.Role.ADMIN,
     }:
         raise Http404
-    if request.membership.role not in MODULE_ROLES.get(job.module, set()):
+    if not can_export_module(request.membership, job.module):
         raise Http404
     if not isinstance(job.filters, dict) or "branch_scope" not in job.filters:
         raise Http404

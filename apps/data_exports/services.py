@@ -11,7 +11,7 @@ from apps.collections.models import MilkCollection
 from apps.finance.models import Expense, Payment
 from apps.inventory.models import InventoryItem, Supplier
 from apps.organizations.models import Branch, Membership
-from apps.organizations.permissions import accessible_branch_ids
+from apps.organizations.permissions import accessible_branch_ids, has_organization_permission
 from apps.parties.models import Customer, Farmer
 
 MAX_SYNC_EXPORT_ROWS = 20000
@@ -41,6 +41,17 @@ MODULE_ROLES = {
     "inventory": {Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.INVENTORY_MANAGER},
     "suppliers": {Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.INVENTORY_MANAGER},
 }
+
+
+def can_export_module(membership, module):
+    """Return whether a member may export a module under current role/capability grants."""
+    if module not in MODULE_ROLES:
+        return False
+    if membership.role in MODULE_ROLES[module]:
+        return True
+    return membership.role == Membership.Role.DAIRY_MANAGER and has_organization_permission(
+        membership, "exports.create"
+    )
 
 
 def _scoped_queryset(module, organization, membership, params, branch_scope=None):
@@ -446,6 +457,6 @@ def build_csv(module, queryset):
 
 
 def export_queryset(*, module, organization, membership, params, branch_scope=None):
-    if module not in MODULE_ROLES or membership.role not in MODULE_ROLES[module]:
+    if not can_export_module(membership, module):
         raise PermissionDenied("You do not have permission to export this category.")
     return _scoped_queryset(module, organization, membership, params, branch_scope=branch_scope)

@@ -7,6 +7,8 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.audit.services import record_event
+from apps.organizations.models import Branch
+from apps.organizations.permissions import accessible_branch_ids
 
 from .formats import build_export_file
 from .models import ExportJob
@@ -16,17 +18,21 @@ from .services import export_queryset
 def queue_export(*, module, file_format, organization, membership, actor, filters):
     if file_format not in {"csv", "xlsx", "pdf"}:
         raise ValueError("Choose CSV, Excel or PDF.")
-    queryset = export_queryset(
-        module=module, organization=organization, membership=membership, params=filters
-    )
-    branch_scope = (
-        None
-        if module == "suppliers"
-        else [
-            str(value) if value is not None else None
-            for value in queryset.order_by().values_list("branch_id", flat=True).distinct()
-        ]
-    )
+    export_queryset(module=module, organization=organization, membership=membership, params=filters)
+    branch_scope = None
+    if module != "suppliers":
+        accessible_ids = accessible_branch_ids(membership)
+        branches = Branch.objects.filter(
+            organization=organization,
+            is_active=True,
+            deleted_at__isnull=True,
+        )
+        if accessible_ids is not None:
+            branches = branches.filter(pk__in=accessible_ids)
+        selected_branch = filters.get("branch", "").strip()
+        if selected_branch:
+            branches = branches.filter(pk=selected_branch)
+        branch_scope = [str(branch_id) for branch_id in branches.values_list("pk", flat=True)]
     job = ExportJob.objects.create(
         organization=organization,
         requested_by=actor,

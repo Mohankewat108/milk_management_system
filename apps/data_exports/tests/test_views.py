@@ -3,6 +3,7 @@ from io import BytesIO
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import PermissionDenied
 from django.http import FileResponse
 from django.http.request import QueryDict
 from django.test import TestCase
@@ -12,7 +13,13 @@ from django.utils import timezone
 from apps.data_exports.models import ExportJob
 from apps.data_exports.queue import process_export_job, queue_export
 from apps.data_exports.storage import private_storage
-from apps.organizations.models import Branch, BranchAssignment, Membership, Organization
+from apps.organizations.models import (
+    Branch,
+    BranchAssignment,
+    Membership,
+    Organization,
+    OrganizationPermission,
+)
 from apps.parties.models import Farmer
 
 User = get_user_model()
@@ -203,3 +210,74 @@ class ExportDownloadAuthorizationTests(TestCase):
             exported,
             [(self.organization.pk, self.branch_a.pk)],
         )
+
+    def grant_permission(self, key):
+        permission = OrganizationPermission.objects.get(key=key)
+        self.membership.permissions.add(permission)
+        return permission
+
+    def test_dairy_manager_can_view_reports_with_explicit_permission(self):
+        self.membership.role = Membership.Role.DAIRY_MANAGER
+        self.membership.save(update_fields=["role", "updated_at"])
+        self.grant_permission("reports.view")
+
+        response = self.client.get(
+            reverse("data_exports:reports", kwargs={"organization_slug": self.organization.slug})
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_dairy_manager_cannot_view_reports_without_permission(self):
+        self.membership.role = Membership.Role.DAIRY_MANAGER
+        self.membership.save(update_fields=["role", "updated_at"])
+
+        response = self.client.get(
+            reverse("data_exports:reports", kwargs={"organization_slug": self.organization.slug})
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_dairy_manager_can_queue_branch_scoped_export_with_permission(self):
+        self.membership.role = Membership.Role.DAIRY_MANAGER
+        self.membership.save(update_fields=["role", "updated_at"])
+        self.grant_permission("exports.create")
+
+        job = queue_export(
+            module="farmers",
+            file_format="csv",
+            organization=self.organization,
+            membership=self.membership,
+            actor=self.user,
+            filters=QueryDict("", mutable=True),
+        )
+
+        self.assertEqual(job.status, ExportJob.Status.QUEUED)
+        self.assertEqual(
+            set(job.filters["branch_scope"]),
+            {str(self.branch_a.pk), str(self.branch_b.pk)},
+        )
+
+    def test_dairy_manager_cannot_queue_export_without_permission(self):
+        self.membership.role = Membership.Role.DAIRY_MANAGER
+        self.membership.save(update_fields=["role", "updated_at"])
+
+        with self.assertRaises(PermissionDenied):
+            queue_export(
+                module="farmers",
+                file_format="csv",
+                organization=self.organization,
+                membership=self.membership,
+                actor=self.user,
+                filters=QueryDict("", mutable=True),
+            )
+
+    def test_dairy_manager_download_rechecks_current_export_permission(self):
+        self.membership.role = Membership.Role.DAIRY_MANAGER
+        self.membership.save(update_fields=["role", "updated_at"])
+        permission = self.grant_permission("exports.create")
+        job = self.create_job(branch_scope=[str(self.branch_a.pk), str(self.branch_b.pk)])
+        self.membership.permissions.remove(permission)
+
+        response = self.download(job)
+
+        self.assertEqual(response.status_code, 404)
