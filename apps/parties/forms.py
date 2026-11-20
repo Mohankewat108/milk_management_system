@@ -46,7 +46,9 @@ class CustomerForm(forms.ModelForm):
         )
         self.fields["user"].required = False
         self.fields["user"].label = "Portal login account"
-        self.fields["user"].help_text = (
+        self.fields[
+            "user"
+        ].help_text = (
             "Link an existing account so this customer can sign in to the customer portal."
         )
         self.fields["user"].queryset = _available_portal_users(self.instance)
@@ -88,9 +90,9 @@ class FarmerForm(forms.ModelForm):
         )
         self.fields["user"].required = False
         self.fields["user"].label = "Farmer login account"
-        self.fields["user"].help_text = (
-            "Optional: link an existing account to enable the farmer self-service portal."
-        )
+        self.fields[
+            "user"
+        ].help_text = "Optional: link an existing account to enable the farmer self-service portal."
         self.fields["user"].queryset = _available_portal_users(self.instance)
 
     def clean_code(self):
