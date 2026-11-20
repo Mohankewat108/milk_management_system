@@ -19,7 +19,12 @@ from apps.audit.services import record_event
 from apps.organizations.decorators import organization_access
 from apps.organizations.models import Membership
 
-from .invitations import resend_farmer_invitation, revoke_farmer_invitation, send_farmer_invitation, valid_invitation
+from .invitations import (
+    resend_farmer_invitation,
+    revoke_farmer_invitation,
+    send_farmer_invitation,
+    valid_invitation,
+)
 from .models import Farmer, FarmerInvitation
 
 User = get_user_model()
@@ -51,7 +56,11 @@ def send_invitation(request, organization_slug, farmer_id):
     farmer = _farmer_for_request(request, organization_slug, farmer_id)
     if not _rate_limit(request, farmer):
         messages.error(request, "Please wait one minute before sending another invitation.")
-        return redirect("parties:farmer_detail", organization_slug=organization_slug, farmer_id=farmer.pk)
+        return redirect(
+            "parties:farmer_detail",
+            organization_slug=organization_slug,
+            farmer_id=farmer.pk,
+        )
     try:
         send_farmer_invitation(actor=request.user, farmer=farmer, request=request)
     except ValidationError as exc:
@@ -64,7 +73,11 @@ def send_invitation(request, organization_slug, farmer_id):
         )
     else:
         messages.success(request, f"Invitation sent to {farmer.email}.")
-    return redirect("parties:farmer_detail", organization_slug=organization_slug, farmer_id=farmer.pk)
+    return redirect(
+        "parties:farmer_detail",
+        organization_slug=organization_slug,
+        farmer_id=farmer.pk,
+    )
 
 
 @login_required
@@ -84,7 +97,10 @@ def resend_invitation(request, organization_slug, farmer_id):
     except ValidationError as exc:
         messages.error(request, "; ".join(exc.messages))
     except Exception:
-        messages.error(request, "The resend email could not be delivered. The previous link was revoked.")
+        messages.error(
+            request,
+            "The resend email could not be delivered. The previous link was revoked.",
+        )
     else:
         messages.success(request, f"A fresh invitation was sent to {farmer.email}.")
     return redirect("parties:farmer_detail", organization_slug=organization_slug, farmer_id=farmer.pk)
@@ -138,7 +154,12 @@ def accept_invitation(request, invitation_id, token):
                 changes={"farmer_id": str(invitation.farmer_id)},
                 request=request,
             )
-        return render(request, "parties/farmer_invitation_invalid.html", {"invitation": invitation}, status=410)
+        return render(
+            request,
+            "parties/farmer_invitation_invalid.html",
+            {"invitation": invitation},
+            status=410,
+        )
 
     if (
         request.user.is_authenticated
@@ -155,11 +176,17 @@ def accept_invitation(request, invitation_id, token):
         if not request.user.is_authenticated:
             return redirect(f"{reverse('accounts:login')}?next={request.path}")
         if request.user.pk != existing.pk:
-            return HttpResponseForbidden("Sign in with the email address that received this invitation.")
+            return HttpResponseForbidden(
+                "Sign in with the email address that received this invitation."
+            )
         user = existing
         form = None
     else:
-        if request.user.is_authenticated and existing is not None and request.user.pk != existing.pk:
+        if (
+            request.user.is_authenticated
+            and existing is not None
+            and request.user.pk != existing.pk
+        ):
             return HttpResponseForbidden("This invitation belongs to another account.")
         user = existing or User(
             username=_username_for_email(invitation.email),
@@ -214,7 +241,9 @@ def accept_invitation(request, invitation_id, token):
 
             farmer = locked.farmer
             if farmer.user_id not in (None, user.pk):
-                return HttpResponseForbidden("This farmer profile is already linked to another account.")
+                return HttpResponseForbidden(
+                    "This farmer profile is already linked to another account."
+                )
             linked_farmer = getattr(user, "farmer_profile", None)
             if linked_farmer is not None and linked_farmer.pk != farmer.pk:
                 return HttpResponseForbidden("This account is already linked to another farmer.")
