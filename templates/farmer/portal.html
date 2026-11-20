@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% load locale_dates %}
+{% block title %}My farmer account | {{ organization.name }}{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <div class="eyebrow">FARMER SELF-SERVICE PORTAL</div>
+    <h1>Welcome, {{ farmer.full_name }}</h1>
+    <p class="muted">{{ organization.name }}{% if farmer.branch %} · {{ farmer.branch.name }}{% endif %} · Farmer ID {{ farmer.code }}</p>
+  </div>
+  <a class="button button-secondary" href="{% url 'accounts:password_change' %}">Change password</a>
+</div>
+<div class="kpi-grid">
+  <section class="panel"><div class="eyebrow">THIS MONTH · APPROVED MILK</div><h2>{{ month_summary.litres|default:"0.000" }} L</h2></section>
+  <section class="panel"><div class="eyebrow">THIS MONTH · EARNINGS</div><h2>{{ currency }} {{ month_summary.amount|default:"0.00" }}</h2></section>
+  <section class="panel"><div class="eyebrow">LIFETIME · APPROVED MILK</div><h2>{{ lifetime_summary.litres|default:"0.000" }} L</h2></section>
+  <section class="panel"><div class="eyebrow">LIFETIME · GROSS VALUE</div><h2>{{ currency }} {{ lifetime_summary.amount|default:"0.00" }}</h2></section>
+  <section class="panel"><div class="eyebrow">PAYMENTS RECEIVED</div><h2>{{ currency }} {{ payment_summary.amount|default:"0.00" }}</h2></section>
+  <section class="panel"><div class="eyebrow">PAYMENTS PENDING</div><h2>{{ currency }} {{ pending_summary.amount|default:"0.00" }}</h2></section>
+</div>
+<section class="panel">
+  <h2>My farmer profile</h2>
+  <div class="table-wrap"><table><tbody>
+    <tr><th>Full name</th><td>{{ farmer.full_name }}</td><th>Farmer ID</th><td>{{ farmer.code }}</td></tr>
+    <tr><th>Dairy</th><td>{{ organization.name }}</td><th>Branch</th><td>{{ farmer.branch.name|default:"Not assigned" }}</td></tr>
+    <tr><th>Email</th><td>{{ farmer.email|default:"Not provided" }}</td><th>Phone</th><td>{{ farmer.phone|default:"Not provided" }}</td></tr>
+    <tr><th>Address</th><td>{{ farmer.address|default:"Not provided" }}</td><th>Login email</th><td>{{ request.user.email }}</td></tr>
+  </tbody></table></div>
+  <p class="small muted">For changes to identity, bank or contact information, contact your dairy administrator so financial records remain auditable.</p>
+</section>
+<section class="panel">
+  <h2>My approved milk collection history</h2>
+  <p class="muted">This page only shows approved collections linked to your farmer account. Draft, submitted, rejected and reversed entries are excluded.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Date / time</th><th>Reference</th><th>Quantity</th><th>SNF</th><th>Fat</th><th>Lactose</th><th>Rate / L</th><th>Gross amount</th></tr></thead>
+    <tbody>
+    {% for item in collections %}
+      <tr><td>{{ item.collected_at|local_date }}</td><td>{{ item.reference }}</td><td>{{ item.quantity_litres }} L</td><td>{{ item.snf }}</td><td>{{ item.fat }}</td><td>{{ item.lactose }}</td><td>{{ currency }} {{ item.milk_rate }}</td><td>{{ currency }} {{ item.total_amount }}</td></tr>
+    {% empty %}<tr><td colspan="8">No approved milk collections are available yet.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</section>
+<section class="panel">
+  <h2>Completed payments</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Payment date</th><th>Reference</th><th>Method</th><th>Transaction reference</th><th>Amount</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for item in payments %}
+      <tr><td>{{ item.paid_at|local_date }}</td><td>{{ item.reference }}</td><td>{{ item.get_method_display }}</td><td>{{ item.transaction_reference|default:"—" }}</td><td>{{ item.currency }} {{ item.amount }}</td><td>{{ item.get_status_display }}</td></tr>
+    {% empty %}<tr><td colspan="6">No completed payments are available yet.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</section>
+<section class="panel">
+  <h2>Payments awaiting verification</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Reference</th><th>Recorded</th><th>Method</th><th>Amount</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for item in pending_payments %}
+      <tr><td>{{ item.reference }}</td><td>{{ item.created_at|local_date }}</td><td>{{ item.get_method_display }}</td><td>{{ item.currency }} {{ item.amount }}</td><td>{{ item.get_status_display }}</td></tr>
+    {% empty %}<tr><td colspan="5">There are no pending payments.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</section>
+{% endblock %}
