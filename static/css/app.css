@@ -767,3 +767,44 @@ label { color: var(--color-text-secondary); }
 .export-security-note{max-width:100ch}
 @media(max-width:850px){.export-schedule-form{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:550px){.export-schedule-form{grid-template-columns:1fr}.module-export-form{width:100%}.module-export-form select{flex:1}}
+
+
+/* Production single-entry login experience */
+.login-experience{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(320px,.85fr);gap:clamp(1.5rem,5vw,4.5rem);align-items:center;width:min(1080px,100%);margin:clamp(1.5rem,5vw,4rem) auto;padding:clamp(1.25rem,4vw,3rem);border:1px solid var(--color-border);border-radius:1.5rem;background:var(--color-surface);box-shadow:var(--shadow-md)}
+.login-intro{min-width:0}
+.login-brand{display:inline-flex;align-items:center;gap:.75rem;color:var(--color-ink);text-decoration:none}
+.login-brand:hover{color:var(--color-ink)}
+.login-brand-mark{width:44px;height:44px;display:grid;place-items:center;border-radius:13px;background:linear-gradient(145deg,#1d70c6,#104781);color:#fff;font-size:1.35rem;font-weight:850}
+.login-brand>span:last-child{display:grid;gap:.15rem}
+.login-brand strong{font-size:1.1rem;letter-spacing:-.03em}
+.login-brand small{color:var(--color-subtle);font-size:.58rem;font-weight:800;letter-spacing:.12em}
+.login-welcome{margin:clamp(2rem,5vw,3.5rem) 0 1.5rem}
+.login-welcome h1{margin:.65rem 0 .8rem;font-size:clamp(2rem,4vw,3.15rem);line-height:1.08;letter-spacing:-.05em}
+.login-welcome>p{max-width:49ch;color:var(--color-muted);line-height:1.75}
+.login-audience{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.7rem}
+.login-audience-item{display:flex;align-items:flex-start;gap:.7rem;min-width:0;padding:.85rem;border:1px solid var(--color-border);border-radius:.85rem;background:var(--color-page)}
+.login-audience-icon{width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;border-radius:.65rem;background:var(--color-primary-soft);color:var(--color-primary);font-size:1.1rem;font-weight:800}
+.login-audience-item h2{margin:.05rem 0 .25rem;font-size:.82rem;letter-spacing:-.01em}
+.login-audience-item p{margin:0;color:var(--color-muted);font-size:.7rem;line-height:1.5}
+.login-trust-note{display:flex;align-items:center;gap:.5rem;margin:1.1rem 0 0;color:var(--color-muted);font-size:.75rem}
+.login-trust-note span{width:20px;height:20px;display:grid;place-items:center;border-radius:50%;background:var(--color-success-bg);color:var(--color-success);font-weight:800}
+.login-form-panel{min-width:0;padding:clamp(1.25rem,3vw,2rem);border:1px solid var(--color-border);border-radius:1.1rem;background:var(--color-page)}
+.login-form-heading{margin-bottom:1.35rem}
+.login-form-kicker{color:var(--color-primary);font-size:.65rem;font-weight:850;letter-spacing:.13em}
+.login-form-heading h2{margin:.45rem 0;font-size:1.55rem;letter-spacing:-.04em}
+.login-form-heading p{margin:0;color:var(--color-muted);font-size:.85rem;line-height:1.6}
+.login-field{margin-top:1rem}
+.login-field label{margin:.1rem 0 .4rem}
+.login-field input{background:var(--color-surface)}
+.login-label-row{display:flex;align-items:center;justify-content:space-between;gap:.75rem}
+.login-label-row a{font-size:.72rem;font-weight:750;text-decoration:none}
+.login-submit{display:flex;align-items:center;justify-content:center;gap:.6rem;min-height:48px;margin-top:1.4rem}
+.login-submit span{font-size:1.1rem;transition:transform var(--transition)}
+.login-submit:hover span{transform:translateX(3px)}
+.login-form-footer{margin-top:1.2rem;padding-top:1rem;border-top:1px solid var(--color-border);text-align:center}
+.login-form-footer p{margin:.35rem 0;color:var(--color-muted);font-size:.78rem}
+.login-form-footer a{font-weight:750;text-decoration:none}
+.login-form-footer .login-security-copy{display:flex;align-items:flex-start;justify-content:center;gap:.4rem;margin-top:.85rem;font-size:.68rem;line-height:1.5}
+@media(max-width:800px){.login-experience{grid-template-columns:1fr;max-width:620px;gap:1.5rem}.login-welcome{margin:1.7rem 0 1.2rem}.login-welcome h1{font-size:clamp(1.9rem,7vw,2.6rem)}}
+@media(max-width:480px){.login-experience{width:calc(100% - 1rem);margin:1rem auto;padding:.8rem;border-radius:1rem;gap:1rem}.login-intro{padding:.5rem}.login-audience{grid-template-columns:1fr}.login-audience-item{padding:.7rem}.login-form-panel{padding:1rem}.login-form-heading h2{font-size:1.35rem}}
+@media(prefers-reduced-motion:reduce){.login-submit span{transition:none}}

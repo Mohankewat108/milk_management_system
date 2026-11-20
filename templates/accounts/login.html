@@ -1,2 +1,68 @@
-{% extends "base.html" %}{% block title %}Sign in | DairyNexus{% endblock %}{% block content %}
-<section class="auth-card"><div class="eyebrow">WELCOME BACK</div><h1>Sign in to DairyNexus</h1><p class="muted">Use your username or email address to access your dairy workspace.</p><form method="post" novalidate>{% csrf_token %}{% if form.non_field_errors %}<div class="alert error" role="alert">{{ form.non_field_errors }}</div>{% endif %}<label for="{{ form.username.id_for_label }}">Username or email</label>{{ form.username }}{{ form.username.errors }}<label for="{{ form.password.id_for_label }}">Password</label>{{ form.password }}{{ form.password.errors }}<button class="button full" type="submit">Sign in</button></form><p class="muted small">Forgot password? <a href="{% url 'accounts:password_reset' %}">Reset it</a></p><p class="muted small">New to DairyNexus? <a href="{% url 'accounts:register' %}">Create an account</a></p></section>{% endblock %}
+{% extends "base.html" %}
+{% block title %}Sign in | DairyNexus{% endblock %}
+{% block content %}
+<section class="login-experience" aria-labelledby="login-title">
+  <div class="login-intro">
+    <a class="login-brand" href="{% url 'home' %}" aria-label="DairyNexus home">
+      <span class="login-brand-mark" aria-hidden="true">D</span>
+      <span><strong>DairyNexus</strong><small>DAIRY MANAGEMENT PLATFORM</small></span>
+    </a>
+    <div class="login-welcome">
+      <span class="eyebrow">WELCOME BACK</span>
+      <h1 id="login-title">One secure sign-in.<br>Every part of your dairy.</h1>
+      <p>Sign in with the account provided to you. DairyNexus will securely identify your access and open the right workspace.</p>
+    </div>
+    <div class="login-audience" aria-label="DairyNexus account types">
+      <article class="login-audience-item">
+        <span class="login-audience-icon" aria-hidden="true">⌂</span>
+        <div><h2>Dairy owners & managers</h2><p>Manage your dairy, branches, team, collections and finances.</p></div>
+      </article>
+      <article class="login-audience-item">
+        <span class="login-audience-icon" aria-hidden="true">◎</span>
+        <div><h2>Staff members</h2><p>Access the tools and branches assigned by your dairy manager.</p></div>
+      </article>
+      <article class="login-audience-item">
+        <span class="login-audience-icon" aria-hidden="true">♧</span>
+        <div><h2>Farmers & customers</h2><p>View your own milk collection, payment and account information.</p></div>
+      </article>
+      <article class="login-audience-item">
+        <span class="login-audience-icon" aria-hidden="true">◇</span>
+        <div><h2>Platform administrators</h2><p>Use your authorised platform account to manage the SaaS platform.</p></div>
+      </article>
+    </div>
+    <p class="login-trust-note"><span aria-hidden="true">✓</span> Your access is controlled by your account permissions.</p>
+  </div>
+
+  <div class="login-form-panel">
+    <div class="login-form-heading">
+      <span class="login-form-kicker">YOUR ACCOUNT</span>
+      <h2>Sign in to continue</h2>
+      <p>Enter the username or email address and password linked to your account.</p>
+    </div>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="alert error" role="alert">{{ form.non_field_errors }}</div>
+      {% endif %}
+      <div class="login-field">
+        <label for="{{ form.username.id_for_label }}">Username or email</label>
+        {{ form.username }}
+        {{ form.username.errors }}
+      </div>
+      <div class="login-field">
+        <div class="login-label-row">
+          <label for="{{ form.password.id_for_label }}">Password</label>
+          <a href="{% url 'accounts:password_reset' %}">Forgot password?</a>
+        </div>
+        {{ form.password }}
+        {{ form.password.errors }}
+      </div>
+      <button class="button full login-submit" type="submit">Sign in securely <span aria-hidden="true">→</span></button>
+    </form>
+    <div class="login-form-footer">
+      <p>New to DairyNexus? <a href="{% url 'accounts:register' %}">Create an account</a></p>
+      <p class="login-security-copy"><span aria-hidden="true">▣</span> Never share your password. DairyNexus will never ask you to disclose it by email.</p>
+    </div>
+  </div>
+</section>
+{% endblock %}
