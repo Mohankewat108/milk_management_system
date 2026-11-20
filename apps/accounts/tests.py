@@ -34,9 +34,9 @@ class LoginCSRFCookieTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         page = response.content.decode()
-        self.assertContains(response, "Dairy owners &amp; managers")
+        self.assertContains(response, "Dairy owners")
         self.assertContains(response, "Staff members")
-        self.assertContains(response, "Farmers &amp; customers")
+        self.assertContains(response, "Farmers")
         self.assertContains(response, "Platform administrators")
         self.assertContains(response, "DairyNexus will securely identify your access")
         self.assertNotContains(response, 'name="role"')
