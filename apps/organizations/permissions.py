@@ -7,10 +7,17 @@ ORGANISATION_WIDE_ROLES = {
 
 
 def accessible_branch_ids(membership):
-    """Return restricted branch IDs; organisation-wide roles get None."""
+    """Return restricted branch IDs; only owner/admin have organisation-wide scope."""
     if membership.role in ORGANISATION_WIDE_ROLES:
         return None
     return list(membership.branch_assignments.values_list("branch_id", flat=True))
+
+
+def has_organization_permission(membership, permission):
+    """Check an explicit organisation capability; owners/admins retain existing authority."""
+    if membership.role in ORGANISATION_WIDE_ROLES:
+        return True
+    return membership.permissions.filter(key=permission).exists()
 
 
 def can_access_branch(membership, branch):
