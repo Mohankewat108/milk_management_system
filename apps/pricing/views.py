@@ -22,7 +22,7 @@ def _effective_end(value):
 
 
 @login_required
-@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN)
+@organization_access(Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.DAIRY_MANAGER, permission="settings.manage")
 @require_http_methods(["GET", "POST"])
 def settings_view(request, organization_slug):
     organization = request.organization
