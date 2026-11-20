@@ -808,3 +808,115 @@ label { color: var(--color-text-secondary); }
 @media(max-width:800px){.login-experience{grid-template-columns:1fr;max-width:620px;gap:1.5rem}.login-welcome{margin:1.7rem 0 1.2rem}.login-welcome h1{font-size:clamp(1.9rem,7vw,2.6rem)}}
 @media(max-width:480px){.login-experience{width:calc(100% - 1rem);margin:1rem auto;padding:.8rem;border-radius:1rem;gap:1rem}.login-intro{padding:.5rem}.login-audience{grid-template-columns:1fr}.login-audience-item{padding:.7rem}.login-form-panel{padding:1rem}.login-form-heading h2{font-size:1.35rem}}
 @media(prefers-reduced-motion:reduce){.login-submit span{transition:none}}
+
+
+/* Platform control centre: one scroll container owns table overflow. */
+.platform-farms-panel {
+  min-width: 0;
+  overflow: visible;
+}
+.platform-farms-panel > .row-between {
+  align-items: flex-start;
+  flex-wrap: wrap;
+  padding: 1.15rem 1.25rem;
+}
+.platform-table-scroll {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: visible;
+  overscroll-behavior-x: contain;
+  border-top: 1px solid var(--color-border);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  background: var(--color-surface);
+  scrollbar-gutter: stable;
+}
+.platform-table-scroll:focus-visible {
+  outline-offset: -3px;
+}
+.platform-table-scroll table {
+  width: 100%;
+  min-width: 1120px;
+  border-collapse: separate;
+  border-spacing: 0;
+  white-space: nowrap;
+}
+.platform-table-scroll th,
+.platform-table-scroll td {
+  padding: .85rem .9rem;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: middle;
+}
+.platform-table-scroll th {
+  position: static;
+  background: var(--color-page);
+  color: var(--color-muted);
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+.platform-table-scroll tbody tr {
+  background: var(--color-surface);
+}
+.platform-table-scroll tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--color-page) 65%, var(--color-surface));
+}
+.platform-table-scroll tbody tr:hover {
+  background: var(--color-primary-soft);
+}
+.platform-table-scroll td:first-child {
+  min-width: 190px;
+  white-space: normal;
+}
+.platform-table-scroll td:nth-child(2) {
+  min-width: 220px;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.platform-table-scroll td:last-child {
+  min-width: 250px;
+  white-space: normal;
+}
+.platform-table-scroll td form {
+  display: grid;
+  gap: .45rem;
+  margin: .35rem 0;
+}
+.platform-table-scroll td form input[type="text"] {
+  min-width: 190px;
+}
+.platform-table-scroll td .button {
+  justify-self: start;
+  white-space: nowrap;
+}
+:root[data-theme="dark"] .platform-table-scroll {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+:root[data-theme="dark"] .platform-table-scroll tbody tr,
+:root[data-theme="dark"] .platform-table-scroll tbody tr:nth-child(even) {
+  background: var(--color-surface);
+}
+:root[data-theme="dark"] .platform-table-scroll tbody tr:hover {
+  background: var(--color-primary-soft);
+}
+@media (max-width: 850px) {
+  .platform-farms-panel > .row-between {
+    padding: 1rem;
+  }
+  .platform-table-scroll table {
+    min-width: 1050px;
+  }
+}
+@media (max-width: 600px) {
+  .platform-farms-panel > .row-between {
+    display: grid;
+    gap: .65rem;
+  }
+  .platform-farms-panel > .row-between > .button {
+    justify-self: start;
+  }
+}
