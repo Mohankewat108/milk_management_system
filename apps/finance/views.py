@@ -84,6 +84,11 @@ def payment_create(request, organization_slug):
 @organization_access(Membership.Role.OWNER, Membership.Role.DAIRY_MANAGER, Membership.Role.ACCOUNTANT, permission="finance.manage")
 @require_POST
 def payment_complete(request, organization_slug, payment_id):
+    branch_ids = accessible_branch_ids(request.membership)
+    scoped = Payment.objects.filter(organization=request.organization)
+    if branch_ids is not None:
+        scoped = scoped.filter(branch_id__in=branch_ids)
+    get_object_or_404(scoped, pk=payment_id)
     try:
         payment = complete_payment(
             payment_id=payment_id, organization=request.organization, actor=request.user
@@ -169,6 +174,11 @@ def expense_create(request, organization_slug):
 @organization_access(Membership.Role.OWNER, Membership.Role.DAIRY_MANAGER, Membership.Role.ACCOUNTANT, permission="finance.manage")
 @require_POST
 def expense_approve(request, organization_slug, expense_id):
+    branch_ids = accessible_branch_ids(request.membership)
+    scoped = Expense.objects.filter(organization=request.organization)
+    if branch_ids is not None:
+        scoped = scoped.filter(branch_id__in=branch_ids)
+    get_object_or_404(scoped, pk=expense_id)
     try:
         expense = approve_expense(
             expense_id=expense_id, organization=request.organization, actor=request.user
