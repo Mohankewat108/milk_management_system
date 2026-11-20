@@ -36,7 +36,7 @@ class Migration(migrations.Migration):
             name="OrganizationPermission",
             fields=[
                 ("id", models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, serialize=False)),
-                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True, db_index=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
                 ("key", models.CharField(max_length=64, unique=True, choices=[
                     ("dashboard.view", "View dashboard"),
