@@ -211,7 +211,6 @@ class ExportDownloadAuthorizationTests(TestCase):
             [(self.organization.pk, self.branch_a.pk)],
         )
 
-
     def grant_permission(self, key):
         permission = OrganizationPermission.objects.get(key=key)
         self.membership.permissions.add(permission)
