@@ -88,11 +88,15 @@ def farmer_portal(request):
         .select_related("branch")
         .order_by("-paid_at", "-created_at")
     )
-    pending_payments = farmer.payments.filter(
-        direction=Payment.Direction.OUTGOING,
-        status=Payment.Status.PENDING,
-        deleted_at__isnull=True,
-    ).select_related("branch").order_by("-created_at")
+    pending_payments = (
+        farmer.payments.filter(
+            direction=Payment.Direction.OUTGOING,
+            status=Payment.Status.PENDING,
+            deleted_at__isnull=True,
+        )
+        .select_related("branch")
+        .order_by("-created_at")
+    )
 
     today = timezone.localdate()
     month_start = today.replace(day=1)
