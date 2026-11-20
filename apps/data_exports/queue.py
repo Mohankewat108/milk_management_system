@@ -18,7 +18,9 @@ from .services import export_queryset
 def queue_export(*, module, file_format, organization, membership, actor, filters):
     if file_format not in {"csv", "xlsx", "pdf"}:
         raise ValueError("Choose CSV, Excel or PDF.")
-    export_queryset(module=module, organization=organization, membership=membership, params=filters)
+    export_queryset(
+        module=module, organization=organization, membership=membership, params=filters
+    )
     branch_scope = None
     if module != "suppliers":
         accessible_ids = accessible_branch_ids(membership)
