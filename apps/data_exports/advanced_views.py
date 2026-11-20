@@ -16,11 +16,11 @@ from apps.finance.models import Expense, Payment
 from apps.inventory.models import InventoryItem
 from apps.organizations.decorators import organization_access
 from apps.organizations.models import Membership
-from apps.organizations.permissions import accessible_branch_ids
+from apps.organizations.permissions import accessible_branch_ids, has_organization_permission
 from apps.parties.models import Customer, Farmer
 
 from .models import ImportBatch, SavedExportTemplate, ScheduledExport
-from .services import MODULE_ROLES
+from .services import MODULE_ROLES, can_export_module
 
 
 def _require_owner_admin(membership):
@@ -34,7 +34,7 @@ def _require_owner_admin(membership):
 def save_export_template(request, organization_slug):
     module = request.POST.get("module", "")
     file_format = request.POST.get("file_format", "xlsx")
-    if module not in MODULE_ROLES or request.membership.role not in MODULE_ROLES[module]:
+    if not can_export_module(request.membership, module):
         raise PermissionDenied
     if file_format not in {"csv", "xlsx", "pdf"}:
         messages.error(request, "Choose CSV, Excel or PDF.")
@@ -229,7 +229,10 @@ def reports_dashboard(request, organization_slug):
         Membership.Role.ADMIN,
         Membership.Role.BRANCH_MANAGER,
         Membership.Role.ACCOUNTANT,
-    }:
+    } and not (
+        membership.role == Membership.Role.DAIRY_MANAGER
+        and has_organization_permission(membership, "reports.view")
+    ):
         raise PermissionDenied
     branch_ids = accessible_branch_ids(membership)
     collections = MilkCollection.objects.filter(organization=request.organization)
