@@ -84,9 +84,11 @@ class FarmerInvitationTests(TestCase):
             kwargs={"invitation_id": invitation.pk, "token": token},
         )
 
+        # Invitation links are public entry points. Simulate the farmer opening
+        # the link in a clean browser session, not the dairy owner's session.
+        self.client.logout()
         response = self.client.get(invitation_url)
         self.assertEqual(response.status_code, 200)
-        self.client.logout()
         response = self.client.post(
             invitation_url,
             {
@@ -155,6 +157,78 @@ class FarmerInvitationTests(TestCase):
                 action="farmer.invitation.email_failed",
             ).exists()
         )
+
+    def _farmer_create_url(self):
+        return reverse("parties:farmer_create", args=[self.organization.slug])
+
+    def _farmer_create_payload(self, **overrides):
+        payload = {
+            "branch": "",
+            "code": "F-NEW",
+            "full_name": "New Portal Farmer",
+            "phone": "9800000000",
+            "email": "new-farmer@example.test",
+            "address": "",
+            "bank_account_name": "",
+            "bank_account_number": "",
+            "bank_name": "",
+        }
+        payload.update(overrides)
+        return payload
+
+    def test_create_farmer_without_invitation_does_not_send_email(self):
+        response = self.client.post(
+            self._farmer_create_url(),
+            self._farmer_create_payload(),
+        )
+        self.assertEqual(response.status_code, 302)
+        created = Farmer.objects.get(code="F-NEW", organization=self.organization)
+        self.assertFalse(created.is_active)
+        self.assertIsNone(created.user_id)
+        self.assertFalse(FarmerInvitation.objects.filter(farmer=created).exists())
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_create_farmer_with_invitation_sends_existing_secure_invitation(self):
+        response = self.client.post(
+            self._farmer_create_url(),
+            self._farmer_create_payload(send_invitation="on"),
+        )
+        self.assertEqual(response.status_code, 302)
+        created = Farmer.objects.get(code="F-NEW", organization=self.organization)
+        invitation = FarmerInvitation.objects.get(farmer=created)
+        self.assertFalse(created.is_active)
+        self.assertIsNone(created.user_id)
+        self.assertEqual(invitation.status, FarmerInvitation.Status.SENT)
+        self.assertEqual(invitation.email, "new-farmer@example.test")
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_create_farmer_requires_email_when_invitation_selected(self):
+        response = self.client.post(
+            self._farmer_create_url(),
+            self._farmer_create_payload(email="", send_invitation="on"),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "An email address is required")
+        self.assertFalse(Farmer.objects.filter(code="F-NEW").exists())
+        self.assertFalse(FarmerInvitation.objects.exists())
+
+    def test_create_farmer_remains_saved_when_invitation_delivery_fails(self):
+        from unittest.mock import patch
+
+        with patch(
+            "apps.parties.invitations.send_mail",
+            side_effect=RuntimeError("mail down"),
+        ):
+            response = self.client.post(
+                self._farmer_create_url(),
+                self._farmer_create_payload(send_invitation="on"),
+            )
+        self.assertEqual(response.status_code, 302)
+        created = Farmer.objects.get(code="F-NEW", organization=self.organization)
+        invitation = FarmerInvitation.objects.get(farmer=created)
+        self.assertFalse(created.is_active)
+        self.assertEqual(invitation.status, FarmerInvitation.Status.FAILED)
+        self.assertEqual(len(mail.outbox), 0)
 
     def test_other_tenant_cannot_send_invitation(self):
         other_owner = User.objects.create_user(

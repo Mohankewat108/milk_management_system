@@ -1,1 +1,50 @@
-{% extends "base.html" %}{% block title %}New farmer{% endblock %}{% block content %}<section class="content-card"><h1>{% if is_edit %}Edit farmer{% else %}Add farmer{% endif %}</h1><form method="post">{% csrf_token %}{{ form.non_field_errors }}{% for field in form %}<label>{{ field.label }}</label>{{ field }}{{ field.errors }}{% endfor %}<button class="button" type="submit">{% if is_edit %}Save changes{% else %}Create farmer{% endif %}</button></form></section>{% endblock %}
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Add farmer" %}{% endblock %}
+{% block content %}
+<section class="content-card">
+  <h1>{% translate "Add farmer" %}</h1>
+  <p class="muted">{% translate "Create a farmer profile. Portal access is optional and requires the farmer to accept an email invitation." %}</p>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    {% for field in form %}
+      {% if field.name == "send_invitation" %}
+        <fieldset class="form-section" aria-describedby="invitation-help">
+          <legend>{% translate "Farmer portal access" %}</legend>
+          <div class="form-check">
+            {{ field }}
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          </div>
+          <p id="invitation-help" class="muted">{{ field.help_text }}</p>
+          {{ field.errors }}
+        </fieldset>
+      {% else %}
+        <div class="form-field{% if field.name == 'email' %} farmer-email-field{% endif %}">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<p class="muted">{{ field.help_text }}</p>{% endif %}
+          {{ field.errors }}
+        </div>
+      {% endif %}
+    {% endfor %}
+    <div class="form-actions">
+      <button class="button" type="submit">{% translate "Create farmer" %}</button>
+      <a class="button button-secondary" href="{% url 'parties:farmers' organization.slug %}">{% translate "Cancel" %}</a>
+    </div>
+  </form>
+</section>
+<script>
+(() => {
+  const checkbox = document.getElementById("id_send_invitation");
+  const email = document.getElementById("id_email");
+  if (!checkbox || !email) return;
+  const updateEmailRequirement = () => {
+    email.required = checkbox.checked;
+    email.setAttribute("aria-required", checkbox.checked ? "true" : "false");
+  };
+  checkbox.addEventListener("change", updateEmailRequirement);
+  updateEmailRequirement();
+})();
+</script>
+{% endblock %}

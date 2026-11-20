@@ -441,6 +441,10 @@ def farmer_list_placeholder(request, organization_slug):
 )
 @require_http_methods(["GET", "POST"])
 def farmer_create(request, organization_slug):
+    from django.core.exceptions import ValidationError
+
+    from .invitations import send_farmer_invitation
+
     org = request.organization
     form = FarmerForm(request.POST or None, organization=org, membership=request.membership)
     if request.method == "POST" and form.is_valid():
@@ -452,8 +456,7 @@ def farmer_create(request, organization_slug):
         else:
             farmer = form.save(commit=False)
             farmer.organization = org
-            # Profiles are created without account access. Access is granted
-            # only after a valid invitation is accepted.
+            # Farmer portal access is granted only after accepting an invitation.
             farmer.is_active = False
             farmer.user = None
             farmer.save()
@@ -464,6 +467,39 @@ def farmer_create(request, organization_slug):
                 target=farmer,
                 request=request,
             )
-            messages.success(request, f"Farmer {farmer.full_name} created.")
-            return redirect("parties:farmers", organization_slug=organization_slug)
-    return render(request, "parties/farmer_form.html", {"organization": org, "form": form})
+
+            if data.get("send_invitation"):
+                try:
+                    send_farmer_invitation(
+                        actor=request.user,
+                        farmer=farmer,
+                        request=request,
+                    )
+                except ValidationError as exc:
+                    messages.warning(
+                        request,
+                        f"Farmer created, but invitation was not sent: {'; '.join(exc.messages)}",
+                    )
+                except Exception:
+                    messages.warning(
+                        request,
+                        "Farmer created successfully, but the invitation email could not be delivered. "
+                        "Open the farmer profile to review the invitation and retry.",
+                    )
+                else:
+                    messages.success(
+                        request,
+                        f"Farmer {farmer.full_name} created and invitation sent to {farmer.email}.",
+                    )
+            else:
+                messages.success(request, f"Farmer {farmer.full_name} created.")
+            return redirect(
+                "parties:farmer_detail",
+                organization_slug=organization_slug,
+                farmer_id=farmer.pk,
+            )
+    return render(
+        request,
+        "parties/farmer_form.html",
+        {"organization": org, "form": form},
+    )
