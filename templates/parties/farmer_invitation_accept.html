@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Accept farmer invitation | DairyNexus{% endblock %}
+{% block workspace_navigation %}{% endblock %}
+{% block workspace_navigation_end %}{% endblock %}
+{% block content %}
+<section class="auth-card">
+  <div class="eyebrow">Farmer portal activation</div>
+  <h1>Accept invitation</h1>
+  <p>You were invited to join <strong>{{ invitation.organization.name }}</strong> as <strong>{{ invitation.farmer.full_name }}</strong>.</p>
+  {% if requires_password %}
+  <form method="post">{% csrf_token %}{{ form.non_field_errors }}{% for field in form %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}{{ field.errors }}{% endfor %}<button class="button full" type="submit">Create account and accept</button></form>
+  {% else %}
+  <form method="post">{% csrf_token %}<button class="button full" type="submit">Accept invitation</button></form>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,10 +1,30 @@
 from django.urls import path
 
-from . import business_views, management_views
+from . import business_views, invitation_views, management_views
 
 app_name = "parties"
 
 urlpatterns = [
+    path(
+        "<slug:organization_slug>/farmers/<uuid:farmer_id>/invitation/send/",
+        invitation_views.send_invitation,
+        name="farmer_invitation_send",
+    ),
+    path(
+        "<slug:organization_slug>/farmers/<uuid:farmer_id>/invitation/resend/",
+        invitation_views.resend_invitation,
+        name="farmer_invitation_resend",
+    ),
+    path(
+        "<slug:organization_slug>/farmers/<uuid:farmer_id>/invitation/revoke/",
+        invitation_views.revoke_invitation,
+        name="farmer_invitation_revoke",
+    ),
+    path(
+        "farmer-invitations/<uuid:invitation_id>/<str:token>/",
+        invitation_views.accept_invitation,
+        name="farmer_invitation_accept",
+    ),
     path("<slug:organization_slug>/customers/", business_views.customer_list, name="customers"),
     path(
         "<slug:organization_slug>/customers/new/",

@@ -1,0 +1,15 @@
+<!doctype html>
+<html><body style="margin:0;background:#f3f7fc;font-family:Arial,sans-serif;color:#172b45">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:32px 16px"><tr><td align="center">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#fff;border:1px solid #dce5ef;border-radius:12px">
+<tr><td style="padding:28px">
+<p style="margin:0 0 8px;color:#1559a6;font-size:12px;font-weight:bold;text-transform:uppercase">Farmer portal invitation</p>
+<h1 style="margin:0 0 18px;font-size:24px">Hello {{ farmer_name }},</h1>
+<p style="line-height:1.6">{{ farm_name }} has invited you to activate your farmer account.</p>
+<p style="line-height:1.6">Accept this invitation to access your milk collection records, payments, statements, and other available farm services.</p>
+<p style="margin:24px 0"><a href="{{ invitation_url }}" style="display:inline-block;padding:12px 18px;border-radius:8px;background:#1559a6;color:#fff;text-decoration:none;font-weight:bold">Accept Invitation</a></p>
+<p style="font-size:13px;color:#60738b">This invitation expires on {{ expires_at }}.</p>
+<p style="font-size:13px;color:#60738b">If you were not expecting this invitation, you can safely ignore this email.</p>
+{% if support_email %}<p style="font-size:13px;color:#60738b">Support: {{ support_email }}</p>{% endif %}
+</td></tr></table></td></tr></table>
+</body></html>

@@ -135,3 +135,4 @@ EMAIL_BACKEND = env(
 )
 DJANGO_SITE_URL = env("DJANGO_SITE_URL", default="").strip().rstrip("/")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="no-reply@dairynexus.local")
+FARMER_INVITATION_EXPIRY_HOURS = env.int("DJANGO_FARMER_INVITATION_EXPIRY_HOURS", default=72)

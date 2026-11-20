@@ -77,7 +77,8 @@
           <th scope="col">{% translate "Farmer name" %}</th>
           <th scope="col">{% translate "Phone" %}</th>
           <th scope="col">{% translate "Branch" %}</th>
-          <th scope="col">{% translate "Status" %}</th>
+          <th scope="col">{% translate "Profile status" %}</th>
+          <th scope="col">{% translate "Invitation" %}</th>
           <th scope="col">{% translate "Actions" %}</th>
         </tr></thead>
         <tbody>
@@ -88,10 +89,34 @@
             <td>{{ item.phone|default:"—" }}</td>
             <td>{{ item.branch.name|default:"—" }}</td>
             <td>{% if item.is_active %}<span class="status active">{% translate "Active" %}</span>{% else %}<span class="status inactive">{% translate "Inactive" %}</span>{% endif %}</td>
-            <td><a class="button button-small button-secondary" href="{% url 'parties:farmer_detail' organization.slug item.pk %}">{% translate "View profile" %}</a></td>
+            <td>
+              {% with invitation=item.invitations.first %}
+              {% if invitation %}
+                {% if invitation.status == "accepted" %}<span class="status active">Accepted</span>
+                {% elif invitation.status == "sent" %}<span class="tag warning">Invitation sent</span>
+                {% elif invitation.status == "pending" %}<span class="tag warning">Pending</span>
+                {% elif invitation.status == "expired" %}<span class="tag danger">Expired</span>
+                {% elif invitation.status == "revoked" %}<span class="tag danger">Revoked</span>
+                {% elif invitation.status == "failed" %}<span class="tag danger">Failed</span>{% endif %}
+              {% else %}<span class="tag">Not invited</span>{% endif %}
+              {% endwith %}
+            </td>
+            <td class="farmer-row-actions">
+              <a class="button button-small button-secondary" href="{% url 'parties:farmer_detail' organization.slug item.pk %}">{% translate "View profile" %}</a>
+              {% if can_manage_invitations and not item.is_active %}
+                {% with invitation=item.invitations.first %}
+                  {% if invitation.status == "pending" or invitation.status == "sent" %}
+                    <form method="post" action="{% url 'parties:farmer_invitation_resend' organization.slug item.pk %}">{% csrf_token %}<button class="button button-small button-secondary" type="submit">{% translate "Resend invite" %}</button></form>
+                    <form method="post" action="{% url 'parties:farmer_invitation_revoke' organization.slug item.pk %}" onsubmit="return confirm('{% translate "Revoke this invitation?" %}')">{% csrf_token %}<button class="button button-small button-danger" type="submit">{% translate "Revoke" %}</button></form>
+                  {% else %}
+                    <form method="post" action="{% url 'parties:farmer_invitation_send' organization.slug item.pk %}">{% csrf_token %}<button class="button button-small" type="submit">{% translate "Send invite" %}</button></form>
+                  {% endif %}
+                {% endwith %}
+              {% endif %}
+            </td>
           </tr>
         {% empty %}
-          <tr><td colspan="7"><div class="directory-empty"><strong>{% translate "No farmers found" %}</strong><p>{% translate "Try changing your search or filter criteria." %}</p></div></td></tr>
+          <tr><td colspan="8"><div class="directory-empty"><strong>{% translate "No farmers found" %}</strong><p>{% translate "Try changing your search or filter criteria." %}</p></div></td></tr>
         {% endfor %}
         </tbody>
       </table>

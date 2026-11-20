@@ -1,0 +1,12 @@
+Hello {{ farmer_name }},
+
+{{ farm_name }} has invited you to access your farmer account.
+
+Accept this invitation to activate your account and access your milk collection records, payments, statements, and available farm services.
+
+Accept invitation: {{ invitation_url }}
+
+This invitation expires on {{ expires_at }}.
+
+If you were not expecting this invitation, you can safely ignore this email.
+Support: {{ support_email }}

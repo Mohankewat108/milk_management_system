@@ -765,6 +765,30 @@ label { color: var(--color-text-secondary); }
 .platform-page .table-wrap table{
   min-width:980px;
 }
+.platform-page .kpi-grid{
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  max-width:1120px;
+  margin-inline:auto;
+}
+.platform-page .kpi{min-height:112px;display:flex;flex-direction:column;justify-content:center}
+.platform-page .kpi small{margin-top:.35rem;color:var(--color-muted)}
+.platform-farms-panel{padding:0;overflow:hidden}
+.platform-farms-panel>.row-between{padding:1.15rem 1.25rem;border-bottom:1px solid var(--color-border)}
+.platform-farms-panel .table-responsive{width:100%;overflow-x:auto;scrollbar-width:thin}
+.platform-farms-panel table{width:100%;min-width:980px;border-collapse:collapse;table-layout:fixed}
+.platform-farms-panel th,.platform-farms-panel td{padding:.85rem .75rem;border-bottom:1px solid var(--color-border);text-align:left;vertical-align:middle}
+.platform-farms-panel th:nth-child(1){width:18%}.platform-farms-panel th:nth-child(2){width:17%}.platform-farms-panel th:nth-child(3){width:10%}.platform-farms-panel th:nth-child(4),.platform-farms-panel th:nth-child(5),.platform-farms-panel th:nth-child(6){width:8%}.platform-farms-panel th:nth-child(7){width:12%}.platform-farms-panel th:nth-child(8){width:19%}
+.platform-farms-panel td{white-space:normal;overflow-wrap:anywhere}
+.platform-farms-panel td form{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:.45rem;margin-top:.35rem}
+.platform-farms-panel td form:first-child{margin-top:0}
+.platform-farms-panel td form input{min-width:0;min-height:38px}
+.platform-farms-panel td .button{min-height:38px}
+.invitation-details{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.75rem;margin:0}
+.invitation-details>div{min-width:0;padding:.75rem;border:1px solid var(--color-border);border-radius:.65rem;background:var(--color-page)}
+.invitation-details dt{color:var(--color-muted);font-size:.72rem;font-weight:750}
+.invitation-details dd{margin:.25rem 0 0;color:var(--color-text-primary);overflow-wrap:anywhere}
+.invitation-history{margin-top:.9rem}.invitation-history summary{cursor:pointer;font-weight:750}.invitation-history ul{margin:.7rem 0 0;padding-left:1.2rem}
+@media(max-width:1050px){.platform-page .kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:850px){
   .platform-page .page-shell{
     width:calc(100% - 1.5rem);

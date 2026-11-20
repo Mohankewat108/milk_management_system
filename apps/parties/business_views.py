@@ -279,6 +279,7 @@ def farmer_list(request, organization_slug):
     records = (
         Farmer.objects.filter(organization=org, deleted_at__isnull=True)
         .select_related("branch", "user")
+        .prefetch_related("invitations")
         .order_by("full_name")
     )
     records = _party_scope(records, request.membership)
@@ -338,6 +339,12 @@ def farmer_list(request, organization_slug):
             "date_error": date_error,
             "date_calendar": "BS" if language_code == "ne" else "AD",
             "branches": branches,
+            "can_manage_invitations": request.membership.role
+            in {
+                Membership.Role.OWNER,
+                Membership.Role.ADMIN,
+                Membership.Role.BRANCH_MANAGER,
+            },
         },
     )
 
@@ -355,14 +362,29 @@ def farmer_detail(request, organization_slug, farmer_id):
         ),
         pk=farmer_id,
     )
+    latest_invitation = party.invitations.select_related("invited_by").first()
+    invitation_history = party.invitations.select_related("invited_by").all()[:25]
+    context = _party_profile_context(
+        party=party,
+        kind="farmer",
+        request=request,
+    )
+    context.update(
+        {
+            "latest_invitation": latest_invitation,
+            "invitation_history": invitation_history,
+            "can_manage_invitations": request.membership.role
+            in {
+                Membership.Role.OWNER,
+                Membership.Role.ADMIN,
+                Membership.Role.BRANCH_MANAGER,
+            },
+        }
+    )
     return render(
         request,
         "parties/party_detail.html",
-        _party_profile_context(
-            party=party,
-            kind="farmer",
-            request=request,
-        ),
+        context,
     )
 
 
@@ -430,6 +452,10 @@ def farmer_create(request, organization_slug):
         else:
             farmer = form.save(commit=False)
             farmer.organization = org
+            # Profiles are created without account access. Access is granted
+            # only after a valid invitation is accepted.
+            farmer.is_active = False
+            farmer.user = None
             farmer.save()
             record_event(
                 actor=request.user,

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Invitation unavailable | DairyNexus{% endblock %}
+{% block workspace_navigation %}{% endblock %}
+{% block workspace_navigation_end %}{% endblock %}
+{% block content %}
+<section class="auth-card" role="alert">
+  <div class="eyebrow">Invitation unavailable</div>
+  <h1>This invitation cannot be used</h1>
+  <p>It may have expired, been revoked, or already been accepted. Contact your dairy administrator for a new invitation.</p>
+  <a class="button button-secondary" href="{% url 'accounts:login' %}">Go to sign in</a>
+</section>
+{% endblock %}

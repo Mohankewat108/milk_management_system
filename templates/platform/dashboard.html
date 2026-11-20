@@ -13,15 +13,12 @@
   <a class="button" href="{% url 'platform:organization_create' %}">Create dairy farm</a>
 </section>
 <div class="kpi-grid">
-  <div class="kpi"><span>Total dairy farms</span><strong>{{ organization_count }}</strong></div>
-  <div class="kpi"><span>Active farms</span><strong>{{ active_organizations }}</strong></div>
-  <div class="kpi"><span>Trial farms</span><strong>{{ trial_organizations }}</strong></div>
-  <div class="kpi"><span>Suspended farms</span><strong>{{ suspended_organizations }}</strong></div>
+  <div class="kpi"><span>Registered dairy farms</span><strong>{{ organization_count }}</strong><small>{{ active_organizations }} active · {{ suspended_organizations }} suspended</small></div>
   <div class="kpi"><span>Platform accounts</span><strong>{{ user_count }}</strong></div>
   <div class="kpi"><span>Customers across farms</span><strong>{{ customer_count }}</strong></div>
   <div class="kpi"><span>Subscriptions</span><strong>{{ subscription_count }}</strong></div>
 </div>
-<section class="panel table-wrap">
+<section class="panel platform-farms-panel">
   <div class="row-between">
     <div><h2>Dairy farms</h2><p class="muted">Each row represents an independent tenant workspace.</p></div>
     <a class="button button-secondary" href="{% url 'platform:organization_create' %}">Add a farm</a>
@@ -52,11 +49,11 @@
               {% if org.status == "suspended" %}
               <input type="hidden" name="status" value="active">
               <input type="text" name="reason" aria-label="Reason for reactivation" placeholder="Reason for reactivation" required>
-              <button class="button button-secondary" type="submit">Reactivate</button>
+              <button class="button button-secondary status-action" type="submit">Reactivate</button>
               {% else %}
               <input type="hidden" name="status" value="suspended">
-              <input type="text" name="reason" aria-label="Reason for suspension" placeholder="Reason for suspension" required>
-              <button class="button button-secondary" type="submit">Suspend</button>
+              <input type="text" name="reason" aria-label="Reason for suspension" placeholder="Reason for suspension" minlength="3" required>
+              <button class="button button-danger status-action" type="submit" data-confirm="Suspend {{ org.name|escapejs }}?">Suspend</button>
               {% endif %}
             </form>
             {% else %}<span class="muted">Closed</span>{% endif %}
@@ -69,4 +66,15 @@
     </table>
   </div>
 </section>
+{% endblock %}
+{% block scripts %}
+<script>
+document.querySelectorAll('.status-action').forEach(function(button){
+  button.closest('form').addEventListener('submit',function(event){
+    if(button.dataset.confirm&&!window.confirm(button.dataset.confirm)){event.preventDefault();return;}
+    button.disabled=true;
+    button.textContent='Processing…';
+  });
+});
+</script>
 {% endblock %}

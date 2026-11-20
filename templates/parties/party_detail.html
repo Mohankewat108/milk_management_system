@@ -34,6 +34,14 @@
         {% csrf_token %}<button class="button button-danger" type="submit">{% translate "Move to Trash" %}</button>
       </form>
       {% endif %}
+      {% if kind == "farmer" and can_manage_invitations %}
+      {% if latest_invitation and latest_invitation.is_pending %}
+      <form method="post" action="{% url 'parties:farmer_invitation_resend' organization.slug party.pk %}"><input type="hidden" name="action" value="resend">{% csrf_token %}<button class="button button-secondary" type="submit">Resend invitation</button></form>
+      <form method="post" action="{% url 'parties:farmer_invitation_revoke' organization.slug party.pk %}" onsubmit="return confirm('Revoke this farmer invitation? The link will stop working.')">{% csrf_token %}<button class="button button-danger" type="submit">Revoke invitation</button></form>
+      {% else %}
+      <form method="post" action="{% url 'parties:farmer_invitation_send' organization.slug party.pk %}">{% csrf_token %}<button class="button" type="submit">Send invitation</button></form>
+      {% endif %}
+      {% endif %}
       <a class="button button-secondary" href="{% if kind == 'customer' %}{% url 'parties:customers' organization.slug %}{% else %}{% url 'parties:farmers' organization.slug %}{% endif %}">{% translate "Back to directory" %}</a>
     </div>
   </header>
@@ -51,6 +59,30 @@
       <div class="profile-contact-item"><span class="profile-contact-icon" aria-hidden="true">◎</span><div><span class="profile-field-label">{% translate "Customer portal" %}</span><strong>{% if party.user %}<span class="profile-inline-status linked">{% translate "Account linked" %}</span>{% else %}<span class="profile-inline-status unlinked">{% translate "Not linked" %}</span>{% endif %}</strong></div></div>
     </div>
   </section>
+
+  {% if kind == "farmer" %}
+  <section class="profile-section panel" aria-labelledby="farmer-invitation-title">
+    <div class="profile-section-heading">
+      <div><span class="profile-section-kicker">{% translate "ACCOUNT ACTIVATION" %}</span><h2 id="farmer-invitation-title">{% translate "Farmer invitation" %}</h2></div>
+    </div>
+    {% if latest_invitation %}
+      <dl class="invitation-details">
+        <div><dt>{% translate "Status" %}</dt><dd><span class="tag {% if latest_invitation.status == 'accepted' %}success{% elif latest_invitation.status == 'sent' or latest_invitation.status == 'pending' %}warning{% elif latest_invitation.status == 'failed' or latest_invitation.status == 'revoked' or latest_invitation.status == 'expired' %}danger{% endif %}">{{ latest_invitation.get_status_display }}</span></dd></div>
+        <div><dt>{% translate "Invited email" %}</dt><dd>{{ latest_invitation.email }}</dd></div>
+        <div><dt>{% translate "Invited by" %}</dt><dd>{{ latest_invitation.invited_by.get_full_name|default:latest_invitation.invited_by.username }}</dd></div>
+        <div><dt>{% translate "Created" %}</dt><dd>{{ latest_invitation.created_at|local_date }}</dd></div>
+        <div><dt>{% translate "Sent" %}</dt><dd>{{ latest_invitation.sent_at|local_date|default:"—" }}</dd></div>
+        <div><dt>{% translate "Accepted" %}</dt><dd>{{ latest_invitation.accepted_at|local_date|default:"—" }}</dd></div>
+        <div><dt>{% translate "Expires" %}</dt><dd>{{ latest_invitation.expires_at|local_date }}</dd></div>
+      </dl>
+      {% if invitation_history|length > 1 %}
+      <details class="invitation-history"><summary>{% translate "View invitation history" %}</summary><ul>{% for invitation in invitation_history %}<li><strong>{{ invitation.get_status_display }}</strong> · {{ invitation.created_at|local_date }} · {{ invitation.email }}</li>{% endfor %}</ul></details>
+      {% endif %}
+    {% else %}
+      <p class="muted">No invitation has been sent. The farmer account remains inactive until an invitation is accepted.</p>
+    {% endif %}
+  </section>
+  {% endif %}
 
   <section class="profile-section" aria-labelledby="profile-performance-title">
     <div class="profile-section-heading profile-section-heading-outside">

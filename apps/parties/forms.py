@@ -76,7 +76,6 @@ class FarmerForm(forms.ModelForm):
             "bank_account_name",
             "bank_account_number",
             "bank_name",
-            "user",
         )
 
     def __init__(self, *args, organization, membership=None, **kwargs):
@@ -88,12 +87,6 @@ class FarmerForm(forms.ModelForm):
         self.fields["branch"].required = bool(
             membership and membership.role not in {"owner", "admin"}
         )
-        self.fields["user"].required = False
-        self.fields["user"].label = "Farmer login account"
-        self.fields[
-            "user"
-        ].help_text = "Optional: link an existing account to enable the farmer self-service portal."
-        self.fields["user"].queryset = _available_portal_users(self.instance)
 
     def clean_code(self):
         code = self.cleaned_data["code"].strip()

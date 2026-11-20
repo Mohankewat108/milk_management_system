@@ -91,3 +91,62 @@ class Farmer(UUIDModel, TimeStampedModel):
 
     def __str__(self) -> str:
         return f"{self.code} · {self.full_name}"
+
+
+class FarmerInvitation(UUIDModel, TimeStampedModel):
+    """One-time, hashed-token invitation to activate a farmer portal account."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        SENT = "sent", "Sent"
+        ACCEPTED = "accepted", "Accepted"
+        EXPIRED = "expired", "Expired"
+        REVOKED = "revoked", "Revoked"
+        FAILED = "failed", "Failed"
+
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="farmer_invitations"
+    )
+    farmer = models.ForeignKey(
+        Farmer, on_delete=models.CASCADE, related_name="invitations"
+    )
+    invited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="sent_farmer_invitations",
+    )
+    email = models.EmailField(db_index=True)
+    token_hash = models.CharField(max_length=64, unique=True)
+    status = models.CharField(
+        max_length=16, choices=Status.choices, default=Status.PENDING, db_index=True
+    )
+    expires_at = models.DateTimeField(db_index=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    failed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["organization", "farmer", "status"]),
+            models.Index(fields=["organization", "email", "created_at"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["farmer"],
+                condition=models.Q(status__in=["pending", "sent"]),
+                name="uniq_farmer_active_invitation",
+            )
+        ]
+
+    @property
+    def is_pending(self):
+        from django.utils import timezone
+
+        return (
+            self.status in {self.Status.PENDING, self.Status.SENT}
+            and self.accepted_at is None
+            and self.revoked_at is None
+            and self.expires_at > timezone.now()
+        )
