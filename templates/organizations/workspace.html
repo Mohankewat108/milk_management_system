@@ -1,3 +1,40 @@
-{% extends "base.html" %}{% block title %}Your workspaces | DairyNexus{% endblock %}{% block content %}
-<div class="page-heading"><div><div class="eyebrow">YOUR ACCOUNT</div><h1>Your dairy workspaces</h1><p class="muted">Choose a business to continue, or register a new dairy business.</p></div><a class="button" href="{% url 'business:register' %}">Register a business</a></div>
-<div class="card-grid">{% for membership in memberships %}<a class="panel panel-link" href="{% url 'business:dashboard' membership.organization.slug %}"><div class="row-between"><span class="tag">{{ membership.get_role_display }}</span><span class="status">{{ membership.organization.get_status_display }}</span></div><h2>{{ membership.organization.name }}</h2><p class="muted">{{ membership.organization.country }} · {{ membership.organization.currency }}</p><span class="text-link">Open workspace →</span></a>{% empty %}<div class="empty panel"><h2>No business workspace yet</h2><p>Create your dairy business workspace to begin.</p><a class="button" href="{% url 'business:register' %}">Register business</a></div>{% endfor %}</div>{% endblock %}
+{% extends "base.html" %}
+{% block title %}Your workspaces | DairyNexus{% endblock %}
+{% block content %}
+<section class="workspace-selection" aria-labelledby="workspace-title">
+  <div class="page-heading">
+    <div>
+      <div class="eyebrow">YOUR ACCOUNT</div>
+      <h1 id="workspace-title">Your dairy workspaces</h1>
+      <p class="muted">Choose a business to continue, or register a new dairy business.</p>
+    </div>
+    {% if memberships %}
+      <a class="button" href="{% url 'business:register' %}">Register a business</a>
+    {% endif %}
+  </div>
+
+  {% if memberships %}
+    <div class="card-grid">
+      {% for membership in memberships %}
+        <a class="panel panel-link workspace-card" href="{% url 'business:dashboard' membership.organization.slug %}">
+          <div class="row-between">
+            <span class="tag">{{ membership.get_role_display }}</span>
+            <span class="status">{{ membership.organization.get_status_display }}</span>
+          </div>
+          <h2>{{ membership.organization.name }}</h2>
+          <p class="muted">{{ membership.organization.country }} · {{ membership.organization.currency }}</p>
+          <span class="text-link">Open workspace →</span>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <section class="empty-state workspace-empty" aria-labelledby="workspace-empty-title">
+      <div class="workspace-empty-icon" aria-hidden="true">＋</div>
+      <div class="eyebrow">GET STARTED</div>
+      <h2 id="workspace-empty-title">Create your dairy workspace</h2>
+      <p>You haven't joined a business workspace yet. Register your dairy business to set up your workspace, manage your dairy operations, and invite your team.</p>
+      <a class="button" href="{% url 'business:register' %}">Register a business</a>
+    </section>
+  {% endif %}
+</section>
+{% endblock %}
