@@ -943,3 +943,14 @@ label { color: var(--color-text-secondary); }
     justify-self: start;
   }
 }
+
+/* Workspace selection and first-run onboarding */
+.workspace-selection{display:grid;gap:1.25rem;min-width:0}
+.workspace-selection .page-heading{margin:0}
+.workspace-empty{min-height:320px;display:grid;justify-items:center;align-content:center;gap:.75rem;padding:clamp(1.5rem,5vw,3rem)}
+.workspace-empty h2{margin:.15rem 0;font-size:clamp(1.25rem,3vw,1.65rem)}
+.workspace-empty p{max-width:56ch;margin:0 0 .5rem;line-height:1.7}
+.workspace-empty-icon{width:64px;height:64px;display:grid;place-items:center;border:1px solid var(--color-border);border-radius:1.1rem;background:var(--color-primary-soft);color:var(--color-primary);font-size:2.2rem;font-weight:600}
+.workspace-card{display:grid;gap:.75rem;align-content:start}
+.workspace-card h2{margin:.1rem 0}
+@media(max-width:700px){.workspace-selection .page-heading{align-items:flex-start;flex-direction:column}.workspace-empty{min-height:260px;padding:1.5rem 1rem}.workspace-empty-icon{width:54px;height:54px;border-radius:.9rem;font-size:1.8rem}}
