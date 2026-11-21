@@ -108,6 +108,27 @@ class FarmerInvitationTests(TestCase):
         self.assertEqual(invitation.status, FarmerInvitation.Status.ACCEPTED)
         self.assertEqual(self.client.get(invitation_url).status_code, 410)
 
+    def test_acceptance_page_sets_csrf_cookie(self):
+        invitation, token = self._send_invitation()
+        url = reverse(
+            "parties:farmer_invitation_accept",
+            kwargs={"invitation_id": invitation.pk, "token": token},
+        )
+        csrf_client = self.client_class(enforce_csrf_checks=True)
+        response = csrf_client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("csrftoken", response.cookies)
+        csrf_token = response.cookies["csrftoken"].value
+        post_response = csrf_client.post(
+            url,
+            {
+                "new_password1": "FarmerPortal-Strong-2026",
+                "new_password2": "FarmerPortal-Strong-2026",
+                "csrfmiddlewaretoken": csrf_token,
+            },
+        )
+        self.assertEqual(post_response.status_code, 302)
+
     def test_expired_invitation_is_marked_and_audited(self):
         invitation, token = self._send_invitation()
         invitation.expires_at = timezone.now() - timedelta(minutes=1)
