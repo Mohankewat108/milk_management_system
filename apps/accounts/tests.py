@@ -70,7 +70,7 @@ class PasswordResetEmailTests(TestCase):
             r"/accounts/password/reset/[A-Za-z0-9_-]+/[A-Za-z0-9_-]+/",
         )
         self.assertIn("time-limited", message.body.lower())
-        self.assertIn("only be used once", message.body.lower())
+        self.assertIn("invalid after your password is changed", message.body.lower())
 
     def test_unknown_email_does_not_reveal_account_existence(self):
         response = self.client.post(
