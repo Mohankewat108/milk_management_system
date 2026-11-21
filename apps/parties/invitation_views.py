@@ -13,6 +13,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 from django.views.decorators.cache import never_cache
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods, require_POST
 
 from apps.audit.services import record_event
@@ -145,6 +146,7 @@ def _username_for_email(email):
 
 
 @never_cache
+@ensure_csrf_cookie
 @require_http_methods(["GET", "POST"])
 def accept_invitation(request, invitation_id, token):
     invitation = get_object_or_404(
