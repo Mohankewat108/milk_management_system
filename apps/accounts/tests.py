@@ -65,7 +65,6 @@ class PasswordResetEmailTests(TestCase):
         message = mail.outbox[0]
         self.assertEqual(message.to, [user.email])
         self.assertIn("http://testserver/accounts/password/reset/", message.body)
-        self.assertIn("uidb64=", message.body) if False else None
         self.assertRegex(
             message.body,
             r"/accounts/password/reset/[A-Za-z0-9_-]+/[A-Za-z0-9_-]+/",
