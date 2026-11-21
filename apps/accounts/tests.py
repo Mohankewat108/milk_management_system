@@ -1,7 +1,10 @@
 import re
 
-from django.test import Client, TestCase
+from django.core import mail
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
+
+from apps.accounts.models import User
 
 
 class LoginCSRFCookieTests(TestCase):
@@ -41,3 +44,39 @@ class LoginCSRFCookieTests(TestCase):
         self.assertContains(response, "DairyNexus will securely identify your access")
         self.assertNotContains(response, 'name="role"')
         self.assertNotContains(response, 'name="account_type"')
+
+
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+class PasswordResetEmailTests(TestCase):
+    def test_password_reset_email_contains_a_complete_reset_link(self):
+        user = User.objects.create_user(
+            username="reset-user",
+            email="reset-user@example.test",
+            password="Valid-Reset-Test-Password-123!",
+        )
+
+        response = self.client.post(
+            reverse("accounts:password_reset"),
+            {"email": user.email},
+        )
+
+        self.assertRedirects(response, reverse("accounts:password_reset_done"))
+        self.assertEqual(len(mail.outbox), 1)
+        message = mail.outbox[0]
+        self.assertEqual(message.to, [user.email])
+        self.assertIn("http://testserver/accounts/password/reset/", message.body)
+        self.assertRegex(
+            message.body,
+            r"/accounts/password/reset/[A-Za-z0-9_-]+/[A-Za-z0-9_-]+/",
+        )
+        self.assertIn("time-limited", message.body.lower())
+        self.assertIn("invalid after your password is changed", message.body.lower())
+
+    def test_unknown_email_does_not_reveal_account_existence(self):
+        response = self.client.post(
+            reverse("accounts:password_reset"),
+            {"email": "missing-user@example.test"},
+        )
+
+        self.assertRedirects(response, reverse("accounts:password_reset_done"))
+        self.assertEqual(len(mail.outbox), 0)
