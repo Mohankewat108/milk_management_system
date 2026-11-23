@@ -1,10 +1,10 @@
 from datetime import UTC, datetime
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
-from unittest.mock import patch
 
 from apps.collections.models import MilkCollection
 from apps.finance.models import Payment
