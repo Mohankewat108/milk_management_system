@@ -6,6 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from apps.collections.models import MilkCollection
+from apps.finance.models import Payment
 from apps.organizations.models import Branch, BranchAssignment, Membership, Organization
 from apps.parties.models import Customer, Farmer
 from apps.pricing.models import PricingConfiguration
@@ -101,6 +102,63 @@ class PartyProfileTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["kind"], "farmer")
         self.assertEqual(response.context["metrics"]["lifetime_litres"], Decimal("2.500"))
+
+    def test_profile_today_and_month_use_organization_timezone(self):
+        # 2026-11-23 00:30 UTC is still 2026-11-22 in Kathmandu.
+        self._collection(self.farmer, MilkCollection.Status.APPROVED, "F-TZ", 22)
+        collection = MilkCollection.objects.get(reference="F-TZ")
+        collection.collected_at = datetime(2026, 11, 22, 18, 30, tzinfo=UTC)
+        collection.save(update_fields=["collected_at"])
+        self.client.force_login(self.owner)
+        response = self.client.get(
+            reverse("parties:farmer_detail", args=[self.organization.slug, self.farmer.pk])
+        )
+        self.assertEqual(response.context["metrics"]["today_litres"], Decimal("2.500"))
+        self.assertEqual(response.context["metrics"]["month_litres"], Decimal("2.500"))
+
+    def test_farmer_profile_aggregates_approved_milk_and_completed_payments(self):
+        self._collection(self.farmer, MilkCollection.Status.APPROVED, "F-APPROVED", 18)
+        self._collection(self.farmer, MilkCollection.Status.SUBMITTED, "F-SUBMITTED", 18)
+        Payment.objects.create(
+            organization=self.organization,
+            branch=self.branch,
+            reference="PAY-FARMER-COMPLETE",
+            direction=Payment.Direction.OUTGOING,
+            farmer=self.farmer,
+            amount=Decimal("100.00"),
+            currency=self.organization.currency,
+            method=Payment.Method.CASH,
+            status=Payment.Status.COMPLETED,
+            paid_at=datetime(2026, 11, 18, 7, 0, tzinfo=UTC),
+            recorded_by=self.owner,
+        )
+        Payment.objects.create(
+            organization=self.organization,
+            branch=self.branch,
+            reference="PAY-FARMER-DELETED",
+            direction=Payment.Direction.OUTGOING,
+            farmer=self.farmer,
+            amount=Decimal("900.00"),
+            currency=self.organization.currency,
+            method=Payment.Method.CASH,
+            status=Payment.Status.COMPLETED,
+            paid_at=datetime(2026, 11, 18, 7, 0, tzinfo=UTC),
+            recorded_by=self.owner,
+            deleted_at=datetime(2026, 11, 19, 7, 0, tzinfo=UTC),
+        )
+        self.client.force_login(self.owner)
+        response = self.client.get(
+            reverse("parties:farmer_detail", args=[self.organization.slug, self.farmer.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["metrics"]["lifetime_litres"], Decimal("2.500"))
+        self.assertEqual(response.context["metrics"]["average_litres"], Decimal("2.500"))
+        self.assertEqual(response.context["metrics"]["average_fat"], Decimal("4.000"))
+        self.assertEqual(response.context["metrics"]["average_snf"], Decimal("8.000"))
+        self.assertEqual(response.context["metrics"]["average_lactose"], Decimal("4.500"))
+        self.assertEqual(response.context["completed_payment_total"], Decimal("100.00"))
+        self.assertEqual(response.context["payment_direction_label"], "Paid to farmer")
+        self.assertEqual(response.context["payments"].paginator.count, 1)
 
     def test_foreign_tenant_party_uuid_is_not_resolvable(self):
         other = Organization.objects.create(
