@@ -73,6 +73,7 @@ class FarmerForm(forms.ModelForm):
             "and activate their farmer portal account."
         ),
     )
+
     class Meta:
         model = Farmer
         fields = (
