@@ -4,6 +4,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from unittest.mock import patch
 
 from apps.collections.models import MilkCollection
 from apps.finance.models import Payment
@@ -104,15 +105,19 @@ class PartyProfileTests(TestCase):
         self.assertEqual(response.context["metrics"]["lifetime_litres"], Decimal("2.500"))
 
     def test_profile_today_and_month_use_organization_timezone(self):
-        # 2026-11-23 00:30 UTC is still 2026-11-22 in Kathmandu.
+        # 00:30 UTC on Nov 23 is 06:15 in Kathmandu.
         self._collection(self.farmer, MilkCollection.Status.APPROVED, "F-TZ", 22)
         collection = MilkCollection.objects.get(reference="F-TZ")
         collection.collected_at = datetime(2026, 11, 22, 18, 30, tzinfo=UTC)
         collection.save(update_fields=["collected_at"])
         self.client.force_login(self.owner)
-        response = self.client.get(
-            reverse("parties:farmer_detail", args=[self.organization.slug, self.farmer.pk])
-        )
+        with patch(
+            "apps.parties.business_views.timezone.now",
+            return_value=datetime(2026, 11, 23, 0, 30, tzinfo=UTC),
+        ):
+            response = self.client.get(
+                reverse("parties:farmer_detail", args=[self.organization.slug, self.farmer.pk])
+            )
         self.assertEqual(response.context["metrics"]["today_litres"], Decimal("2.500"))
         self.assertEqual(response.context["metrics"]["month_litres"], Decimal("2.500"))
 
