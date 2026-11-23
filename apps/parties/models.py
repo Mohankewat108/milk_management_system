@@ -107,9 +107,7 @@ class FarmerInvitation(UUIDModel, TimeStampedModel):
     organization = models.ForeignKey(
         Organization, on_delete=models.CASCADE, related_name="farmer_invitations"
     )
-    farmer = models.ForeignKey(
-        Farmer, on_delete=models.CASCADE, related_name="invitations"
-    )
+    farmer = models.ForeignKey(Farmer, on_delete=models.CASCADE, related_name="invitations")
     invited_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
