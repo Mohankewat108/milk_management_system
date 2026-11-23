@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
@@ -73,8 +73,6 @@ def _party_profile_context(*, party, kind, request):
     # Using collected_at__date can extract dates in the database/current timezone
     # rather than the organisation's timezone, causing boundary-day collections
     # to be excluded from "today" and "this month".
-    from datetime import datetime, time
-
     def local_start(day):
         return datetime.combine(day, time.min, tzinfo=business_tz)
 
@@ -85,9 +83,6 @@ def _party_profile_context(*, party, kind, request):
     tomorrow_start = local_end_exclusive(today)
     week_start_dt = local_start(week_start)
     month_start_dt = local_start(month_start)
-    next_month_start_dt = local_end_exclusive(
-        (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
-    )
     previous_month_start_dt = local_start(previous_month_start)
     previous_month_end_exclusive = local_start(month_start)
     selected_start_dt = local_start(start)
