@@ -69,6 +69,30 @@ def _party_profile_context(*, party, kind, request):
     previous_month_start = previous_month_end.replace(day=1)
     start, end, date_error = _date_bounds(request)
 
+    # Convert local calendar dates to timezone-aware datetime boundaries.
+    # Using collected_at__date can extract dates in the database/current timezone
+    # rather than the organisation's timezone, causing boundary-day collections
+    # to be excluded from "today" and "this month".
+    from datetime import datetime, time
+
+    def local_start(day):
+        return datetime.combine(day, time.min, tzinfo=business_tz)
+
+    def local_end_exclusive(day):
+        return local_start(day + timedelta(days=1))
+
+    today_start = local_start(today)
+    tomorrow_start = local_end_exclusive(today)
+    week_start_dt = local_start(week_start)
+    month_start_dt = local_start(month_start)
+    next_month_start_dt = local_end_exclusive(
+        (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
+    )
+    previous_month_start_dt = local_start(previous_month_start)
+    previous_month_end_exclusive = local_start(month_start)
+    selected_start_dt = local_start(start)
+    selected_end_exclusive = local_end_exclusive(end)
+
     relation = "customer" if kind == "customer" else "farmer"
     # MilkCollection uses workflow states (draft/submitted/approved/rejected/reversed)
     # and does not implement soft deletion. Do not filter on deleted_at here.
@@ -83,22 +107,22 @@ def _party_profile_context(*, party, kind, request):
     collections = _party_scope(collections, request.membership)
 
     approved = collections.filter(status=MilkCollection.Status.APPROVED)
-    filtered_approved = approved.filter(collected_at__date__gte=start, collected_at__date__lte=end)
+    filtered_approved = approved.filter(collected_at__gte=selected_start_dt, collected_at__lt=selected_end_exclusive)
     metrics = {
-        "today_litres": approved.filter(collected_at__date=today).aggregate(
+        "today_litres": approved.filter(collected_at__gte=today_start, collected_at__lt=tomorrow_start).aggregate(
             v=Sum("quantity_litres")
         )["v"]
         or Decimal("0"),
         "week_litres": approved.filter(
-            collected_at__date__gte=week_start, collected_at__date__lte=today
+            collected_at__gte=week_start_dt, collected_at__lt=tomorrow_start
         ).aggregate(v=Sum("quantity_litres"))["v"]
         or Decimal("0"),
         "month_litres": approved.filter(
-            collected_at__date__gte=month_start, collected_at__date__lte=today
+            collected_at__gte=month_start_dt, collected_at__lt=tomorrow_start
         ).aggregate(v=Sum("quantity_litres"))["v"]
         or Decimal("0"),
         "previous_month_litres": approved.filter(
-            collected_at__date__gte=previous_month_start, collected_at__date__lte=previous_month_end
+            collected_at__gte=previous_month_start_dt, collected_at__lt=previous_month_end_exclusive
         ).aggregate(v=Sum("quantity_litres"))["v"]
         or Decimal("0"),
         "lifetime_litres": approved.aggregate(v=Sum("quantity_litres"))["v"] or Decimal("0"),
@@ -145,7 +169,7 @@ def _party_profile_context(*, party, kind, request):
         average_snf=Avg("snf"),
     )
     history = Paginator(
-        collections.filter(collected_at__date__gte=start, collected_at__date__lte=end), 25
+        collections.filter(collected_at__gte=selected_start_dt, collected_at__lt=selected_end_exclusive), 25
     ).get_page(request.GET.get("page"))
     payment_history = Paginator(payments, 15).get_page(request.GET.get("payment_page"))
     status_counts = collections.values("status").annotate(total=Count("id"))
