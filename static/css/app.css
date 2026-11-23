@@ -856,6 +856,128 @@ label { color: var(--color-text-secondary); }
 @media(max-width:480px){.login-experience{width:calc(100% - 1rem);margin:1rem auto;padding:.8rem;border-radius:1rem;gap:1rem}.login-intro{padding:.5rem}.login-audience{grid-template-columns:1fr}.login-audience-item{padding:.7rem}.login-form-panel{padding:1rem}.login-form-heading h2{font-size:1.35rem}}
 @media(prefers-reduced-motion:reduce){.login-submit span{transition:none}}
 
+/* Platform control centre: one scroll container owns table overflow. */
+.platform-farms-panel {
+  min-width: 0;
+  overflow: visible;
+}
+.platform-farms-panel > .row-between {
+  align-items: flex-start;
+  flex-wrap: wrap;
+  padding: 1.15rem 1.25rem;
+}
+.platform-table-scroll {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: visible;
+  overscroll-behavior-x: contain;
+  border-top: 1px solid var(--color-border);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  background: var(--color-surface);
+  scrollbar-gutter: stable;
+}
+.platform-table-scroll:focus-visible {
+  outline-offset: -3px;
+}
+.platform-table-scroll table {
+  width: 100%;
+  min-width: 1120px;
+  border-collapse: separate;
+  border-spacing: 0;
+  white-space: nowrap;
+}
+.platform-table-scroll th,
+.platform-table-scroll td {
+  padding: .85rem .9rem;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: middle;
+}
+.platform-table-scroll th {
+  position: static;
+  background: var(--color-page);
+  color: var(--color-muted);
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+.platform-table-scroll tbody tr {
+  background: var(--color-surface);
+}
+.platform-table-scroll tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--color-page) 65%, var(--color-surface));
+}
+.platform-table-scroll tbody tr:hover {
+  background: var(--color-primary-soft);
+}
+.platform-table-scroll td:first-child {
+  min-width: 190px;
+  white-space: normal;
+}
+.platform-table-scroll td:nth-child(2) {
+  min-width: 220px;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.platform-table-scroll td:last-child {
+  min-width: 250px;
+  white-space: normal;
+}
+.platform-table-scroll td form {
+  display: grid;
+  gap: .45rem;
+  margin: .35rem 0;
+}
+.platform-table-scroll td form input[type="text"] {
+  min-width: 190px;
+}
+.platform-table-scroll td .button {
+  justify-self: start;
+  white-space: nowrap;
+}
+:root[data-theme="dark"] .platform-table-scroll {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+:root[data-theme="dark"] .platform-table-scroll tbody tr,
+:root[data-theme="dark"] .platform-table-scroll tbody tr:nth-child(even) {
+  background: var(--color-surface);
+}
+:root[data-theme="dark"] .platform-table-scroll tbody tr:hover {
+  background: var(--color-primary-soft);
+}
+@media (max-width: 850px) {
+  .platform-farms-panel > .row-between {
+    padding: 1rem;
+  }
+  .platform-table-scroll table {
+    min-width: 1050px;
+  }
+}
+@media (max-width: 600px) {
+  .platform-farms-panel > .row-between {
+    display: grid;
+    gap: .65rem;
+  }
+  .platform-farms-panel > .row-between > .button {
+    justify-self: start;
+  }
+}
+
+/* Workspace selection and first-run onboarding */
+.workspace-selection{display:grid;gap:1.25rem;min-width:0}
+.workspace-selection .page-heading{margin:0}
+.workspace-empty{min-height:320px;display:grid;justify-items:center;align-content:center;gap:.75rem;padding:clamp(1.5rem,5vw,3rem)}
+.workspace-empty h2{margin:.15rem 0;font-size:clamp(1.25rem,3vw,1.65rem)}
+.workspace-empty p{max-width:56ch;margin:0 0 .5rem;line-height:1.7}
+.workspace-empty-icon{width:64px;height:64px;display:grid;place-items:center;border:1px solid var(--color-border);border-radius:1.1rem;background:var(--color-primary-soft);color:var(--color-primary);font-size:2.2rem;font-weight:600}
+.workspace-card{display:grid;gap:.75rem;align-content:start}
+.workspace-card h2{margin:.1rem 0}
+@media(max-width:700px){.workspace-selection .page-heading{align-items:flex-start;flex-direction:column}.workspace-empty{min-height:260px;padding:1.5rem 1rem}.workspace-empty-icon{width:54px;height:54px;border-radius:.9rem;font-size:1.8rem}}
+
 /* ==========================================================================
    Global theme consistency patch
    Keep this block last: it normalizes older component rules to the theme
