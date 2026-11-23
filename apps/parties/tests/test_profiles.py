@@ -132,7 +132,7 @@ class PartyProfileTests(TestCase):
             paid_at=datetime(2026, 11, 18, 7, 0, tzinfo=UTC),
             recorded_by=self.owner,
         )
-        deleted = Payment.objects.create(
+        Payment.objects.create(
             organization=self.organization,
             branch=self.branch,
             reference="PAY-FARMER-DELETED",
