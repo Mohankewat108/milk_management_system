@@ -67,6 +67,28 @@
       <article class="profile-metric-card"><span class="profile-metric-label">{% translate "Collection days" %}</span><strong>{{ metrics.active_collection_days }}</strong><span class="profile-metric-foot">{% translate "Days with approved milk" %}</span></article>
       <article class="profile-metric-card"><span class="profile-metric-label">{% translate "Daily average" %}</span><strong>{{ metrics.average_per_collection_day|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">{% translate "Per active day" %}</span></article>
     </div>
+    {% with approved_count=status_summary.approved|default:0 submitted_count=status_summary.submitted|default:0 draft_count=status_summary.draft|default:0 rejected_count=status_summary.rejected|default:0 reversed_count=status_summary.reversed|default:0 %}
+    {% if approved_count == 0 %}
+    <div class="profile-section panel" aria-live="polite">
+      <div class="profile-section-heading"><div><span class="profile-section-kicker">{% translate "COLLECTION STATUS" %}</span><h2>{% translate "Why are performance totals zero?" %}</h2></div></div>
+      {% if submitted_count > 0 %}
+      <p>{% blocktranslate with count=submitted_count %}{{ count }} collection(s) are submitted and awaiting approval. Performance totals include approved collections only.{% endblocktranslate %}</p>
+      {% else %}
+      <p>{% translate "No approved milk collections are recorded for this farmer yet. Record a milk collection and approve it to update these performance totals." %}</p>
+      {% endif %}
+    </div>
+    {% endif %}
+    <section class="profile-section panel" aria-labelledby="profile-status-title">
+      <div class="profile-section-heading"><div><span class="profile-section-kicker">{% translate "COLLECTION STATUS" %}</span><h2 id="profile-status-title">{% translate "Collection record breakdown" %}</h2><p>{% translate "All collection records linked to this farmer, including unapproved records." %}</p></div></div>
+      <div class="profile-metric-grid">
+        <article class="profile-metric-card"><span class="profile-metric-label">{% translate "Approved" %}</span><strong>{{ approved_count }}</strong><span class="profile-metric-foot">{% translate "Counted in performance" %}</span></article>
+        <article class="profile-metric-card"><span class="profile-metric-label">{% translate "Submitted" %}</span><strong>{{ submitted_count }}</strong><span class="profile-metric-foot">{% translate "Awaiting approval" %}</span></article>
+        <article class="profile-metric-card"><span class="profile-metric-label">{% translate "Draft" %}</span><strong>{{ draft_count }}</strong><span class="profile-metric-foot">{% translate "Not submitted" %}</span></article>
+        <article class="profile-metric-card"><span class="profile-metric-label">{% translate "Rejected" %}</span><strong>{{ rejected_count }}</strong><span class="profile-metric-foot">{% translate "Rejected records" %}</span></article>
+        <article class="profile-metric-card"><span class="profile-metric-label">{% translate "Reversed" %}</span><strong>{{ reversed_count }}</strong><span class="profile-metric-foot">{% translate "Reversed records" %}</span></article>
+      </div>
+    </section>
+    {% endwith %}
   </section>
 
   <section class="profile-section panel" aria-labelledby="profile-quality-title">
