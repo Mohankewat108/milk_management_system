@@ -72,9 +72,9 @@
   <section class="profile-section panel" aria-labelledby="profile-quality-title">
     <div class="profile-section-heading"><div><span class="profile-section-kicker">{% translate "QUALITY MONITORING" %}</span><h2 id="profile-quality-title">{% translate "Milk quality averages" %}</h2><p>{% translate "Average readings from approved collections." %}</p></div></div>
     <div class="profile-quality-grid">
-      <div class="profile-quality-item"><span class="quality-symbol">FAT</span><div><strong>{{ metrics.average_fat|default_if_none:"—"|floatformat:3 }}</strong><span>{% translate "Average fat content" %}</span></div></div>
-      <div class="profile-quality-item"><span class="quality-symbol">SNF</span><div><strong>{{ metrics.average_snf|default_if_none:"—"|floatformat:3 }}</strong><span>{% translate "Average solids-not-fat" %}</span></div></div>
-      <div class="profile-quality-item"><span class="quality-symbol">LAC</span><div><strong>{{ metrics.average_lactose|default_if_none:"—"|floatformat:3 }}</strong><span>{% translate "Average lactose" %}</span></div></div>
+      <div class="profile-quality-item"><span class="quality-symbol">FAT</span><div><strong>{% if metrics.average_fat is not None %}{{ metrics.average_fat|floatformat:3 }}{% else %}—{% endif %}</strong><span>{% translate "Average fat content" %}</span></div></div>
+      <div class="profile-quality-item"><span class="quality-symbol">SNF</span><div><strong>{% if metrics.average_snf is not None %}{{ metrics.average_snf|floatformat:3 }}{% else %}—{% endif %}</strong><span>{% translate "Average solids-not-fat" %}</span></div></div>
+      <div class="profile-quality-item"><span class="quality-symbol">LAC</span><div><strong>{% if metrics.average_lactose is not None %}{{ metrics.average_lactose|floatformat:3 }}{% else %}—{% endif %}</strong><span>{% translate "Average lactose" %}</span></div></div>
     </div>
   </section>
 
