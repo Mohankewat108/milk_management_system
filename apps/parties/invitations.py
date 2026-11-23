@@ -26,7 +26,8 @@ def valid_invitation(invitation, raw_token):
     supplied_hash = hash_invitation_token(raw_token)
     return (
         hmac.compare_digest(invitation.token_hash, supplied_hash)
-        and invitation.status in {
+        and invitation.status
+        in {
             FarmerInvitation.Status.PENDING,
             FarmerInvitation.Status.SENT,
         }
@@ -84,9 +85,7 @@ def create_farmer_invitation(
         raise ValidationError("Farmer invitation expiry must be configured as a positive value.")
 
     raw_token = secrets.token_urlsafe(32)
-    expires_at = timezone.now() + timedelta(
-        hours=expiry_hours
-    )
+    expires_at = timezone.now() + timedelta(hours=expiry_hours)
     invitation = FarmerInvitation.objects.create(
         organization=farmer.organization,
         farmer=farmer,
