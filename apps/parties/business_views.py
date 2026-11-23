@@ -55,10 +55,14 @@ def _date_bounds(request):
 
 
 def _party_profile_context(*, party, kind, request):
+    # Reporting windows must use the dairy's local business date.
     try:
-        today = timezone.now().astimezone(ZoneInfo(request.organization.timezone)).date()
+        business_tz = ZoneInfo(
+            request.organization.timezone or timezone.get_current_timezone_name()
+        )
     except Exception:
-        today = timezone.localdate()
+        business_tz = timezone.get_current_timezone()
+    today = timezone.now().astimezone(business_tz).date()
     week_start = today - timedelta(days=today.weekday())
     month_start = today.replace(day=1)
     previous_month_end = month_start - timedelta(days=1)
@@ -114,6 +118,7 @@ def _party_profile_context(*, party, kind, request):
     payments = (
         Payment.objects.filter(
             organization=request.organization,
+            deleted_at__isnull=True,
             **{relation: party},
         )
         .select_related("branch", "recorded_by")
