@@ -1,65 +1,138 @@
 {% extends "base.html" %}
 {% load locale_dates %}
-{% block title %}My farmer account | {{ organization.name }}{% endblock %}
+{% block title %}My farmer dashboard | {{ organization.name }}{% endblock %}
 {% block content %}
-<div class="page-heading">
-  <div>
-    <div class="eyebrow">FARMER SELF-SERVICE PORTAL</div>
-    <h1>Welcome, {{ farmer.full_name }}</h1>
-    <p class="muted">{{ organization.name }}{% if farmer.branch %} · {{ farmer.branch.name }}{% endif %} · Farmer ID {{ farmer.code }}</p>
-  </div>
-  <a class="button button-secondary" href="{% url 'accounts:password_change' %}">Change password</a>
+<div class="profile-page farmer-owner-dashboard">
+  <header class="profile-hero">
+    <div class="profile-identity">
+      <div class="profile-avatar" aria-hidden="true">{{ farmer.full_name|slice:":1"|upper }}</div>
+      <div class="profile-title-block">
+        <div class="eyebrow">{{ organization.name }} ? DAIRY FARMER OWNER PORTAL</div>
+        <h1>{{ farmer.full_name }}</h1>
+        <div class="profile-meta">
+          <span class="profile-code">Farmer ID {{ farmer.code }}</span>
+          <span class="profile-meta-dot" aria-hidden="true"></span>
+          <span>{{ farmer.branch.name|default:"No branch assigned" }}</span>
+          <span>Member since {{ farmer.created_at|local_date }}</span>
+          <span class="status {% if farmer.is_active %}active{% else %}inactive{% endif %}">{% if farmer.is_active %}Active{% else %}Inactive{% endif %}</span>
+        </div>
+      </div>
+    </div>
+    <div class="profile-actions"><a class="button button-secondary" href="{% url 'accounts:password_change' %}">Change password</a></div>
+  </header>
+
+  <section class="profile-section" aria-labelledby="farmer-performance-title">
+    <div class="profile-section-heading profile-section-heading-outside">
+      <div><span class="profile-section-kicker">PERFORMANCE</span><h2 id="farmer-performance-title">My dairy overview</h2><p>Your approved milk production, quality and earnings at a glance.</p></div>
+      <span class="profile-period-note">Approved records</span>
+    </div>
+    <div class="profile-metric-grid">
+      <article class="profile-metric-card metric-today"><span class="profile-metric-label">Today</span><strong>{{ today_summary.litres|default:0|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">Today's approved milk</span></article>
+      <article class="profile-metric-card profile-shift-card"><span class="profile-metric-label">Morning today</span><strong>{{ today_shift.morning|default:0|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">Morning shift</span></article>
+      <article class="profile-metric-card profile-shift-card"><span class="profile-metric-label">Evening today</span><strong>{{ today_shift.evening|default:0|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">Evening shift</span></article>
+      <article class="profile-metric-card"><span class="profile-metric-label">This week</span><strong>{{ week_summary.litres|default:0|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">Since Monday</span></article>
+      <article class="profile-metric-card"><span class="profile-metric-label">This month</span><strong>{{ month_summary.litres|default:0|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">Current month</span></article>
+      <article class="profile-metric-card"><span class="profile-metric-label">Previous month</span><strong>{{ previous_month_summary.litres|default:0|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">Last month</span></article>
+      <article class="profile-metric-card metric-highlight"><span class="profile-metric-label">Lifetime production</span><strong>{{ lifetime_summary.litres|default:0|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">All approved collections</span></article>
+      <article class="profile-metric-card"><span class="profile-metric-label">Average per collection</span><strong>{{ average_litres|default:0|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">Average quantity</span></article>
+      <article class="profile-metric-card"><span class="profile-metric-label">Active collection days</span><strong>{{ active_days|default:0 }}</strong><span class="profile-metric-foot">Days with approved milk</span></article>
+    </div>
+  </section>
+
+  <section class="profile-section panel" aria-labelledby="farmer-production-title">
+    <div class="profile-section-heading"><div><span class="profile-section-kicker">PRODUCTION ANALYTICS</span><h2 id="farmer-production-title">Recent production trend</h2><p>Seven most recent collection days, split by morning and evening shift.</p></div></div>
+    {% if production_trend %}
+      <div class="profile-trend-list" role="group" aria-label="Recent daily milk production by shift">
+        {% for day in production_trend %}
+          <div class="profile-trend-row"><time datetime="{{ day.date }}">{{ day.date }}</time><div class="profile-trend-track"><span class="profile-trend-morning" style="width:{% widthratio day.morning trend_max 100 %}%"></span><span class="profile-trend-evening" style="width:{% widthratio day.evening trend_max 100 %}%"></span></div><strong>{{ day.litres|floatformat:2 }} L</strong></div>
+        {% endfor %}
+      </div>
+      <div class="profile-trend-legend"><span><i class="morning"></i>Morning</span><span><i class="evening"></i>Evening</span></div>
+    {% else %}<p class="profile-empty-cell">Production analytics will appear after approved collections are recorded.</p>{% endif %}
+  </section>
+
+  <section class="profile-section panel" aria-labelledby="farmer-contact-title">
+    <div class="profile-section-heading"><div><span class="profile-section-kicker">MY ACCOUNT</span><h2 id="farmer-contact-title">Farmer and contact information</h2><p>Registered information held by your dairy.</p></div></div>
+    <div class="profile-contact-grid">
+      <div class="profile-contact-item"><span class="profile-contact-icon" aria-hidden="true">F</span><div><span class="profile-field-label">Full name</span><strong>{{ farmer.full_name }}</strong></div></div>
+      <div class="profile-contact-item"><span class="profile-contact-icon" aria-hidden="true">ID</span><div><span class="profile-field-label">Farmer ID</span><strong>{{ farmer.code }}</strong></div></div>
+      <div class="profile-contact-item"><span class="profile-contact-icon" aria-hidden="true">BR</span><div><span class="profile-field-label">Branch</span><strong>{{ farmer.branch.name|default:"Not assigned" }}</strong></div></div>
+      <div class="profile-contact-item"><span class="profile-contact-icon" aria-hidden="true">PH</span><div><span class="profile-field-label">Phone</span><strong>{{ farmer.phone|default:"Not provided" }}</strong></div></div>
+      <div class="profile-contact-item"><span class="profile-contact-icon" aria-hidden="true">EM</span><div><span class="profile-field-label">Email</span><strong class="profile-break">{{ farmer.email|default:"Not provided" }}</strong></div></div>
+      <div class="profile-contact-item"><span class="profile-contact-icon" aria-hidden="true">AD</span><div><span class="profile-field-label">Address</span><strong>{{ farmer.address|default:"Not provided" }}</strong></div></div>
+      <div class="profile-contact-item"><span class="profile-contact-icon" aria-hidden="true">AC</span><div><span class="profile-field-label">Login account</span><strong>{{ request.user.email|default:request.user.username }}</strong></div></div>
+    </div>
+    <p class="small muted">For changes to identity, contact or financial details, contact your dairy administrator to keep records accurate.</p>
+  </section>
+
+  <section class="profile-section panel" aria-labelledby="farmer-quality-title">
+    <div class="profile-section-heading"><div><span class="profile-section-kicker">QUALITY MONITORING</span><h2 id="farmer-quality-title">Milk quality profile</h2><p>Lifetime and monthly averages are based on approved collections only.</p></div></div>
+    <div class="profile-quality-grid">
+      <div class="profile-quality-item"><span class="quality-symbol">FAT</span><div><strong>{{ quality_summary.average_fat|default_if_none:"?"|floatformat:3 }}</strong><span>Lifetime average</span></div></div>
+      <div class="profile-quality-item"><span class="quality-symbol">SNF</span><div><strong>{{ quality_summary.average_snf|default_if_none:"?"|floatformat:3 }}</strong><span>Lifetime average</span></div></div>
+      <div class="profile-quality-item"><span class="quality-symbol">LAC</span><div><strong>{{ quality_summary.average_lactose|default_if_none:"?"|floatformat:3 }}</strong><span>Lifetime average</span></div></div>
+    </div>
+div>
+  </section>
+
+  <section class="profile-section panel" aria-labelledby="farmer-finance-title">
+    <div class="profile-section-heading"><div><span class="profile-section-kicker">FINANCIAL SUMMARY</span><h2 id="farmer-finance-title">My earnings and payments</h2><p>Milk value is earned; completed outgoing payments are money received.</p></div></div>
+    <div class="profile-finance-grid">
+      <div><span>Income for selected period</span><strong>{{ currency }} {{ current_month_earnings|default:0|floatformat:2 }}</strong><small>Approved milk value for selected dates</small></div>
+      <div><span>Previous period income</span><strong>{{ currency }} {{ previous_month_earnings|default:0|floatformat:2 }}</strong><small>Approved milk value before selected dates</small></div>
+      <div><span>Total lifetime income</span><strong>{{ currency }} {{ lifetime_summary.amount|default:0|floatformat:2 }}</strong><small>All-time approved milk income, unaffected by filters</small></div>
+      <div><span>Payments received in selected period</span><strong>{{ currency }} {{ payment_summary.amount|default:0|floatformat:2 }}</strong><small>Completed payments within selected dates</small></div>
+      <div><span>Paid in selected period</span><strong>{{ currency }} {{ payments_current_month|default:0|floatformat:2 }}</strong><small>Completed payments within selected dates</small></div>
+      <div class="profile-finance-pending"><span>Estimated outstanding balance</span><strong>{{ currency }} {{ outstanding_balance|default:0|floatformat:2 }}</strong><small>Estimate: lifetime approved milk value less completed payouts</small></div>
+    </div>
+  </section>
+
+  <section class="profile-section panel" aria-labelledby="farmer-history-title">
+    <div class="profile-section-heading"><div><span class="profile-section-kicker">ACTIVITY</span><h2 id="farmer-history-title">Approved milk collection history</h2><p>Filtered history and footer totals always use the same approved records.</p></div></div>
+    <form method="get" class="profile-collection-filters">
+      <div class="profile-filter-field"><label for="collection-from">From date</label><input id="collection-from" name="date_from" type="date" value="{{ date_from }}"></div>
+      <div class="profile-filter-field"><label for="collection-to">To date</label><input id="collection-to" name="date_to" type="date" value="{{ date_to }}"></div>
+      <div class="profile-filter-field"><label for="collection-shift">Shift</label><select id="collection-shift" name="shift"><option value="">All shifts</option>{% for value,label in shift_choices %}<option value="{{ value }}" {% if shift_filter == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div class="profile-filter-field"><label for="collection-search">Reference</label><input id="collection-search" name="q" type="search" value="{{ search_query }}" placeholder="Search reference"></div>
+      <div class="profile-filter-actions"><button type="submit" class="button button-primary" name="apply" value="1">Apply filters</button><a class="button button-secondary" href="?">Reset</a><label for="export-format">Export format</label><select id="export-format" name="export_format"><option value="pdf">PDF</option><option value="csv">CSV / Excel</option></select><button type="submit" class="button button-secondary" name="export" value="1">Export filtered records</button></div>
+    </form>
+    <p class="profile-filter-result-count">{{ collection_count }} records matching filters</p>
+<div class="table-wrap profile-table-wrap"><table>
+      <thead><tr><th>#</th><th>Date and time</th><th>Reference</th><th>Branch</th><th>Shift</th><th>Litres</th><th>FAT</th><th>SNF</th><th>Lactose</th><th>Rate / L</th><th>Amount</th></tr></thead>
+      <tbody>{% for item in collections %}
+        <tr><td>{{ forloop.counter }}</td><td>{{ item.collected_at|local_date }}</td><td>{{ item.reference }}</td><td>{{ item.branch.name|default:"?" }}</td><td>{{ item.get_shift_display }}</td><td>{{ item.quantity_litres|floatformat:3 }} L</td><td>{{ item.fat|floatformat:3 }}</td><td>{{ item.snf|floatformat:3 }}</td><td>{{ item.lactose|floatformat:3 }}</td><td>{{ currency }} {{ item.milk_rate|floatformat:2 }}</td><td>{{ currency }} {{ item.total_amount|floatformat:2 }}</td></tr>
+      {% empty %}<tr><td colspan="11" class="profile-empty-cell">No approved milk collections match these filters.</td></tr>{% endfor %}</tbody>
+      <tfoot><tr class="profile-collection-total-row"><th colspan="5">TOTAL / AVERAGE ? FILTERED RECORDS</th><th>{{ total_litres|floatformat:3 }} L</th><th>{{ average_fat_filtered|default_if_none:"?"|floatformat:3 }}</th><th>{{ average_snf_filtered|default_if_none:"?"|floatformat:3 }}</th><th>{{ average_lactose_filtered|default_if_none:"?"|floatformat:3 }}</th><th>{{ currency }} {{ average_rate|floatformat:2 }}</th><th>{{ currency }} {{ total_value|floatformat:2 }}</th></tr></tfoot>
+    </table></div>
+    {% if collections.has_other_pages %}
+      <nav class="profile-pagination" aria-label="Collection history pages">
+        <span>Page {{ collections.number }} of {{ collections.paginator.num_pages }}</span>
+        <div>
+          {% if collections.has_previous %}<a class="button button-secondary" href="?{% if date_from %}date_from={{ date_from|urlencode }}&{% endif %}{% if date_to %}date_to={{ date_to|urlencode }}&{% endif %}{% if shift_filter %}shift={{ shift_filter|urlencode }}&{% endif %}{% if search_query %}q={{ search_query|urlencode }}&{% endif %}page={{ collections.previous_page_number }}">Previous</a>{% endif %}
+          {% if collections.has_next %}<a class="button button-secondary" href="?{% if date_from %}date_from={{ date_from|urlencode }}&{% endif %}{% if date_to %}date_to={{ date_to|urlencode }}&{% endif %}{% if shift_filter %}shift={{ shift_filter|urlencode }}&{% endif %}{% if search_query %}q={{ search_query|urlencode }}&{% endif %}page={{ collections.next_page_number }}">Next</a>{% endif %}
+        </div>
+      </nav>
+    {% endif %}
+  </section>
+
+  <section class="profile-section panel" aria-labelledby="farmer-payment-title">
+    <div class="profile-section-heading"><div><span class="profile-section-kicker">PAYMENT HISTORY</span><h2 id="farmer-payment-title">Completed payments</h2><p>Payments successfully made to your farmer account.</p></div></div>
+    <div class="table-wrap profile-table-wrap"><table>
+      <thead><tr><th>Date</th><th>Reference</th><th>Branch</th><th>Method</th><th>Transaction reference</th><th>Amount</th><th>Status</th></tr></thead>
+      <tbody>{% for item in payments %}
+        <tr><td>{{ item.paid_at|local_date }}</td><td>{{ item.reference }}</td><td>{{ item.branch.name|default:"?" }}</td><td>{{ item.get_method_display }}</td><td>{{ item.transaction_reference|default:"?" }}</td><td>{{ item.currency }} {{ item.amount|floatformat:2 }}</td><td><span class="tag {{ item.status }}">{{ item.get_status_display }}</span></td></tr>
+      {% empty %}<tr><td colspan="7" class="profile-empty-cell">No completed payments are available yet.</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </section>
+
+  <section class="profile-section panel" aria-labelledby="farmer-pending-title">
+    <div class="profile-section-heading"><div><span class="profile-section-kicker">PENDING</span><h2 id="farmer-pending-title">Payments awaiting processing</h2><p>These are not included in the amount received until marked completed.</p></div></div>
+    <div class="table-wrap profile-table-wrap"><table>
+      <thead><tr><th>Reference</th><th>Recorded</th><th>Branch</th><th>Method</th><th>Amount</th><th>Status</th></tr></thead>
+      <tbody>{% for item in pending_payments %}
+        <tr><td>{{ item.reference }}</td><td>{{ item.created_at|local_date }}</td><td>{{ item.branch.name|default:"?" }}</td><td>{{ item.get_method_display }}</td><td>{{ item.currency }} {{ item.amount|floatformat:2 }}</td><td><span class="tag {{ item.status }}">{{ item.get_status_display }}</span></td></tr>
+      {% empty %}<tr><td colspan="6" class="profile-empty-cell">There are no pending payments.</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </section>
 </div>
-<div class="kpi-grid">
-  <section class="panel"><div class="eyebrow">THIS MONTH · APPROVED MILK</div><h2>{{ month_summary.litres|default:"0.000" }} L</h2></section>
-  <section class="panel"><div class="eyebrow">THIS MONTH · EARNINGS</div><h2>{{ currency }} {{ month_summary.amount|default:"0.00" }}</h2></section>
-  <section class="panel"><div class="eyebrow">LIFETIME · APPROVED MILK</div><h2>{{ lifetime_summary.litres|default:"0.000" }} L</h2></section>
-  <section class="panel"><div class="eyebrow">LIFETIME · GROSS VALUE</div><h2>{{ currency }} {{ lifetime_summary.amount|default:"0.00" }}</h2></section>
-  <section class="panel"><div class="eyebrow">PAYMENTS RECEIVED</div><h2>{{ currency }} {{ payment_summary.amount|default:"0.00" }}</h2></section>
-  <section class="panel"><div class="eyebrow">PAYMENTS PENDING</div><h2>{{ currency }} {{ pending_summary.amount|default:"0.00" }}</h2></section>
-</div>
-<section class="panel">
-  <h2>My farmer profile</h2>
-  <div class="table-wrap"><table><tbody>
-    <tr><th>Full name</th><td>{{ farmer.full_name }}</td><th>Farmer ID</th><td>{{ farmer.code }}</td></tr>
-    <tr><th>Dairy</th><td>{{ organization.name }}</td><th>Branch</th><td>{{ farmer.branch.name|default:"Not assigned" }}</td></tr>
-    <tr><th>Email</th><td>{{ farmer.email|default:"Not provided" }}</td><th>Phone</th><td>{{ farmer.phone|default:"Not provided" }}</td></tr>
-    <tr><th>Address</th><td>{{ farmer.address|default:"Not provided" }}</td><th>Login email</th><td>{{ request.user.email }}</td></tr>
-  </tbody></table></div>
-  <p class="small muted">For changes to identity, bank or contact information, contact your dairy administrator so financial records remain auditable.</p>
-</section>
-<section class="panel">
-  <h2>My approved milk collection history</h2>
-  <p class="muted">This page only shows approved collections linked to your farmer account. Draft, submitted, rejected and reversed entries are excluded.</p>
-  <div class="table-wrap"><table>
-    <thead><tr><th>Date / time</th><th>Reference</th><th>Quantity</th><th>SNF</th><th>Fat</th><th>Lactose</th><th>Rate / L</th><th>Gross amount</th></tr></thead>
-    <tbody>
-    {% for item in collections %}
-      <tr><td>{{ item.collected_at|local_date }}</td><td>{{ item.reference }}</td><td>{{ item.quantity_litres }} L</td><td>{{ item.snf }}</td><td>{{ item.fat }}</td><td>{{ item.lactose }}</td><td>{{ currency }} {{ item.milk_rate }}</td><td>{{ currency }} {{ item.total_amount }}</td></tr>
-    {% empty %}<tr><td colspan="8">No approved milk collections are available yet.</td></tr>{% endfor %}
-    </tbody>
-  </table></div>
-</section>
-<section class="panel">
-  <h2>Completed payments</h2>
-  <div class="table-wrap"><table>
-    <thead><tr><th>Payment date</th><th>Reference</th><th>Method</th><th>Transaction reference</th><th>Amount</th><th>Status</th></tr></thead>
-    <tbody>
-    {% for item in payments %}
-      <tr><td>{{ item.paid_at|local_date }}</td><td>{{ item.reference }}</td><td>{{ item.get_method_display }}</td><td>{{ item.transaction_reference|default:"—" }}</td><td>{{ item.currency }} {{ item.amount }}</td><td>{{ item.get_status_display }}</td></tr>
-    {% empty %}<tr><td colspan="6">No completed payments are available yet.</td></tr>{% endfor %}
-    </tbody>
-  </table></div>
-</section>
-<section class="panel">
-  <h2>Payments awaiting verification</h2>
-  <div class="table-wrap"><table>
-    <thead><tr><th>Reference</th><th>Recorded</th><th>Method</th><th>Amount</th><th>Status</th></tr></thead>
-    <tbody>
-    {% for item in pending_payments %}
-      <tr><td>{{ item.reference }}</td><td>{{ item.created_at|local_date }}</td><td>{{ item.get_method_display }}</td><td>{{ item.currency }} {{ item.amount }}</td><td>{{ item.get_status_display }}</td></tr>
-    {% empty %}<tr><td colspan="5">There are no pending payments.</td></tr>{% endfor %}
-    </tbody>
-  </table></div>
-</section>
 {% endblock %}
