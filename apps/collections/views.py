@@ -165,6 +165,8 @@ def collection_list(request, organization_slug):
     total_litres = summary["litres"] or 0
     weighted_fat = summary["weighted_fat"] / total_litres if total_litres else None
     weighted_snf = summary["weighted_snf"] / total_litres if total_litres else None
+    # Weighted average rate: total value divided by total litres, using this exact filtered queryset.
+    average_rate = summary["value"] / total_litres if total_litres else None
     status_counts = status_scope_records.aggregate(
         submitted=Count("id", filter=Q(status=MilkCollection.Status.SUBMITTED)),
         approved=Count("id", filter=Q(status=MilkCollection.Status.APPROVED)),
@@ -200,6 +202,7 @@ def collection_list(request, organization_slug):
             "page_obj": page,
             "total_litres": total_litres,
             "total_value": summary["value"] or 0,
+            "average_rate": average_rate,
             "total_records": summary["count"] or 0,
             "weighted_fat": weighted_fat,
             "weighted_snf": weighted_snf,

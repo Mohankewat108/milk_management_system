@@ -51,6 +51,11 @@
       <span class="collection-kpi-foot">Excludes reversed entries{% if date_from or date_to %} | {{ date_from|default:"-" }} to {{ date_to|default:"-" }}{% else %} | All dates{% endif %}</span>
     </article>
     <article class="collection-kpi">
+      <span class="collection-kpi-label">Average rate per litre</span>
+      <strong>{% if average_rate != None %}{{ organization.currency }} {{ average_rate|floatformat:2 }}{% else %}—{% endif %} <small>/ L</small></strong>
+      <span class="collection-kpi-foot">Filtered collection value divided by filtered litres</span>
+    </article>
+    <article class="collection-kpi">
       <span class="collection-kpi-label">Collection value</span>
       <strong>{{ organization.currency }} {{ total_value|floatformat:2 }}</strong>
       <span class="collection-kpi-foot">Active records in this view</span>
