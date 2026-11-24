@@ -15,6 +15,7 @@ class CollectionEntryForm(forms.Form):
     farmer = forms.ModelChoiceField(queryset=Farmer.objects.none(), required=False)
     customer = forms.ModelChoiceField(queryset=Customer.objects.none(), required=False)
     collected_at = forms.DateTimeField(widget=forms.DateTimeInput(attrs={"type": "datetime-local"}))
+    shift = forms.ChoiceField(choices=(("morning", "Morning"), ("evening", "Evening")), initial="morning", required=False)
     quantity_litres = forms.DecimalField(max_digits=12, decimal_places=3, min_value=0.001)
     snf = forms.DecimalField(max_digits=7, decimal_places=3, min_value=0)
     fat = forms.DecimalField(max_digits=7, decimal_places=3, min_value=0)
@@ -53,7 +54,22 @@ class CollectionEntryForm(forms.Form):
                 farmers = farmers.filter(branch_id__in=branch_ids)
                 customers = customers.filter(branch_id__in=branch_ids)
 
-        self.fields["branch"].queryset = branches.order_by("name")
+        branches = branches.order_by("name")
+        self.fields["branch"].queryset = branches
+        # Automatically select the staff member's assigned branch when there is
+        # only one. For multiple assignments, default to the first assigned
+        # branch while keeping the selector available for switching.
+        assigned_branch_ids = []
+        if membership is not None:
+            assigned_branch_ids = list(
+                membership.branch_assignments.order_by("branch__name").values_list("branch_id", flat=True)
+            )
+        if assigned_branch_ids:
+            self.initial["branch"] = assigned_branch_ids[0]
+        elif branches.exists():
+            # Owner/admin memberships are organisation-wide and have no branch
+            # assignments, so use the first active branch as the default.
+            self.initial["branch"] = branches.first().pk
         self.fields["farmer"].queryset = farmers.order_by("full_name")
         self.fields["customer"].queryset = customers.order_by("full_name")
         self.fields["party_type"].widget.attrs.update(
@@ -68,6 +84,8 @@ class CollectionEntryForm(forms.Form):
 
     def clean(self):
         cleaned = super().clean()
+        if not cleaned.get("shift"):
+            cleaned["shift"] = "morning"
         kind = cleaned.get("party_type")
         farmer, customer = cleaned.get("farmer"), cleaned.get("customer")
         if kind == "farmer" and (farmer is None or customer is not None):
@@ -87,6 +105,7 @@ class CollectionEntryForm(forms.Form):
 
 class CollectionEditForm(forms.Form):
     """Edit operational measurements while retaining historical pricing."""
+    shift = forms.ChoiceField(choices=(("morning", "Morning"), ("evening", "Evening")), required=False)
 
     quantity_litres = forms.DecimalField(max_digits=12, decimal_places=3, min_value=0.001)
     snf = forms.DecimalField(max_digits=7, decimal_places=3, min_value=0)
@@ -103,6 +122,7 @@ class CollectionEditForm(forms.Form):
     def __init__(self, *args, instance, **kwargs):
         self.instance = instance
         initial = {
+            "shift": instance.shift,
             "quantity_litres": instance.quantity_litres,
             "snf": instance.snf,
             "fat": instance.fat,
@@ -115,3 +135,10 @@ class CollectionEditForm(forms.Form):
         }
         initial.update(kwargs.pop("initial", {}))
         super().__init__(*args, initial=initial, **kwargs)
+        if self.is_bound and not self.data.get(self.add_prefix("shift")):
+            self.initial["shift"] = instance.shift
+    def clean(self):
+        cleaned = super().clean()
+        if not cleaned.get("shift"):
+            cleaned["shift"] = self.instance.shift
+        return cleaned

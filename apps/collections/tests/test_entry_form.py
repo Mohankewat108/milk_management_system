@@ -57,6 +57,8 @@ class CollectionEntryFormTests(TestCase):
         self.assertIn(self.farmer_a, form.fields["farmer"].queryset)
         self.assertIn(self.farmer_unassigned, form.fields["farmer"].queryset)
         self.assertIn(self.customer_a, form.fields["customer"].queryset)
+        self.assertEqual(form["branch"].value(), self.branch_a.pk)
+
 
     def test_branch_operator_only_sees_assigned_branch_parties(self):
         operator = User.objects.create_user(
@@ -73,6 +75,7 @@ class CollectionEntryFormTests(TestCase):
 
         form = CollectionEntryForm(organization=self.organization, membership=membership)
         self.assertQuerySetEqual(form.fields["branch"].queryset, [self.branch_a])
+        self.assertEqual(form["branch"].value(), self.branch_a.pk)
         self.assertQuerySetEqual(form.fields["farmer"].queryset, [self.farmer_a])
         self.assertQuerySetEqual(form.fields["customer"].queryset, [self.customer_a])
 

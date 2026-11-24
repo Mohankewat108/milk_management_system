@@ -18,7 +18,12 @@ class StaffMembershipForm(forms.Form):
     first_name = forms.CharField(max_length=150)
     last_name = forms.CharField(max_length=150, required=False)
     role = forms.ChoiceField(choices=STAFF_ROLE_CHOICES)
-    branches = forms.ModelMultipleChoiceField(queryset=Branch.objects.none(), required=False)
+    branches = forms.ModelMultipleChoiceField(
+        queryset=Branch.objects.none(),
+        required=False,
+        label="Assigned branches (required)",
+        help_text="On staff edit, their current branch assignments are preselected. Select the branches this staff member can access.",
+    )
     permissions = forms.ModelMultipleChoiceField(
         queryset=OrganizationPermission.objects.none(),
         required=False,
