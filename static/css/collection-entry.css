@@ -21,3 +21,39 @@
 .collection-entry-field[data-collection-field="farmer"][hidden],.collection-entry-field[data-collection-field="customer"][hidden]{display:none!important}
 @media(max-width:900px){.collection-entry-layout{grid-template-columns:1fr}}
 @media(max-width:620px){.collection-entry-card{padding:.65rem}.collection-entry-layout{gap:.65rem}.collection-entry-core,.collection-entry-quality{padding:.7rem}.collection-entry-grid,.collection-entry-grid-two{grid-template-columns:1fr}.collection-entry-wide{grid-column:auto}.collection-entry-actions .button{width:100%}}
+
+.collection-party-search{width:100%;min-height:38px;padding:.5rem .65rem;margin:0 0 .35rem;font-size:.84rem;border:1px solid var(--color-border,#456);border-radius:.5rem;background:var(--color-page);color:inherit}.collection-party-search:focus{outline:2px solid var(--color-primary);outline-offset:1px}
+/* Milk Entry UX improvements */
+.collection-entry-redesign{max-width:1100px!important;margin-inline:auto!important;padding:clamp(.8rem,2vw,1.4rem)!important}
+.collection-entry-redesign .collection-entry-header{margin-bottom:1.2rem}
+.collection-entry-redesign .collection-entry-header h1{font-size:clamp(1.45rem,2vw,2rem);margin:.25rem 0 .5rem}
+.collection-entry-redesign .collection-entry-section{padding:clamp(.8rem,2vw,1.25rem);border:1px solid var(--color-border,#33485f);border-radius:1rem;background:var(--color-page)}
+.collection-entry-redesign .collection-entry-grid{gap:1rem}
+.collection-entry-redesign .collection-entry-field label{font-size:.88rem;font-weight:650;margin-bottom:.25rem}
+.collection-entry-redesign .collection-entry-field input,.collection-entry-redesign .collection-entry-field select,.collection-entry-redesign .collection-entry-field textarea{min-height:46px;font-size:.95rem;padding:.7rem .8rem}
+.collection-entry-redesign .collection-party-field{grid-column:span 1}
+.collection-party-search{display:block;width:100%;min-height:44px;margin:0 0 .45rem;padding:.65rem .75rem;border:1px solid var(--color-border,#456);border-radius:.6rem;background:var(--color-page);color:inherit;font-size:.9rem}
+.collection-party-search:focus{outline:2px solid var(--color-primary);outline-offset:1px}
+.collection-entry-redesign .collection-entry-note{margin-top:1rem}
+.collection-entry-redesign .collection-entry-actions{position:sticky;bottom:.5rem;z-index:5;padding:.65rem;border:1px solid var(--color-border,#33485f);border-radius:.75rem;background:var(--color-page);box-shadow:0 5px 20px #0002}
+.collection-entry-redesign .collection-entry-actions .button{min-height:46px;padding-inline:1.2rem;font-weight:700}
+@media(max-width:700px){.collection-entry-redesign .collection-entry-grid{grid-template-columns:1fr}.collection-entry-redesign .collection-party-field{grid-column:auto}.collection-entry-redesign .collection-entry-actions{position:static;display:grid;grid-template-columns:1fr}}
+.collection-entry-redesign .collection-entry-form{width:100%;max-width:100%}
+.collection-entry-redesign .collection-entry-core{width:100%;max-width:100%}
+.collection-entry-redesign .collection-entry-grid{grid-template-columns:repeat(2,minmax(0,1fr));width:100%}
+.collection-entry-redesign .collection-entry-field{min-width:0}
+@media(max-width:700px){.collection-entry-redesign .collection-entry-grid{grid-template-columns:1fr}}
+
+/* Correct layout: the collection form is rendered in collections/list.html */
+#collection-entry-panel .collection-entry-layout{display:block!important;grid-template-columns:1fr!important}
+#collection-entry-panel .collection-entry-core{width:100%!important;max-width:none!important}
+#collection-entry-panel .collection-entry-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:1rem!important}
+#collection-entry-panel .collection-entry-field{min-width:0}
+#collection-entry-panel .collection-entry-field input,#collection-entry-panel .collection-entry-field select,#collection-entry-panel .collection-entry-field textarea{width:100%;min-width:0;min-height:46px;box-sizing:border-box}
+#collection-entry-panel .collection-entry-field[data-collection-field="notes"]{grid-column:1/-1}
+#collection-entry-panel .collection-entry-actions{display:flex;justify-content:flex-end;gap:.75rem;position:sticky;bottom:.6rem;z-index:10;background:var(--color-page);padding:.75rem;border:1px solid var(--color-border,#33485f);border-radius:.75rem;box-shadow:0 5px 18px #0003}
+#collection-entry-panel .collection-entry-actions button{min-height:46px;font-weight:700;padding-inline:1.3rem}
+#collection-entry-panel .collection-entry-core h3{font-size:1.25rem;margin-bottom:1rem}
+#collection-entry-panel .collection-entry-field label{font-size:.9rem;font-weight:650}
+#collection-entry-panel .collection-party-search{margin-bottom:.4rem}
+@media(max-width:700px){#collection-entry-panel .collection-entry-grid{grid-template-columns:1fr!important}#collection-entry-panel .collection-entry-field[data-collection-field="notes"]{grid-column:auto}#collection-entry-panel .collection-entry-actions{position:static;display:grid;grid-template-columns:1fr}#collection-entry-panel .collection-entry-actions button{width:100%}}

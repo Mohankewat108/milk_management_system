@@ -6,14 +6,25 @@ from apps.organizations.models import Branch
 from apps.parties.models import Customer, Farmer
 
 
+class SearchablePartyChoiceField(forms.ModelChoiceField):
+    """Include searchable contact identifiers in each party option."""
+    def label_from_instance(self, obj):
+        parts = [getattr(obj, "full_name", "")]
+        for attr in ("code", "phone", "email", "address"):
+            value = getattr(obj, attr, "")
+            if value and str(value) not in parts:
+                parts.append(str(value))
+        return " | ".join(filter(None, parts))
+
+
 class CollectionEntryForm(forms.Form):
     idempotency_key = forms.CharField(
         max_length=64, initial=lambda: secrets.token_urlsafe(32), widget=forms.HiddenInput
     )
     branch = forms.ModelChoiceField(queryset=Branch.objects.none())
     party_type = forms.ChoiceField(choices=(("farmer", "Farmer"), ("customer", "Customer")))
-    farmer = forms.ModelChoiceField(queryset=Farmer.objects.none(), required=False)
-    customer = forms.ModelChoiceField(queryset=Customer.objects.none(), required=False)
+    farmer = SearchablePartyChoiceField(queryset=Farmer.objects.none(), required=False)
+    customer = SearchablePartyChoiceField(queryset=Customer.objects.none(), required=False)
     collected_at = forms.DateTimeField(
         widget=forms.DateTimeInput(
             attrs={"type": "datetime-local", "class": "collection-current-datetime", "data-current-datetime": "true"}
@@ -79,7 +90,9 @@ class CollectionEntryForm(forms.Form):
             # assignments, so use the first active branch as the default.
             self.initial["branch"] = branches.first().pk
         self.fields["farmer"].queryset = farmers.order_by("full_name")
+        self.fields["farmer"].widget.attrs.update({"class": "collection-party-select", "data-collection-party": "farmer"})
         self.fields["customer"].queryset = customers.order_by("full_name")
+        self.fields["customer"].widget.attrs.update({"class": "collection-party-select", "data-collection-party": "customer"})
         self.fields["party_type"].widget.attrs.update(
             {"class": "collection-party-type", "data-collection-party-type": "true"}
         )
