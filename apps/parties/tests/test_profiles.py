@@ -10,6 +10,7 @@ from apps.collections.models import MilkCollection
 from apps.finance.models import Payment
 from apps.organizations.models import Branch, BranchAssignment, Membership, Organization
 from apps.parties.models import Customer, Farmer
+from apps.parties.forms import CustomerForm
 from apps.pricing.models import PricingConfiguration
 
 User = get_user_model()
@@ -81,6 +82,30 @@ class PartyProfileTests(TestCase):
             status=status,
             **kwargs,
         )
+
+
+    def test_customer_form_only_offers_assigned_branches(self):
+        other_branch = Branch.objects.create(
+            organization=self.organization, code="OTHER", name="Other Branch"
+        )
+        staff = User.objects.create_user(
+            username="branch-customer-staff", email="branch-staff@example.test",
+            password="LongDemoPass!123",
+        )
+        staff_membership = Membership.objects.create(
+            user=staff, organization=self.organization, role=Membership.Role.BRANCH_MANAGER
+        )
+        BranchAssignment.objects.create(membership=staff_membership, branch=self.branch)
+        form = CustomerForm(organization=self.organization, membership=staff_membership)
+        offered_ids = set(form.fields["branch"].queryset.values_list("id", flat=True))
+        self.assertIn(self.branch.id, offered_ids)
+        self.assertNotIn(other_branch.id, offered_ids)
+        form = CustomerForm(
+            data={"branch": str(other_branch.id), "code": "C-OTHER", "full_name": "Blocked Customer"},
+            organization=self.organization, membership=staff_membership,
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("branch", form.errors)
 
     def test_customer_profile_sums_only_approved_collections(self):
         self._collection(self.customer, MilkCollection.Status.APPROVED, "C-APP", 18)
