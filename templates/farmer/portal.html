@@ -32,7 +32,6 @@
       <article class="profile-metric-card"><span class="profile-metric-label">Previous month</span><strong>{{ previous_month_summary.litres|default:0|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">Last month</span></article>
       <article class="profile-metric-card metric-highlight"><span class="profile-metric-label">Lifetime production</span><strong>{{ lifetime_summary.litres|default:0|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">All approved collections</span></article>
       <article class="profile-metric-card"><span class="profile-metric-label">Average per collection</span><strong>{{ average_litres|default:0|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">Average quantity</span></article>
-      <article class="profile-metric-card"><span class="profile-metric-label">Active collection days</span><strong>{{ active_days|default:0 }}</strong><span class="profile-metric-foot">Days with approved milk</span></article>
     </div>
   </section>
 
