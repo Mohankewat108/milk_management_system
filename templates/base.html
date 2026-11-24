@@ -81,10 +81,6 @@
 
     {% if user.is_authenticated %}
 
-      <a href="{% url 'business:workspace' %}">
-        {% translate "Workspaces" %}
-      </a>
-
       {% if user.farmer_profile %}
         <a href="{% url 'farmer_portal:home' %}">
           {% translate "My farmer account" %}
