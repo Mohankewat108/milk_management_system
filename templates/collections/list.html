@@ -62,15 +62,9 @@
     </article>
     <article class="collection-kpi">
       <span class="collection-kpi-label">Weighted FAT / SNF / Lacto</span>
-      <strong>{% if weighted_fat != None %}{{ weighted_fat|floatformat:2 }}%{% else %}--{% endif %} <span class="collection-kpi-divider">/</span> {% if weighted_snf != None %}{{ weighted_snf|floatformat:2 }}%{% else %}--{% endif %} <span class="collection-kpi-divider">/</span> {% if weighted_lactose != None %}{{ weighted_lactose|floatformat:2 }}%{% else %}--{% endif %}</strong>
+      <strong>{% if weighted_fat != None %}{{ weighted_fat|floatformat:2 }}{% else %}--{% endif %} <span class="collection-kpi-divider">/</span> {% if weighted_snf != None %}{{ weighted_snf|floatformat:2 }}{% else %}--{% endif %} <span class="collection-kpi-divider">/</span> {% if weighted_lactose != None %}{{ weighted_lactose|floatformat:2 }}{% else %}--{% endif %}</strong>
       <span class="collection-kpi-foot">Weighted by collected litres</span>
     </article>
-  </section>
-  <section class="collection-status-strip" aria-label="Collection statuses">
-    <div><span class="status-dot status-submitted"></span><span>Submitted</span><strong>{{ status_counts.submitted|default:0 }}</strong></div>
-    <div><span class="status-dot status-approved"></span><span>Approved</span><strong>{{ status_counts.approved|default:0 }}</strong></div>
-    <div><span class="status-dot status-rejected"></span><span>Rejected</span><strong>{{ status_counts.rejected|default:0 }}</strong></div>
-    <div><span class="status-dot status-reversed"></span><span>Reversed</span><strong>{{ status_counts.reversed|default:0 }}</strong></div>
   </section>
   <div class="collection-toolbar">
     <form class="search-form collection-filter-form" method="get">
