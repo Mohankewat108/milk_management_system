@@ -43,6 +43,11 @@ urlpatterns = [
     ),
     path("<slug:organization_slug>/reports/", advanced_views.reports_dashboard, name="reports"),
     path(
+        "<slug:organization_slug>/reports/export/",
+        advanced_views.queue_report_export,
+        name="reports_export",
+    ),
+    path(
         "<slug:organization_slug>/bulk/<str:module>/",
         advanced_views.bulk_party_action,
         name="bulk_party",

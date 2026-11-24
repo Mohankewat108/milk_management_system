@@ -16,6 +16,7 @@ class ExportJob(UUIDModel, TimeStampedModel):
         EXPENSES = "expenses", "Expenses"
         INVENTORY = "inventory", "Inventory"
         SUPPLIERS = "suppliers", "Suppliers"
+        REPORTS = "reports", "Advanced reports"
 
     class Status(models.TextChoices):
         QUEUED = "queued", "Queued"

@@ -102,6 +102,11 @@ def download_export(request, organization_slug, job_id):
         raise Http404
     if not can_export_module(request.membership, job.module):
         raise Http404
+    if job.module == "reports" and not isinstance(job.filters, dict):
+        raise Http404
+    if job.module == "reports":
+        if not isinstance(job.filters, dict) or "branch_scope" not in job.filters:
+            raise Http404
     if not isinstance(job.filters, dict) or "branch_scope" not in job.filters:
         raise Http404
     branch_ids = accessible_branch_ids(request.membership)

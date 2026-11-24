@@ -29,9 +29,18 @@ def queue_export(*, module, file_format, organization, membership, actor, filter
         )
         if accessible_ids is not None:
             branches = branches.filter(pk__in=accessible_ids)
+        requested_branches = filters.getlist("branch") if hasattr(filters, "getlist") else []
         selected_branch = filters.get("branch", "").strip()
-        if selected_branch:
-            branches = branches.filter(pk=selected_branch)
+        if selected_branch and not requested_branches:
+            requested_branches = [selected_branch]
+        if requested_branches:
+            allowed_values = {str(value) for value in branches.values_list("pk", flat=True)}
+            invalid = {
+                str(value) for value in requested_branches if str(value) not in allowed_values
+            }
+            if invalid:
+                raise ValueError("One or more selected branches are not accessible.")
+            branches = branches.filter(pk__in=requested_branches)
         branch_scope = [str(branch_id) for branch_id in branches.values_list("pk", flat=True)]
     job = ExportJob.objects.create(
         organization=organization,
@@ -41,9 +50,15 @@ def queue_export(*, module, file_format, organization, membership, actor, filter
         status=ExportJob.Status.QUEUED,
         filters={
             "branch": filters.get("branch", ""),
+            "branches": filters.getlist("branch") if hasattr(filters, "getlist") else [],
+            "all_branches": filters.get("all_branches", ""),
             "status": filters.get("status", ""),
             "from": filters.get("from", ""),
             "to": filters.get("to", ""),
+            "period": filters.get("period", "custom"),
+            "month": filters.get("month", ""),
+            "farmer": filters.get("farmer", ""),
+            "customer": filters.get("customer", ""),
             "branch_scope": branch_scope,
         },
         expires_at=timezone.now() + timedelta(days=7),
@@ -126,7 +141,12 @@ class _FilterParams:
     def get(self, key, default=""):
         return self.values.get(key, default)
 
+    def __getitem__(self, key):
+        return self.values[key]
+
     def getlist(self, key):
+        if key == "branch":
+            return self.values.get("branches", self.values.get(key, []))
         return self.values.get(key, [])
 
 
