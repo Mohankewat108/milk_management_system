@@ -228,7 +228,7 @@
               {% translate "Farm management" %}
             </div>
 
-            {% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'branch_manager' or request.membership.role == 'support' %}
+            {% if request.can_parties %}
 
               <a href="{% url 'parties:farmers' request.organization.slug %}">
                 ♙
@@ -242,7 +242,7 @@
 
             {% endif %}
 
-            {% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'branch_manager' or request.membership.role == 'collection_operator' or request.membership.role == 'quality_officer' %}
+            {% if request.can_collections %}
 
               <a href="{% url 'collections:list' request.organization.slug %}">
                 ◉
@@ -264,7 +264,7 @@
               {% translate "Finance & operations" %}
             </div>
 
-            {% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'accountant' %}
+            {% if request.can_finance %}
 
               <a href="{% url 'finance:list' request.organization.slug %}">
                 ▤
@@ -278,7 +278,7 @@
 
             {% endif %}
 
-            {% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'inventory_manager' %}
+            {% if request.can_inventory %}
 
               <a href="{% url 'inventory:items' request.organization.slug %}">
                 ▣
@@ -287,14 +287,14 @@
 
             {% endif %}
 
-            {% if request.membership.role in "owner admin branch_manager collection_operator quality_officer accountant inventory_manager support" %}
+            {% if request.can_exports %}
 
               <a href="{% url 'data_exports:centre' request.organization.slug %}">
                 ⇩
                 <span>{% translate "Export centre" %}</span>
               </a>
 
-              {% if request.membership.role == 'owner' or request.membership.role == 'admin' or request.membership.role == 'branch_manager' or request.membership.role == 'accountant' %}
+              {% if request.can_reports %}
 
                 <a href="{% url 'data_exports:reports' request.organization.slug %}">
                   ▥

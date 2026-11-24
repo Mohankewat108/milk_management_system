@@ -6,6 +6,33 @@ ORGANISATION_WIDE_ROLES = {
 }
 
 
+# Default role capabilities are centrally defined and can be extended by explicit
+# grants stored on a membership. Dairy managers use their explicitly assigned grants.
+ROLE_PERMISSION_DEFAULTS = {
+    Membership.Role.DAIRY_MANAGER: set(),
+    Membership.Role.BRANCH_MANAGER: {
+        "dashboard.view", "parties.view", "parties.manage",
+        "collections.view", "collections.create",
+        "reports.view", "exports.create",
+    },
+    Membership.Role.COLLECTION_OPERATOR: {
+        "dashboard.view", "collections.view", "collections.create", "exports.create",
+    },
+    Membership.Role.QUALITY_OFFICER: {
+        "dashboard.view", "collections.view", "collections.approve", "reports.view", "exports.create",
+    },
+    Membership.Role.ACCOUNTANT: {
+        "dashboard.view", "finance.view", "finance.manage", "reports.view", "exports.create",
+    },
+    Membership.Role.INVENTORY_MANAGER: {
+        "dashboard.view", "inventory.view", "inventory.manage", "reports.view", "exports.create",
+    },
+    Membership.Role.SUPPORT: {
+        "dashboard.view", "parties.view", "reports.view",
+    },
+}
+
+
 def accessible_branch_ids(membership):
     """Return restricted branch IDs; only owner/admin have organisation-wide scope."""
     if membership.role in ORGANISATION_WIDE_ROLES:
@@ -24,6 +51,10 @@ def has_organization_permission(membership, permission):
         "inventory.view": {"inventory.manage"},
     }
     granted_keys = {permission, *implied.get(permission, set())}
+    if permission in ROLE_PERMISSION_DEFAULTS.get(membership.role, set()):
+        return True
+    if any(key in ROLE_PERMISSION_DEFAULTS.get(membership.role, set()) for key in granted_keys):
+        return True
     return membership.permissions.filter(key__in=granted_keys).exists()
 
 

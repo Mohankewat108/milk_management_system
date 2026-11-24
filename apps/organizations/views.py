@@ -90,69 +90,14 @@ def dashboard(request, organization_slug):
         "collection_count": collections.count(),
         "active_rate": active_rate,
         "rate_date": today,
-        "can_record_collection": (
-            membership.role == Membership.Role.DAIRY_MANAGER
-            and has_organization_permission(membership, "collections.create")
-        )
-        or membership.role
-        in {
-            Membership.Role.OWNER,
-            Membership.Role.ADMIN,
-            Membership.Role.BRANCH_MANAGER,
-            Membership.Role.COLLECTION_OPERATOR,
-        },
-        "can_view_parties": (
-            membership.role == Membership.Role.DAIRY_MANAGER
-            and has_organization_permission(membership, "parties.view")
-        )
-        or membership.role
-        in {
-            Membership.Role.OWNER,
-            Membership.Role.ADMIN,
-            Membership.Role.BRANCH_MANAGER,
-            Membership.Role.SUPPORT,
-        },
-        "can_view_collections": (
-            membership.role == Membership.Role.DAIRY_MANAGER
-            and has_organization_permission(membership, "collections.view")
-        )
-        or membership.role
-        in {
-            Membership.Role.OWNER,
-            Membership.Role.ADMIN,
-            Membership.Role.BRANCH_MANAGER,
-            Membership.Role.COLLECTION_OPERATOR,
-            Membership.Role.QUALITY_OFFICER,
-        },
-        "can_approve_collections": (
-            membership.role == Membership.Role.DAIRY_MANAGER
-            and has_organization_permission(membership, "collections.approve")
-        )
-        or membership.role
-        in {Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.QUALITY_OFFICER},
+        "can_record_collection": has_organization_permission(membership, "collections.create"),
+        "can_view_parties": has_organization_permission(membership, "parties.view"),
+        "can_view_collections": has_organization_permission(membership, "collections.view"),
+        "can_approve_collections": has_organization_permission(membership, "collections.approve"),
         "can_manage_staff": membership.role in {Membership.Role.OWNER, Membership.Role.ADMIN},
-        "can_manage_finance": (
-            membership.role == Membership.Role.DAIRY_MANAGER
-            and has_organization_permission(membership, "finance.manage")
-        )
-        or membership.role
-        in {
-            Membership.Role.OWNER,
-            Membership.Role.ADMIN,
-            Membership.Role.ACCOUNTANT,
-        },
-        "can_manage_inventory": (
-            membership.role == Membership.Role.DAIRY_MANAGER
-            and has_organization_permission(membership, "inventory.manage")
-        )
-        or membership.role
-        in {
-            Membership.Role.OWNER,
-            Membership.Role.ADMIN,
-            Membership.Role.INVENTORY_MANAGER,
-        },
-        "can_manage_configuration": membership.role
-        in {Membership.Role.OWNER, Membership.Role.ADMIN},
+        "can_manage_finance": has_organization_permission(membership, "finance.view"),
+        "can_manage_inventory": has_organization_permission(membership, "inventory.view"),
+        "can_manage_configuration": membership.role in {Membership.Role.OWNER, Membership.Role.ADMIN},
     }
     return render(request, "dashboard/business.html", context)
 
