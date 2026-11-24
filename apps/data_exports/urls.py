@@ -17,6 +17,21 @@ urlpatterns = [
         name="download",
     ),
     path(
+        "<slug:organization_slug>/exports/jobs/<uuid:job_id>/retry/",
+        views.retry_export,
+        name="retry",
+    ),
+    path(
+        "<slug:organization_slug>/exports/jobs/<uuid:job_id>/cancel/",
+        views.cancel_export,
+        name="cancel",
+    ),
+    path(
+        "<slug:organization_slug>/exports/jobs/<uuid:job_id>/delete/",
+        views.delete_export,
+        name="delete",
+    ),
+    path(
         "<slug:organization_slug>/exports/templates/save/",
         advanced_views.save_export_template,
         name="template_save",

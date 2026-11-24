@@ -4,6 +4,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.collections.models import MilkCollection
 from apps.finance.models import Payment
@@ -104,10 +105,16 @@ class PartyProfileTests(TestCase):
         self.assertEqual(response.context["metrics"]["lifetime_litres"], Decimal("2.500"))
 
     def test_profile_today_and_month_use_organization_timezone(self):
-        # 2026-11-23 00:30 UTC is still 2026-11-22 in Kathmandu.
-        self._collection(self.farmer, MilkCollection.Status.APPROVED, "F-TZ", 22)
-        collection = MilkCollection.objects.get(reference="F-TZ")
-        collection.collected_at = datetime(2026, 11, 22, 18, 30, tzinfo=UTC)
+        # The fixture follows the active test clock, then checks the local-day
+        # boundary using an instant shortly after midnight in Kathmandu.
+        self.organization.timezone = "Asia/Kathmandu"
+        self.organization.save(update_fields=["timezone", "updated_at"])
+        collection = self._collection(
+            self.farmer, MilkCollection.Status.APPROVED, "F-TZ", timezone.localdate().day
+        )
+        local_today = timezone.now().astimezone(timezone.get_fixed_timezone(345))
+        local_collection_time = local_today.replace(hour=0, minute=30, second=0, microsecond=0)
+        collection.collected_at = local_collection_time.astimezone(UTC)
         collection.save(update_fields=["collected_at"])
         self.client.force_login(self.owner)
         response = self.client.get(
@@ -157,6 +164,9 @@ class PartyProfileTests(TestCase):
         self.assertEqual(response.context["metrics"]["average_snf"], Decimal("8.000"))
         self.assertEqual(response.context["metrics"]["average_lactose"], Decimal("4.500"))
         self.assertEqual(response.context["completed_payment_total"], Decimal("100.00"))
+        self.assertEqual(response.context["period_completed_payment_total"], Decimal("100.00"))
+        self.assertEqual(response.context["lifetime_unpaid_income"], Decimal("81.25"))
+        self.assertEqual(response.context["period_unpaid_income"], Decimal("81.25"))
         self.assertEqual(response.context["payment_direction_label"], "Paid to farmer")
         self.assertEqual(response.context["payments"].paginator.count, 1)
 

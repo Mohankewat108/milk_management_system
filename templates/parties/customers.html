@@ -13,7 +13,6 @@
   <header class="directory-heading">
     <div><div class="eyebrow">{{ organization.name }}</div><h1>{% translate "Customers" %}</h1><p class="muted">{% translate "Manage customer records for this business." %}</p></div>
     <div class="actions">
-      <a class="button button-secondary" href="{% url 'business:trash' organization.slug %}">{% translate "Trash" %}</a>
       <a class="button" href="{% url 'parties:customer_create' organization.slug %}">＋ {% translate "Add customer" %}</a>
     </div>
   </header>

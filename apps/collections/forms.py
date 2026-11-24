@@ -31,16 +31,39 @@ class CollectionEntryForm(forms.Form):
     quality_test_method = forms.CharField(max_length=80, required=False)
     notes = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 3}))
 
-    def __init__(self, *args, organization, **kwargs):
+    def __init__(self, *args, organization, membership=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["branch"].queryset = Branch.objects.filter(
+        branches = Branch.objects.filter(
             organization=organization, is_active=True, deleted_at__isnull=True
         )
-        self.fields["farmer"].queryset = Farmer.objects.filter(
+        farmers = Farmer.objects.filter(
             organization=organization, is_active=True, deleted_at__isnull=True
         )
-        self.fields["customer"].queryset = Customer.objects.filter(
+        customers = Customer.objects.filter(
             organization=organization, is_active=True, deleted_at__isnull=True
+        )
+
+        # Match the same branch visibility rules used by the collection service.
+        if membership is not None:
+            from apps.organizations.permissions import accessible_branch_ids
+
+            branch_ids = accessible_branch_ids(membership)
+            if branch_ids is not None:
+                branches = branches.filter(pk__in=branch_ids)
+                farmers = farmers.filter(branch_id__in=branch_ids)
+                customers = customers.filter(branch_id__in=branch_ids)
+
+        self.fields["branch"].queryset = branches.order_by("name")
+        self.fields["farmer"].queryset = farmers.order_by("full_name")
+        self.fields["customer"].queryset = customers.order_by("full_name")
+        self.fields["party_type"].widget.attrs.update(
+            {"class": "collection-party-type", "data-collection-party-type": "true"}
+        )
+        self.fields["farmer"].widget.attrs.update(
+            {"class": "collection-party-select", "data-collection-party": "farmer"}
+        )
+        self.fields["customer"].widget.attrs.update(
+            {"class": "collection-party-select", "data-collection-party": "customer"}
         )
 
     def clean(self):
@@ -51,6 +74,14 @@ class CollectionEntryForm(forms.Form):
             raise forms.ValidationError("Choose one farmer and no customer.")
         if kind == "customer" and (customer is None or farmer is not None):
             raise forms.ValidationError("Choose one customer and no farmer.")
+
+        branch = cleaned.get("branch")
+        party = farmer if kind == "farmer" else customer
+        if branch and party and party.branch_id and party.branch_id != branch.pk:
+            raise forms.ValidationError(
+                "The selected farmer/customer belongs to a different branch. "
+                "Choose the party's branch or select a party assigned to this branch."
+            )
         return cleaned
 
 

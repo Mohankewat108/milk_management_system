@@ -68,7 +68,7 @@ services:
       DATABASE_URL: postgresql://dairynexus:${POSTGRES_PASSWORD:-local-only-change-this}@db:5432/dairynexus
       DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,web,worker
     command: >-
-      sh -c "while true; do python manage.py process_data_jobs --limit 20; sleep 5; done"
+      python manage.py process_data_jobs --limit 20 --loop --interval 5
     volumes:
       - .:/app
       - private_uploads:/app/private_uploads

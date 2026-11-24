@@ -5,6 +5,11 @@ from . import business_views, management_views
 app_name = "parties"
 
 urlpatterns = [
+    path(
+        "<slug:organization_slug>/<str:kind>/<uuid:party_id>/collections/export/",
+        business_views.party_collection_export,
+        name="party_collection_export",
+    ),
     path("<slug:organization_slug>/customers/", business_views.customer_list, name="customers"),
     path(
         "<slug:organization_slug>/customers/new/",

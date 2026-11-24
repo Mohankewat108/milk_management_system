@@ -4,7 +4,7 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db.models import Q
+from django.db.models import F, Q
 from django.utils import timezone
 
 from apps.collections.models import MilkCollection
@@ -131,6 +131,13 @@ def _scoped_queryset(module, organization, membership, params, branch_scope=None
         if None in branch_scope:
             scope_filter |= Q(branch__isnull=True)
         qs = qs.filter(scope_filter)
+    # Collection integrity: never export/report an entry if its farmer/customer
+    # has since been moved to another branch or has no branch assignment.
+    if module in {"collections", "reports"}:
+        qs = qs.filter(
+            (Q(farmer__isnull=False) & Q(farmer__branch_id=F("branch_id")))
+            | (Q(customer__isnull=False) & Q(customer__branch_id=F("branch_id")))
+        )
     if branch_ids_requested and module != "suppliers":
         qs = qs.filter(branch_id__in=branch_ids_requested)
     if params.get("farmer") and module in {"collections", "reports"}:

@@ -591,6 +591,35 @@
     });
   }
 
+  /* ================= COLLECTION PARTY SELECTOR ================= */
+
+  const partyTypeSelect = document.querySelector("[data-collection-party-type]");
+  if (partyTypeSelect) {
+    const partyFields = Array.from(
+      document.querySelectorAll("[data-collection-party-field]")
+    );
+
+    function syncCollectionPartyField() {
+      const selectedType = partyTypeSelect.value;
+      partyFields.forEach(function (field) {
+        const fieldType = field.dataset.collectionPartyField;
+        const isVisible = fieldType === selectedType;
+        field.hidden = !isVisible;
+
+        const select = field.querySelector("select");
+        if (select) {
+          select.required = isVisible;
+          if (!isVisible) {
+            select.value = "";
+          }
+        }
+      });
+    }
+
+    partyTypeSelect.addEventListener("change", syncCollectionPartyField);
+    syncCollectionPartyField();
+  }
+
   /* ================= NEPALI/HINDI DIGITS ================= */
 
   const language = (root.lang || "en")

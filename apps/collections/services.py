@@ -44,8 +44,16 @@ def create_collection(
     if bool(farmer) == bool(customer):
         raise ValidationError("Select exactly one farmer or customer.")
     party = farmer or customer
-    if party.organization_id != organization.id or not party.is_active:
+    if (
+        party.organization_id != organization.id
+        or not party.is_active
+        or getattr(party, "deleted_at", None) is not None
+    ):
         raise ValidationError("The selected party is not active in this organisation.")
+    if party.branch_id and party.branch_id != branch.id:
+        raise ValidationError(
+            "The selected farmer/customer belongs to a different branch."
+        )
     quantity = Decimal(str(quantity_litres))
     quality = [Decimal(str(value)) for value in (snf, fat, lactose)]
     if quantity <= 0:
@@ -194,4 +202,57 @@ def approve_collection(*, collection_id, organization, actor):
         post_approved_farmer_collection(collection=entry, actor=actor)
     elif entry.customer_id:
         post_approved_customer_collection_sale(collection=entry, actor=actor)
+    return entry
+
+
+@transaction.atomic
+def reverse_collection(*, collection_id, organization, actor, reason):
+    """Reverse a collection and any associated posted ledger journal atomically."""
+    from apps.finance.ledger_services import reverse_journal_entry
+    from apps.finance.models import JournalEntry
+
+    from .models import MilkCollection
+
+    entry = MilkCollection.objects.select_for_update().get(
+        pk=collection_id, organization=organization
+    )
+    require_actor_branch_access(actor=actor, organization=organization, branch=entry.branch)
+    if entry.status == MilkCollection.Status.REVERSED:
+        return entry
+    if len((reason or "").strip()) < 8:
+        raise ValidationError("Provide a clear reversal reason (at least 8 characters).")
+
+    if entry.status == MilkCollection.Status.APPROVED:
+        source_types = []
+        if entry.farmer_id:
+            source_types.append("milk_collection")
+        elif entry.customer_id:
+            source_types.append("customer_milk_sale")
+
+        journals = JournalEntry.objects.filter(
+            organization=organization,
+            source_type__in=source_types,
+            source_id=str(entry.pk),
+            status=JournalEntry.Status.POSTED,
+            reversal__isnull=True,
+        ).select_related("period", "branch")
+
+        for journal in journals:
+            reversal_date = timezone.localdate()
+            try:
+                tenant_tz = ZoneInfo(organization.timezone or timezone.get_current_timezone_name())
+            except ZoneInfoNotFoundError:
+                tenant_tz = timezone.get_current_timezone()
+            reversal_date = timezone.now().astimezone(tenant_tz).date()
+            reverse_journal_entry(
+                entry_id=journal.pk,
+                organization=organization,
+                actor=actor,
+                reversal_date=reversal_date,
+                reason=reason.strip(),
+            )
+
+    entry.status = MilkCollection.Status.REVERSED
+    entry.notes = (entry.notes + "\\n" if entry.notes else "") + f"REVERSAL: {reason.strip()}"
+    entry.save(update_fields=["status", "notes", "updated_at"])
     return entry

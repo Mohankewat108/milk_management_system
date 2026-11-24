@@ -1,6 +1,7 @@
 import calendar
 import csv
 import io
+import time
 from datetime import timedelta
 
 from django.conf import settings
@@ -119,9 +120,39 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--limit", type=int, default=20)
+        parser.add_argument("--loop", action="store_true", help="Run continuously as a worker.")
+        parser.add_argument(
+            "--interval",
+            type=float,
+            default=5.0,
+            help="Seconds between polls when --loop is enabled.",
+        )
 
     def handle(self, *args, **options):
         limit = max(1, min(options["limit"], 100))
+        interval = max(1.0, min(options["interval"], 300.0))
+        while True:
+            try:
+                self.process_batch(limit)
+            except Exception as exc:
+                self.stderr.write(f"Worker cycle failed: {type(exc).__name__}: {exc}")
+            if not options["loop"]:
+                return
+            time.sleep(interval)
+
+    def process_batch(self, limit):
+        # Recover jobs abandoned by a worker crash. updated_at is refreshed when
+        # the job enters Processing; jobs older than 15 minutes are requeued.
+        stale_before = timezone.now() - timedelta(minutes=15)
+        stale_jobs = ExportJob.objects.filter(
+            status=ExportJob.Status.PROCESSING, updated_at__lt=stale_before
+        )
+        recovered = stale_jobs.update(
+            status=ExportJob.Status.QUEUED,
+            error_message="Recovered after worker interruption; queued for another attempt.",
+        )
+        if recovered:
+            self.stdout.write(f"Recovered {recovered} stale export job(s)")
         for job in ExportJob.objects.filter(status=ExportJob.Status.QUEUED).order_by("created_at")[
             :limit
         ]:

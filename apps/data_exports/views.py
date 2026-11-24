@@ -156,3 +156,85 @@ def download_export(request, organization_slug, job_id):
     response["Cache-Control"] = "private, no-store"
     response["X-Content-Type-Options"] = "nosniff"
     return response
+
+
+@login_required
+@organization_access()
+@require_POST
+def retry_export(request, organization_slug, job_id):
+    job = get_object_or_404(ExportJob, pk=job_id, organization=request.organization)
+    if job.requested_by_id != request.user.pk and request.membership.role not in {
+        Membership.Role.OWNER, Membership.Role.ADMIN
+    }:
+        raise Http404
+    if not can_export_module(request.membership, job.module):
+        raise Http404
+    if job.status != ExportJob.Status.FAILED:
+        messages.error(request, "Only failed exports can be retried.")
+    else:
+        if job.file:
+            job.file.delete(save=False)
+        job.file = ""
+        job.file_size = 0
+        job.record_count = 0
+        job.error_message = ""
+        job.status = ExportJob.Status.QUEUED
+        job.save(
+            update_fields=[
+                "file", "file_size", "record_count", "error_message", "status", "updated_at"
+            ]
+        )
+        record_event(
+            actor=request.user, organization=request.organization,
+            action="export.retried", target=job, request=request
+        )
+        messages.success(request, "Export queued for retry.")
+    return redirect("data_exports:centre", organization_slug=organization_slug)
+
+
+
+@login_required
+@organization_access()
+@require_POST
+def cancel_export(request, organization_slug, job_id):
+    job = get_object_or_404(ExportJob, pk=job_id, organization=request.organization)
+    if job.requested_by_id != request.user.pk and request.membership.role not in {
+        Membership.Role.OWNER, Membership.Role.ADMIN
+    }:
+        raise Http404
+    if job.status != ExportJob.Status.QUEUED:
+        messages.error(request, "Only queued exports can be cancelled.")
+    else:
+        job.status = ExportJob.Status.CANCELLED
+        job.error_message = "Cancelled by user."
+        job.save(update_fields=["status", "error_message", "updated_at"])
+        record_event(
+            actor=request.user, organization=request.organization,
+            action="export.cancelled", target=job, request=request
+        )
+        messages.success(request, "Export cancelled.")
+    return redirect("data_exports:centre", organization_slug=organization_slug)
+
+
+
+@login_required
+@organization_access()
+@require_POST
+def delete_export(request, organization_slug, job_id):
+    job = get_object_or_404(ExportJob, pk=job_id, organization=request.organization)
+    if job.requested_by_id != request.user.pk and request.membership.role not in {
+        Membership.Role.OWNER, Membership.Role.ADMIN
+    }:
+        raise Http404
+    if job.status in {ExportJob.Status.QUEUED, ExportJob.Status.PROCESSING}:
+        messages.error(request, "Cancel or wait for this export before deleting it.")
+    else:
+        if job.file:
+            job.file.delete(save=False)
+        record_event(
+            actor=request.user, organization=request.organization,
+            action="export.deleted", target=job, request=request
+        )
+        job.delete()
+        messages.success(request, "Export history entry deleted.")
+    return redirect("data_exports:centre", organization_slug=organization_slug)

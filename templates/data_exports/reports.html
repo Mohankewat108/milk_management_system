@@ -245,17 +245,6 @@
         <article><span>{% translate "Purchase movements" %}</span><strong>{{ purchase_movements }}</strong><small>{{ stock_purchase_quantity|floatformat:3 }} {{ organization.inventory_items.first.unit|default:"units" }}</small></article>
         <article><span>{% translate "Usage movements" %}</span><strong>{{ usage_movements }}</strong><small>{{ stock_usage_quantity|floatformat:3 }} {% translate "units consumed" %}</small></article>
       </div>
-      <div class="table-wrap"><table><thead><tr><th>{% translate "Item" %}</th><th>{% translate "Branch" %}</th><th>{% translate "Current stock" %}</th><th>{% translate "Reorder level" %}</th><th>{% translate "Unit" %}</th><th>{% translate "Stock value" %}</th></tr></thead><tbody>
-        {% for item in low_stock_items %}<tr><td>{{ item.name }} · {{ item.code }}</td><td>{{ item.branch.name }}</td><td>{{ item.current_stock|floatformat:3 }}</td><td>{{ item.reorder_level|floatformat:3 }}</td><td>{{ item.unit }}</td><td>{{ organization.currency }} {{ item.current_stock|floatformat:2 }} × {{ item.purchase_price|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="6">{% translate "No low-stock items." %}</td></tr>{% endfor %}
-      </tbody></table></div>
-    </section>
-
-    <section id="reports-status" class="panel export-panel reports-section">
-      <h2>{% translate "Collection status breakdown" %}</h2>
-      <div class="table-wrap"><table><thead><tr><th>{% translate "Status" %}</th><th>{% translate "Records" %}</th></tr></thead><tbody>
-        {% for row in collection_statuses %}<tr><td>{{ row.status|title }}</td><td>{{ row.total }}</td></tr>
-        {% empty %}<tr><td colspan="2">{% translate "No records in this period." %}</td></tr>{% endfor %}
-      </tbody></table></div>
     </section>
 
     <p class="export-security-note">{% translate "Reports exclude deleted financial and inventory records, use approved collections for milk value, enforce permitted branch access, and distinguish customer receipts from farmer payments. These indicators are operational summaries, not audited financial statements." %}</p>

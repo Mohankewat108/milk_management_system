@@ -281,3 +281,39 @@ class ExportDownloadAuthorizationTests(TestCase):
         response = self.download(job)
 
         self.assertEqual(response.status_code, 404)
+
+    def job_action(self, name, job):
+        return self.client.post(
+            reverse(
+                f"data_exports:{name}",
+                kwargs={"organization_slug": self.organization.slug, "job_id": job.pk},
+            )
+        )
+
+    def test_failed_export_can_be_retried(self):
+        job = self.create_job(branch_scope=[str(self.branch_a.pk)])
+        job.status = ExportJob.Status.FAILED
+        job.file = ""
+        job.error_message = "previous failure"
+        job.save(update_fields=["status", "file", "error_message"])
+        response = self.job_action("retry", job)
+        job.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(job.status, ExportJob.Status.QUEUED)
+        self.assertEqual(job.error_message, "")
+
+    def test_queued_export_can_be_cancelled(self):
+        job = self.create_job(branch_scope=[str(self.branch_a.pk)])
+        job.status = ExportJob.Status.QUEUED
+        job.file = ""
+        job.save(update_fields=["status", "file"])
+        response = self.job_action("cancel", job)
+        job.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(job.status, ExportJob.Status.CANCELLED)
+
+    def test_completed_export_history_can_be_deleted(self):
+        job = self.create_job(branch_scope=[str(self.branch_a.pk)])
+        response = self.job_action("delete", job)
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(ExportJob.objects.filter(pk=job.pk).exists())

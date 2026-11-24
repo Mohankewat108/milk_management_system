@@ -796,7 +796,7 @@ def queue_report_export(request, organization_slug):
         params.pop("branch", None)
         params["all_branches"] = "1"
     try:
-        job = queue_export(
+        queue_export(
             module="reports",
             file_format=request.POST.get("file_format", "xlsx").lower(),
             organization=request.organization,
@@ -806,8 +806,8 @@ def queue_report_export(request, organization_slug):
         )
     except (PermissionDenied, ValueError) as exc:
         raise PermissionDenied from exc
-    messages.success(request, f"Advanced report export queued ({str(job.pk)[:8]}).")
-    return redirect("data_exports:reports", organization_slug=organization_slug)
+    messages.success(request, "Export queued. Open Export Centre to download when ready.")
+    return redirect("data_exports:centre", organization_slug=organization_slug)
 
 @login_required
 @organization_access(Membership.Role.OWNER, Membership.Role.ADMIN)

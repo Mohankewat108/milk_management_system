@@ -1,43 +1,181 @@
 {% extends "base.html" %}
-{% load locale_dates %}
+{% load locale_dates static %}
 {% block title %}Milk collections | {{ organization.name }}{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/collection-entry.css' %}">
+{% endblock %}
 {% block content %}
-<div class="collection-page">
-  <div class="page-heading">
-    <div><div class="eyebrow">{{ organization.name }}</div><h1>Milk collections</h1><p class="muted">Recorded quantity: {{ total_litres|floatformat:3 }} L</p></div>
-    <a class="button" href="{% url 'collections:create' organization.slug %}">Record collection</a>
+
+<div class="collection-page collection-dashboard">
+  <header class="page-heading collection-heading">
+    <div>
+      <div class="eyebrow">{{ organization.name }} | {{ branch_context }} | Dairy operations</div>
+      <h1>Milk collections</h1>
+      <p class="muted">Enter milk measurements and review collection records in one workspace.</p>
+    </div>
+  </header>
+  {% if collection_form %}<section class="content-card collection-entry-card" id="collection-entry-panel">
+    <form method="post" class="collection-entry-form">
+      {% csrf_token %}
+      {{ collection_form.non_field_errors }}
+      <div class="collection-entry-layout">
+        <div class="collection-entry-section collection-entry-core">
+          <h3>Milk entry</h3>
+          <div class="collection-entry-grid">
+            {% for field in collection_form %}
+              {% if field.name == "idempotency_key" %}
+                {{ field }}
+              {% elif field.name == "branch" or field.name == "party_type" or field.name == "farmer" or field.name == "customer" or field.name == "collected_at" or field.name == "quantity_litres" or field.name == "fat" or field.name == "snf" or field.name == "lactose" %}
+                <div class="collection-entry-field collection-party-field" data-collection-field="{{ field.name }}">
+                  <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-hidden="true">*</span><span class="sr-only"> required</span>{% endif %}</label>
+                  {{ field }}
+                  {% if field.help_text %}<small class="muted">{{ field.help_text }}</small>{% endif %}
+                  {{ field.errors }}
+                </div>
+              {% endif %}
+            {% endfor %}
+          </div>
+          <div class="collection-entry-actions">
+            <button class="button" type="submit">Save collection</button>
+          </div>
+        </div>
+        <div class="collection-entry-side">
+          <div class="collection-entry-section collection-entry-quality">
+            <h3>Quality &amp; additional readings</h3>
+            <div class="collection-entry-grid collection-entry-grid-two">
+              {% for field in collection_form %}
+                {% if field.name == "lactometer_reading" or field.name == "milk_temperature_c" or field.name == "sample_reference" or field.name == "quality_test_method" or field.name == "notes" %}
+                  <div class="collection-entry-field {% if field.name == 'notes' %}collection-entry-wide{% endif %}">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-hidden="true">*</span><span class="sr-only"> required</span>{% endif %}</label>
+                    {{ field }}
+                    {% if field.help_text %}<small class="muted">{{ field.help_text }}</small>{% endif %}
+                    {{ field.errors }}
+                  </div>
+                {% endif %}
+              {% endfor %}
+            </div>
+          </div>
+          <div class="collection-entry-note">
+            <strong>Pricing calculated automatically</strong>
+            <span>Use actual measured FAT, SNF and lactose readings. Pricing is applied by your configured dairy rules.</span>
+          </div>
+        </div>
+      </div>
+    </form>
+  </section>{% endif %}
+  <section class="collection-kpis" aria-label="Collection summary">
+    <article class="collection-kpi collection-kpi-primary">
+      <span class="collection-kpi-label">Total milk collected</span>
+      <strong>{{ total_litres|floatformat:3 }} <small>L</small></strong>
+      <span class="collection-kpi-foot">Excludes reversed entries{% if date_from or date_to %} | {{ date_from|default:"-" }} to {{ date_to|default:"-" }}{% else %} | All dates{% endif %}</span>
+    </article>
+    <article class="collection-kpi">
+      <span class="collection-kpi-label">Collection value</span>
+      <strong>{{ organization.currency }} {{ total_value|floatformat:2 }}</strong>
+      <span class="collection-kpi-foot">Active records in this view</span>
+    </article>
+    <article class="collection-kpi">
+      <span class="collection-kpi-label">Active records</span>
+      <strong>{{ total_records }}</strong>
+      <span class="collection-kpi-foot">Matching non-reversed entries</span>
+    </article>
+    <article class="collection-kpi">
+      <span class="collection-kpi-label">Weighted FAT / SNF</span>
+      <strong>{% if weighted_fat != None %}{{ weighted_fat|floatformat:2 }}%{% else %}--{% endif %} <span class="collection-kpi-divider">/</span> {% if weighted_snf != None %}{{ weighted_snf|floatformat:2 }}%{% else %}--{% endif %}</strong>
+      <span class="collection-kpi-foot">Weighted by collected litres</span>
+    </article>
+  </section>
+  <section class="collection-status-strip" aria-label="Collection statuses">
+    <div><span class="status-dot status-submitted"></span><span>Submitted</span><strong>{{ status_counts.submitted|default:0 }}</strong></div>
+    <div><span class="status-dot status-approved"></span><span>Approved</span><strong>{{ status_counts.approved|default:0 }}</strong></div>
+    <div><span class="status-dot status-rejected"></span><span>Rejected</span><strong>{{ status_counts.rejected|default:0 }}</strong></div>
+    <div><span class="status-dot status-reversed"></span><span>Reversed</span><strong>{{ status_counts.reversed|default:0 }}</strong></div>
+  </section>
+  <div class="collection-toolbar">
+    <form class="search-form collection-filter-form" method="get">
+      <label class="collection-search-field">Search records
+        <input type="search" name="q" value="{{ search_query }}" placeholder="Farmer, branch or reference..." aria-label="Search farmer, branch or reference">
+      </label>
+      <label>From ({{ date_calendar }})
+        {% if date_calendar == "BS" %}<input type="text" inputmode="numeric" data-calendar-date data-calendar="bs" name="from" value="{{ date_from }}" placeholder="YYYY-MM-DD">{% else %}<input type="date" name="from" value="{{ date_from }}">{% endif %}
+      </label>
+      <label>To ({{ date_calendar }})
+        {% if date_calendar == "BS" %}<input type="text" inputmode="numeric" data-calendar-date data-calendar="bs" name="to" value="{{ date_to }}" placeholder="YYYY-MM-DD">{% else %}<input type="date" name="to" value="{{ date_to }}">{% endif %}
+      </label>
+      <label>Branch
+        <select name="branch"><option value="">All accessible branches</option>{% for branch in filter_branches %}<option value="{{ branch.pk }}" {% if branch_filter == branch.pk|stringformat:"s" %}selected{% endif %}>{{ branch.name }}</option>{% endfor %}</select>
+      </label>
+      <label>Farmer / customer
+        <input type="search" name="party" value="{{ party_filter }}" placeholder="Search name" aria-label="Filter by farmer or customer">
+      </label>
+      <label>Status
+        <select name="status">
+          <option value="">All statuses</option>
+          {% for value,label in status_choices %}<option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </label>
+      <button class="button button-secondary" type="submit">Apply filters</button>
+      {% if search_query or date_from or date_to or status_filter or branch_filter or party_filter %}<a class="button button-ghost" href="{% url 'collections:list' organization.slug %}">Clear</a>{% endif %}
+    </form>
+    <form class="collection-export-form" method="post" action="{% url 'data_exports:queue' organization.slug 'collections' %}">
+      {% csrf_token %}
+      {% if export_from %}<input type="hidden" name="from" value="{{ export_from }}">{% endif %}
+      {% if export_to %}<input type="hidden" name="to" value="{{ export_to }}">{% endif %}
+      {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+      <label class="sr-only" for="collection-export-format">Export format</label>
+      <select id="collection-export-format" name="file_format"><option value="xlsx">Excel</option><option value="csv">CSV</option><option value="pdf">PDF</option></select>
+      <button class="button button-secondary" type="submit">Export</button>
+    </form>
   </div>
-  <div class="module-export-actions"><form method="post" action="{% url 'data_exports:queue' organization.slug 'collections' %}">{% csrf_token %}{% if date_calendar != "BS" %}<input type="hidden" name="from" value="{{ date_from }}"><input type="hidden" name="to" value="{{ date_to }}">{% endif %}<select name="file_format" aria-label="Export format"><option value="xlsx">Excel</option><option value="csv">CSV</option><option value="pdf">PDF</option></select><button class="button button-secondary" type="submit">Export collections ↓</button></form></div>
-  <form class="search-form" method="get">
-    <label>From ({{ date_calendar }}) {% if date_calendar == "BS" %}<input type="text" inputmode="numeric" data-calendar-date data-calendar="bs" name="from" value="{{ date_from }}" placeholder="वर्ष-महिना-दिन">{% else %}<input type="date" name="from" value="{{ date_from }}">{% endif %}</label>
-    <label>To ({{ date_calendar }}) {% if date_calendar == "BS" %}<input type="text" inputmode="numeric" data-calendar-date data-calendar="bs" name="to" value="{{ date_to }}" placeholder="वर्ष-महिना-दिन">{% else %}<input type="date" name="to" value="{{ date_to }}">{% endif %}</label>
-    <button class="button button-secondary" type="submit">Filter</button>
-  </form>
   {% if date_error %}<p class="alert error" role="alert">{{ date_error }}</p>{% endif %}
-  <section class="panel table-wrap"><table>
-    <thead><tr><th>Reference</th><th>Date</th><th>Branch</th><th>Farmer / Customer</th><th>Litres</th><th>SNF</th><th>FAT</th><th>Lactose</th><th>Rate</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
-    <tbody>
-    {% for item in page_obj %}<tr>
-      <td>{{ item.reference }}</td><td>{{ item.collected_at|local_date }}</td><td>{{ item.branch.name }}</td>
-      <td>{% if item.farmer %}{{ item.farmer.full_name }}{% else %}{{ item.customer.full_name }}{% endif %}</td>
-      <td>{{ item.quantity_litres }}</td><td>{{ item.snf }}</td><td>{{ item.fat }}</td><td>{{ item.lactose }}</td>
-      <td>{{ item.milk_rate }}</td><td>{{ item.total_amount }}</td><td><span class="tag">{{ item.get_status_display }}</span></td>
-      <td><div class="table-actions">
-        {% if item.status != "approved" and item.status != "reversed" %}
-          <a class="button button-small button-secondary" href="{% url 'collections:edit' organization.slug item.id %}">Edit</a>
-        {% endif %}
-        {% if membership.role == "owner" or membership.role == "admin" %}
-          {% if item.status != "reversed" %}
-          <form method="post" action="{% url 'collections:reverse' organization.slug item.id %}">{% csrf_token %}
-            <input type="text" name="reason" minlength="8" required placeholder="Reversal reason" aria-label="Reason for reversal">
-            <button class="button button-small button-ghost" type="submit" onclick="return confirm('Reverse this collection? This action is recorded in the audit log.')">Reverse</button>
-          </form>
-          {% endif %}
-        {% endif %}
-      </div></td>
-    </tr>{% empty %}<tr><td colspan="12">No collection records found.</td></tr>{% endfor %}
-    </tbody>
-  </table></section>
-  <div class="pagination">{% if page_obj.has_previous %}<a href="?{% if date_from %}from={{ date_from|urlencode }}&{% endif %}{% if date_to %}to={{ date_to|urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}<span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a href="?{% if date_from %}from={{ date_from|urlencode }}&{% endif %}{% if date_to %}to={{ date_to|urlencode }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>{% endif %}</div>
+  <section class="collection-table-card panel">
+    <div class="collection-table-header">
+      <div><h2>Collection records</h2><p class="muted">Latest entries first | {{ page_obj.paginator.count }} matching record{{ page_obj.paginator.count|pluralize }}</p></div>
+      <span class="collection-table-caption">25 records per page</span>
+    </div>
+    <div class="table-wrap collection-table-wrap">
+      <table>
+        <thead><tr><th>Reference</th><th>Date</th><th>Branch</th><th>Farmer / Customer</th><th>Litres</th><th>SNF</th><th>FAT</th><th>Lactose</th><th>Rate</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+        {% for item in page_obj %}<tr>
+          <td><span class="collection-reference">{{ item.reference }}</span></td>
+          <td>{{ item.collected_at|local_date }}</td>
+          <td>{{ item.branch.name }}</td>
+          <td class="collection-party">{% if item.farmer %}{{ item.farmer.full_name }}{% else %}{{ item.customer.full_name }}{% endif %}</td>
+          <td class="collection-number">{{ item.quantity_litres|floatformat:3 }}</td><td>{{ item.snf|floatformat:2 }}%</td><td>{{ item.fat|floatformat:2 }}%</td><td>{{ item.lactose|floatformat:2 }}%</td>
+          <td>{{ item.milk_rate|floatformat:2 }}</td><td class="collection-amount">{{ item.total_amount|floatformat:2 }}</td>
+          <td><span class="collection-status status-{{ item.status }}">{{ item.get_status_display }}</span></td>
+          <td><div class="table-actions collection-actions">
+            {% if item.status != "approved" and item.status != "reversed" %}<a class="button button-small button-secondary" href="{% url 'collections:edit' organization.slug item.id %}">Edit</a>{% endif %}
+            {% if membership.role == "owner" or membership.role == "admin" %}{% if item.status != "reversed" %}
+            <form method="post" action="{% url 'collections:reverse' organization.slug item.id %}">{% csrf_token %}<input type="text" name="reason" minlength="8" required placeholder="Reversal reason" aria-label="Reason for reversal"><button class="button button-small button-ghost" type="submit" onclick="return confirm('Reverse this collection? This action is recorded in the audit log.')">Reverse</button></form>
+            {% endif %}{% endif %}
+            {% if item.status == "submitted" and can_approve_collection %}<form method="post" action="{% url 'collections:approve' organization.slug item.id %}">{% csrf_token %}<button class="button button-small button-secondary" type="submit">Approve</button></form>{% endif %}
+          </div></td>
+        </tr>{% empty %}<tr><td colspan="12"><div class="collection-empty"><strong>No collections found</strong><span>Try changing your filters{% if can_create_collection %} or record a new collection{% endif %}.</span>{% if can_create_collection %}<a class="button button-secondary" href="#collection-entry-panel">Record collection</a>{% endif %}</div></td>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <nav class="pagination collection-pagination" aria-label="Collection pagination">
+      {% if page_obj.has_previous %}<a href="?{{ filter_querystring }}{% if filter_querystring %}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}
+      <span>Page <strong>{{ page_obj.number }}</strong> of {{ page_obj.paginator.num_pages }}</span>
+      {% if page_obj.has_next %}<a href="?{{ filter_querystring }}{% if filter_querystring %}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>{% endif %}
+    </nav>
+  </section>
 </div>
+<script>
+(function(){
+ const type=document.querySelector('[data-collection-party-type]');
+ const farmer=document.querySelector('[data-collection-field="farmer"]');
+ const customer=document.querySelector('[data-collection-field="customer"]');
+ if(!type||!farmer||!customer)return;
+ function update(){
+   const isFarmer=type.value==='farmer';
+   farmer.hidden=!isFarmer; customer.hidden=isFarmer;
+   const f=farmer.querySelector('select'); const c=customer.querySelector('select');
+   if(f) f.disabled=!isFarmer; if(c) c.disabled=isFarmer;
+ }
+ type.addEventListener('change',update); update();
+})();
+</script>
 {% endblock %}

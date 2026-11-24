@@ -1051,3 +1051,98 @@ label { color: var(--color-text-secondary); }
  .reports-bi .reports-kpis{grid-template-columns:1fr!important}
  .reports-bi .reports-quality-grid,.reports-bi .reports-finance-grid,.reports-bi .reports-inventory-grid{grid-template-columns:1fr}
 }
+/* Fix branch dropdown anchoring: position it relative to its own control, not the page/sidebar. */
+.reports-bi .reports-branch-dropdown{
+ position:relative!important;
+ width:100%!important;
+ min-width:0!important;
+}
+.reports-bi .reports-branch-menu{
+ left:0!important;
+ right:auto!important;
+ top:calc(100% + 5px)!important;
+ width:max-content!important;
+ max-width:min(320px, calc(100vw - 32px))!important;
+ box-sizing:border-box!important;
+}
+/* Milk collection dashboard refresh */
+.collection-dashboard{display:flex;flex-direction:column;gap:1rem}
+.collection-heading{margin-bottom:.1rem}
+.collection-heading-actions{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+.collection-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.85rem}
+.collection-kpi{min-width:0;padding:1.05rem 1.15rem;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);box-shadow:var(--shadow-sm)}
+.collection-kpi-label{display:block;color:var(--color-muted);font-size:.74rem;font-weight:750;letter-spacing:.02em}
+.collection-kpi strong{display:block;margin:.45rem 0 .25rem;color:var(--color-ink);font-size:clamp(1.2rem,2vw,1.65rem);font-weight:850;letter-spacing:-.04em;overflow-wrap:anywhere}
+.collection-kpi strong small{font-size:.7em;color:var(--color-muted)}
+.collection-kpi-foot{display:block;color:var(--color-subtle);font-size:.69rem}
+.collection-kpi-primary{border-color:var(--color-border)}
+.collection-kpi-primary strong{color:var(--color-primary)}
+.collection-kpi-divider{color:var(--color-muted);font-weight:500;padding:0 .1em}
+.collection-status-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.65rem;padding:.75rem 1rem;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface)}
+.collection-status-strip>div{display:flex;align-items:center;gap:.5rem;min-width:0;color:var(--color-muted);font-size:.75rem}
+.collection-status-strip strong{margin-left:auto;color:var(--color-ink);font-size:1rem}
+.status-dot{width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:#8b9bab}
+.status-submitted{background:#4f95d8}.status-approved{background:#22a06b}.status-rejected{background:#d45b5b}.status-reversed{background:#929aa5}
+.collection-toolbar{display:flex;gap:.7rem;align-items:stretch;flex-wrap:wrap}
+.collection-filter-form{flex:1 1 700px;margin:0;align-items:flex-end}
+.collection-filter-form label{min-width:145px;flex:1}
+.collection-filter-form .collection-search-field{min-width:220px;flex:1.5}
+.collection-filter-form input,.collection-filter-form select{margin-top:.35rem}
+.collection-export-form{display:flex;align-items:flex-end;gap:.45rem;padding:.75rem;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface)}
+.collection-export-form select{min-width:105px}
+.collection-table-card{overflow:hidden;padding:0}
+.collection-table-header{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1.1rem 1.2rem}
+.collection-table-header h2{margin:0;font-size:1.05rem}
+.collection-table-header p{margin:.3rem 0 0;font-size:.78rem}
+.collection-table-caption{color:var(--color-muted);font-size:.72rem;white-space:nowrap}
+.collection-table-wrap{border:0;border-radius:0}
+.collection-table-wrap table{min-width:1150px}
+.collection-reference{font-weight:750;color:var(--color-primary)}
+.collection-party{font-weight:650}
+.collection-number,.collection-amount{font-variant-numeric:tabular-nums}
+.collection-amount{font-weight:750}
+.collection-status{display:inline-flex;align-items:center;padding:.25rem .55rem;border-radius:999px;background:#edf2f7;color:#53657a;font-size:.68rem;font-weight:800}
+.collection-status.status-approved{background:#e5f6ee;color:#19754e}
+.collection-status.status-submitted{background:#e9f3ff;color:#2768a4}
+.collection-status.status-rejected{background:#fdeaea;color:#a23a3a}
+.collection-status.status-reversed{background:#eceef1;color:#66717e}
+.collection-actions{gap:.35rem;align-items:center;flex-wrap:wrap}
+.collection-actions form{display:flex;align-items:center;gap:.3rem}
+.collection-actions input{width:130px;min-height:32px;font-size:.72rem}
+.collection-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.45rem;padding:2.5rem 1rem;color:var(--color-muted)}
+.collection-empty strong{color:var(--color-ink);font-size:1rem}
+.collection-empty span{font-size:.8rem}
+.collection-empty .button{margin-top:.4rem}
+.collection-pagination{padding:.9rem 1.1rem;margin:0}
+:root[data-theme="dark"] .collection-kpi,:root[data-theme="dark"] .collection-status-strip,:root[data-theme="dark"] .collection-export-form{background:var(--color-surface)}
+:root[data-theme="dark"] .collection-status{background:#23384d;color:#b9c7d8}
+:root[data-theme="dark"] .collection-status.status-approved{background:#163d32;color:#8ee0b7}
+:root[data-theme="dark"] .collection-status.status-submitted{background:#193b59;color:#a5cefa}
+:root[data-theme="dark"] .collection-status.status-rejected{background:#4a2528;color:#f0aaaa}
+:root[data-theme="dark"] .collection-status.status-reversed{background:#30343a;color:#c0c7cf}
+@media(max-width:1050px){.collection-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.collection-status-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.collection-toolbar{display:block}.collection-filter-form{margin-bottom:.65rem}.collection-export-form{width:100%}.collection-export-form select{flex:1}.collection-table-header{align-items:flex-start;flex-direction:column}.collection-table-caption{white-space:normal}}
+@media(max-width:480px){.collection-kpis{gap:.5rem}.collection-kpi{padding:.8rem}.collection-kpi strong{font-size:1.15rem}.collection-status-strip{padding:.7rem;gap:.5rem}.collection-status-strip>div{font-size:.68rem}.collection-filter-form label{min-width:100%}.collection-heading-actions .button{width:100%}}
+.collection-entry-card{max-width:1000px;margin-inline:auto}
+/* Unified collection form: hide contents until staff open the form. */
+#collection-entry-details:not([open]) > form{display:none !important}
+#collection-entry-details:not([open]) > summary{display:flex;cursor:pointer;min-height:1rem}
+#collection-entry-details[open] > form{display:flex !important}
+.collection-entry-header{margin-bottom:1.4rem}
+.collection-entry-header h1{margin:.25rem 0 .5rem}
+.collection-entry-form{display:flex;flex-direction:column;gap:1.2rem}
+.collection-entry-section{padding:1.15rem;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface)}
+.collection-entry-section h2{margin:0 0 .35rem;font-size:1.05rem}
+.collection-entry-section>p{margin:.2rem 0 1rem;font-size:.78rem}
+.collection-entry-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.95rem}
+.collection-entry-field{min-width:0}
+.collection-entry-field label{display:block;margin:0 0 .35rem;font-size:.78rem;font-weight:750}
+.collection-entry-field input,.collection-entry-field select,.collection-entry-field textarea{width:100%;margin:0}
+.collection-entry-field small{display:block;margin-top:.35rem;font-size:.7rem}
+.collection-entry-field .errorlist{margin:.3rem 0;color:#b42323;font-size:.75rem}
+.collection-entry-wide{grid-column:1/-1}
+.collection-entry-note{display:flex;flex-direction:column;gap:.25rem;padding:1rem 1.1rem;border:1px solid var(--color-border);border-left:3px solid var(--color-primary);border-radius:var(--radius-sm);background:var(--color-surface)}
+.collection-entry-note strong{font-size:.8rem}
+.collection-entry-note span{color:var(--color-muted);font-size:.75rem;line-height:1.5}
+.collection-entry-actions{justify-content:flex-end}
+@media(max-width:620px){.collection-entry-grid{grid-template-columns:1fr}.collection-entry-wide{grid-column:auto}.collection-entry-section{padding:.8rem}.collection-entry-actions .button{flex:1}}

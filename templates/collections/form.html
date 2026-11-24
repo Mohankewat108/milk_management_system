@@ -1,16 +1,52 @@
 {% extends "base.html" %}
-{% block title %}Record milk collection{% endblock %}
+{% load static %}
+{% block title %}Record milk collection | {{ organization.name }}{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/collection-entry.css' %}">
+{% endblock %}
 {% block content %}
-<section class="content-card">
-  <div class="eyebrow">{{ organization.name }}</div><h1>Record milk collection</h1>
-  <p class="muted">Enter actual instrument results. The system chooses the approved pricing and quality profile by collection date and branch, then calculates the price using Decimal arithmetic.</p>
-  <form method="post">{% csrf_token %}{{ form.non_field_errors }}
-    <h2>Collection details</h2>
-    {% for field in form %}
-      {% if field.name == "snf" %}<h2>Milk quality and laboratory readings</h2>{% endif %}
-      <label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small class="muted">{{ field.help_text }}</small>{% endif %}{{ field.errors }}
-    {% endfor %}
-    <div class="actions"><button class="button" type="submit">Save collection</button><a class="button button-secondary" href="{% url 'collections:list' organization.slug %}">Cancel</a></div>
+<section class="content-card collection-entry-card">
+  <div class="collection-entry-header">
+    <div class="eyebrow">{{ organization.name }} | Collection operations</div>
+    <h1>Record milk collection</h1>
+    <p class="muted">Enter the actual collection quantity and quality measurements. Pricing and totals are calculated using the configured dairy pricing rules.</p>
+  </div>
+  <form method="post" class="collection-entry-form">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="collection-entry-section">
+      <h2>Collection details</h2>
+      <p class="muted">Choose the collection branch and supplier/customer first.</p>
+      <div class="collection-entry-grid">
+      {% for field in form %}
+        {% if field.name == "idempotency_key" %}{{ field }}
+        {% elif field.name == "farmer" or field.name == "customer" %}
+        <div class="collection-entry-field collection-party-field {% if field.name == 'farmer' %}is-active{% endif %}"
+             data-collection-party-field="{{ field.name }}">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<small class="muted">{{ field.help_text }}</small>{% endif %}
+          {{ field.errors }}
+        </div>
+        {% else %}
+        <div class="collection-entry-field {% if field.name == 'notes' %}collection-entry-wide{% endif %}">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<small class="muted">{{ field.help_text }}</small>{% endif %}
+          {{ field.errors }}
+        </div>
+        {% endif %}
+      {% endfor %}
+      </div>
+    </div>
+    <div class="collection-entry-note">
+      <strong>Accuracy reminder</strong>
+      <span>Use measured FAT, SNF and lactose values. Do not estimate laboratory readings. The pricing configuration is applied automatically and saved as a snapshot.</span>
+    </div>
+    <div class="actions collection-entry-actions">
+      <button class="button" type="submit">Save collection</button>
+      <a class="button button-secondary" href="{% url 'collections:list' organization.slug %}">Cancel</a>
+    </div>
   </form>
 </section>
 {% endblock %}

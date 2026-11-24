@@ -23,6 +23,7 @@ class ExportJob(UUIDModel, TimeStampedModel):
         PROCESSING = "processing", "Processing"
         COMPLETED = "completed", "Completed"
         FAILED = "failed", "Failed"
+        CANCELLED = "cancelled", "Cancelled"
         EXPIRED = "expired", "Expired"
 
     organization = models.ForeignKey(

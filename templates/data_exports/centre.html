@@ -65,8 +65,8 @@
           <tr>
             <td>{{ job.get_module_display }} · {{ job.file_format|upper }}</td>
             <td>{{ job.created_at|date:"Y-m-d H:i" }}</td>
-            <td>{{ job.get_status_display }}{% if job.error_message %}<small>{{ job.error_message }}</small>{% endif %}</td>
-            <td>{% if job.status == 'completed' and job.expires_at > now %}<a class="button button-small" href="{% url 'data_exports:download' organization.slug job.pk %}">{% translate "Download" %} ↓</a>{% elif job.status == 'queued' or job.status == 'processing' %}<span>{% translate "Please wait…" %}</span>{% else %}—{% endif %}</td>
+            <td data-export-status="{{ job.status }}" aria-live="polite">{{ job.get_status_display }}{% if job.error_message %}<small>{{ job.error_message }}</small>{% endif %}</td>
+            <td class="export-job-actions">{% if job.status == 'completed' and job.expires_at > now %}<a class="button button-small" href="{% url 'data_exports:download' organization.slug job.pk %}">{% translate "Download" %} ↓</a>{% endif %}{% if job.status == 'failed' %}<form method="post" action="{% url 'data_exports:retry' organization.slug job.pk %}">{% csrf_token %}<button class="button button-small" type="submit">{% translate "Retry" %}</button></form>{% elif job.status == 'queued' %}<form method="post" action="{% url 'data_exports:cancel' organization.slug job.pk %}">{% csrf_token %}<button class="button button-small" type="submit">{% translate "Cancel" %}</button></form>{% endif %}{% if job.status != 'queued' and job.status != 'processing' %}<form method="post" action="{% url 'data_exports:delete' organization.slug job.pk %}">{% csrf_token %}<button class="button button-small" type="submit">{% translate "Delete" %}</button></form>{% endif %}</td>
           </tr>
           {% empty %}
           <tr><td colspan="4">{% translate "You have not exported any files yet. Choose a record type above to get started." %}</td></tr>
@@ -116,4 +116,17 @@
   </details>
   <p class="export-security-note">{% translate "Your downloads are restricted to your organisation and permitted branches. Finance exports are available only to authorised roles." %}</p>
 </section>
+<script>
+(() => {
+  const pending = document.querySelector('[data-export-status="queued"], [data-export-status="processing"]');
+  if (!pending) return;
+  const refresh = () => {
+    if (document.visibilityState === 'visible') window.location.reload();
+  };
+  setTimeout(refresh, 5000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && pending) refresh();
+  }, { once: true });
+})();
+</script>
 {% endblock %}

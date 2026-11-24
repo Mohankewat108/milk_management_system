@@ -1,0 +1,23 @@
+/* Milk collections: single integrated entry + record workspace */
+.collection-entry-card{width:100%;max-width:none;margin:0 0 1rem;padding:1rem;border-radius:1rem}
+.collection-entry-form{display:block}
+.collection-entry-layout{display:grid;grid-template-columns:1.05fr .95fr;gap:1rem;align-items:start}
+.collection-entry-core,.collection-entry-quality{padding:1rem;border-radius:.8rem;background:var(--color-page);min-width:0}
+.collection-entry-core h3,.collection-entry-quality h3{margin:0 0 .8rem;font-size:1rem}
+.collection-entry-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.7rem}
+.collection-entry-grid-two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.collection-entry-field{display:flex;flex-direction:column;gap:.25rem;min-width:0}
+.collection-entry-field label{margin:0;font-size:.76rem}
+.collection-entry-field input,.collection-entry-field select,.collection-entry-field textarea{width:100%;min-width:0;max-width:100%;min-height:38px;padding:.5rem .65rem;font-size:.84rem;border-radius:.5rem}
+.collection-entry-field textarea{min-height:75px}
+.collection-entry-field small{font-size:.7rem;line-height:1.35}
+.collection-entry-wide{grid-column:1/-1}
+.collection-entry-side{display:flex;flex-direction:column;gap:.75rem;min-width:0}
+.collection-entry-note{padding:.75rem .85rem;display:flex;flex-direction:column;gap:.25rem;border-radius:.65rem;border-left:3px solid var(--color-primary)}
+.collection-entry-note strong{font-size:.8rem}
+.collection-entry-note span{font-size:.74rem}
+.collection-entry-actions{display:flex;justify-content:flex-end;margin-top:.85rem}
+.collection-entry-actions .button{min-height:40px}
+.collection-entry-field[data-collection-field="farmer"][hidden],.collection-entry-field[data-collection-field="customer"][hidden]{display:none!important}
+@media(max-width:900px){.collection-entry-layout{grid-template-columns:1fr}}
+@media(max-width:620px){.collection-entry-card{padding:.65rem}.collection-entry-layout{gap:.65rem}.collection-entry-core,.collection-entry-quality{padding:.7rem}.collection-entry-grid,.collection-entry-grid-two{grid-template-columns:1fr}.collection-entry-wide{grid-column:auto}.collection-entry-actions .button{width:100%}}

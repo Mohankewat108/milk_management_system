@@ -95,6 +95,25 @@ class CollectionServiceTests(TestCase):
             create_collection(**{**data, "quantity_litres": "3.000"})
         self.assertEqual(MilkCollection.objects.count(), 1)
 
+    def test_soft_deleted_party_cannot_receive_new_collection(self):
+        from django.utils import timezone
+
+        self.farmer.deleted_at = timezone.now()
+        self.farmer.save(update_fields=["deleted_at", "updated_at"])
+        with self.assertRaises(ValidationError):
+            create_collection(
+                organization=self.org,
+                branch=self.branch,
+                actor=self.user,
+                collected_at=datetime(2026, 11, 18, 6, 0, tzinfo=UTC),
+                quantity_litres="1",
+                snf="8",
+                fat="4",
+                lactose="4",
+                farmer=self.farmer,
+            )
+        self.assertEqual(MilkCollection.objects.count(), 0)
+
     def test_party_from_another_organisation_is_rejected(self):
         other = Organization.objects.create(
             owner=self.user, name="Dairy B", slug="dairy-b", is_demo=True
@@ -113,6 +132,30 @@ class CollectionServiceTests(TestCase):
                 fat="4",
                 lactose="4",
                 farmer=foreign_farmer,
+            )
+
+    def test_party_assigned_to_another_branch_is_rejected_by_service(self):
+        other_branch = Branch.objects.create(
+            organization=self.org, code="OTHER", name="Other Branch"
+        )
+        other_farmer = Farmer.objects.create(
+            organization=self.org,
+            branch=other_branch,
+            code="F-OTHER",
+            full_name="Other Branch Farmer",
+        )
+
+        with self.assertRaises(ValidationError):
+            create_collection(
+                organization=self.org,
+                branch=self.branch,
+                actor=self.user,
+                collected_at=datetime(2026, 11, 18, 6, 0, tzinfo=UTC),
+                quantity_litres="1.000",
+                snf="8.0",
+                fat="4.0",
+                lactose="4.5",
+                farmer=other_farmer,
             )
 
     def test_lactometer_and_rate_components_are_saved_in_snapshot(self):

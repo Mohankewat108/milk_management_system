@@ -13,17 +13,33 @@
     python manage.py migrate
 
 ## Run the worker
-The repository's Docker Compose configuration includes a worker service. Starting the stack with docker compose up --build runs the background worker automatically. For a non-Compose deployment, run this command continuously from a process supervisor, or on a short recurring schedule:
+The repository's Docker Compose configuration includes a worker service. Starting the stack with docker compose up --build runs the background worker automatically. For a non-Compose deployment, run the continuous worker under a process supervisor (systemd, Supervisor, or Windows Task Scheduler). The command supports continuous polling:
 
-    python manage.py process_data_jobs --limit 20
+    python manage.py process_data_jobs --limit 20 --loop --interval 5
 
-It processes queued exports, uploaded imports, due schedules, and deletes expired export files. The command is safe to invoke repeatedly; job status transitions prevent an already-claimed export from being processed twice.
+Without `--loop`, it runs one batch and exits (suitable for cron). In loop mode, it polls every five seconds by default; `--interval` is clamped to 1–300 seconds. It processes queued exports, uploaded imports, due schedules, and expired export cleanup. Keep one worker instance unless import/schedule locking is added.
 
-Example cron entry (every minute):
 
-    * * * * * cd /srv/dairynexus && /srv/dairynexus/.venv/bin/python manage.py process_data_jobs --limit 20 >> /var/log/dairynexus-data-jobs.log 2>&1
+### Local Windows development
 
-Use a supervisor/worker process in container deployments instead of cron if preferred. Only one scheduled worker should run per deployment unless you add dedicated locking for import batches and schedule rows.
+Run from the project root in PowerShell:
+
+
+    .\.venv\Scripts\python.exe manage.py process_data_jobs --limit 20 --loop --interval 5
+
+
+Keep this terminal open while testing queued exports. Stop the worker with Ctrl+C.
+
+
+### Docker Compose
+
+The Compose `worker` service uses the same built-in loop mode and restarts unless stopped. Start the stack with:
+
+
+    docker compose up --build
+
+
+Ensure Docker Desktop is running and `.env` contains valid `KEY=value` entries before starting Compose.
 
 ## Email configuration
 Set DJANGO_EMAIL_BACKEND, EMAIL_HOST, EMAIL_PORT, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD, EMAIL_USE_TLS, and DEFAULT_FROM_EMAIL. The development default is Django's console email backend; production delivery requires a configured SMTP provider.
