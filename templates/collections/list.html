@@ -61,8 +61,8 @@
       <span class="collection-kpi-foot">Matching non-reversed entries</span>
     </article>
     <article class="collection-kpi">
-      <span class="collection-kpi-label">Weighted FAT / SNF</span>
-      <strong>{% if weighted_fat != None %}{{ weighted_fat|floatformat:2 }}%{% else %}--{% endif %} <span class="collection-kpi-divider">/</span> {% if weighted_snf != None %}{{ weighted_snf|floatformat:2 }}%{% else %}--{% endif %}</strong>
+      <span class="collection-kpi-label">Weighted FAT / SNF / Lacto</span>
+      <strong>{% if weighted_fat != None %}{{ weighted_fat|floatformat:2 }}%{% else %}--{% endif %} <span class="collection-kpi-divider">/</span> {% if weighted_snf != None %}{{ weighted_snf|floatformat:2 }}%{% else %}--{% endif %} <span class="collection-kpi-divider">/</span> {% if weighted_lactose != None %}{{ weighted_lactose|floatformat:2 }}%{% else %}--{% endif %}</strong>
       <span class="collection-kpi-foot">Weighted by collected litres</span>
     </article>
   </section>
