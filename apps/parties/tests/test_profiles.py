@@ -298,6 +298,33 @@ class PartyProfileTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(list(response.context["page_obj"].object_list), [self.customer])
 
+    def test_owner_can_edit_all_farmer_profile_fields_and_status(self):
+        self.client.force_login(self.owner)
+        url = reverse("parties:farmer_edit", args=[self.organization.slug, self.farmer.pk])
+        response = self.client.post(url, {
+            "branch": str(self.branch.pk),
+            "code": "F001-UPDATED",
+            "full_name": "Updated Farmer",
+            "phone": "9812345678",
+            "email": "updated-farmer@example.test",
+            "address": "Updated address",
+            "bank_account_name": "Updated Account",
+            "bank_account_number": "123456789",
+            "bank_name": "Updated Bank",
+            "is_active": "",
+        })
+        self.assertEqual(response.status_code, 302)
+        self.farmer.refresh_from_db()
+        self.assertEqual(self.farmer.code, "F001-UPDATED")
+        self.assertEqual(self.farmer.full_name, "Updated Farmer")
+        self.assertEqual(self.farmer.phone, "9812345678")
+        self.assertEqual(self.farmer.email, "updated-farmer@example.test")
+        self.assertEqual(self.farmer.address, "Updated address")
+        self.assertEqual(self.farmer.bank_account_name, "Updated Account")
+        self.assertEqual(self.farmer.bank_account_number, "123456789")
+        self.assertEqual(self.farmer.bank_name, "Updated Bank")
+        self.assertFalse(self.farmer.is_active)
+
     def test_owner_can_edit_customer_profile(self):
         self.client.force_login(self.owner)
         url = reverse("parties:customer_edit", args=[self.organization.slug, self.customer.pk])

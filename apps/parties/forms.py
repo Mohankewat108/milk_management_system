@@ -77,6 +77,7 @@ class FarmerForm(forms.ModelForm):
             "bank_account_number",
             "bank_name",
             "user",
+            "is_active",
         )
 
     def __init__(self, *args, organization, membership=None, **kwargs):

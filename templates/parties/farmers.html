@@ -87,7 +87,12 @@
             <td>{{ item.phone|default:"—" }}</td>
             <td>{{ item.branch.name|default:"—" }}</td>
             <td>{% if item.is_active %}<span class="status active">{% translate "Active" %}</span>{% else %}<span class="status inactive">{% translate "Inactive" %}</span>{% endif %}</td>
-            <td><a class="button button-small button-secondary" href="{% url 'parties:farmer_detail' organization.slug item.pk %}">{% translate "View profile" %}</a></td>
+            <td class="directory-row-actions">
+              <a class="button button-small button-secondary" href="{% url 'parties:farmer_detail' organization.slug item.pk %}">{% translate "View profile" %}</a>
+              {% if request.membership.role == "owner" or request.membership.role == "admin" %}
+                <a class="button button-small" href="{% url 'parties:farmer_edit' organization.slug item.pk %}">{% translate "Edit" %}</a>
+              {% endif %}
+            </td>
           </tr>
         {% empty %}
           <tr><td colspan="7"><div class="directory-empty"><strong>{% translate "No farmers found" %}</strong><p>{% translate "Try changing your search or filter criteria." %}</p></div></td></tr>
