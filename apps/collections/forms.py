@@ -14,7 +14,12 @@ class CollectionEntryForm(forms.Form):
     party_type = forms.ChoiceField(choices=(("farmer", "Farmer"), ("customer", "Customer")))
     farmer = forms.ModelChoiceField(queryset=Farmer.objects.none(), required=False)
     customer = forms.ModelChoiceField(queryset=Customer.objects.none(), required=False)
-    collected_at = forms.DateTimeField(widget=forms.DateTimeInput(attrs={"type": "datetime-local"}))
+    collected_at = forms.DateTimeField(
+        widget=forms.DateTimeInput(
+            attrs={"type": "datetime-local", "class": "collection-current-datetime", "data-current-datetime": "true"}
+        ),
+        initial=None,
+    )
     shift = forms.ChoiceField(choices=(("morning", "Morning"), ("evening", "Evening")), initial="morning", required=False)
     quantity_litres = forms.DecimalField(max_digits=12, decimal_places=3, min_value=0.001)
     snf = forms.DecimalField(max_digits=7, decimal_places=3, min_value=0)
@@ -37,6 +42,9 @@ class CollectionEntryForm(forms.Form):
         branches = Branch.objects.filter(
             organization=organization, is_active=True, deleted_at__isnull=True
         )
+        # Default collection timestamp to the actual local current date/time.
+        from django.utils import timezone
+        self.initial.setdefault("collected_at", timezone.localtime())
         farmers = Farmer.objects.filter(
             organization=organization, is_active=True, deleted_at__isnull=True
         )
