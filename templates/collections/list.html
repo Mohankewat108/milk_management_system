@@ -25,7 +25,7 @@
             {% for field in collection_form %}
               {% if field.name == "idempotency_key" %}
                 {{ field }}
-              {% elif field.name == "branch" or field.name == "party_type" or field.name == "farmer" or field.name == "customer" or field.name == "collected_at" or field.name == "quantity_litres" or field.name == "fat" or field.name == "snf" or field.name == "lactose" %}
+              {% elif field.name == "branch" or field.name == "party_type" or field.name == "shift" or field.name == "farmer" or field.name == "customer" or field.name == "collected_at" or field.name == "quantity_litres" or field.name == "fat" or field.name == "snf" or field.name == "lactose" %}
                 <div class="collection-entry-field collection-party-field" data-collection-field="{{ field.name }}">
                   <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-hidden="true">*</span><span class="sr-only"> required</span>{% endif %}</label>
                   {{ field }}
@@ -40,21 +40,6 @@
           </div>
         </div>
         <div class="collection-entry-side">
-          <div class="collection-entry-section collection-entry-quality">
-            <h3>Quality &amp; additional readings</h3>
-            <div class="collection-entry-grid collection-entry-grid-two">
-              {% for field in collection_form %}
-                {% if field.name == "lactometer_reading" or field.name == "milk_temperature_c" or field.name == "sample_reference" or field.name == "quality_test_method" or field.name == "notes" %}
-                  <div class="collection-entry-field {% if field.name == 'notes' %}collection-entry-wide{% endif %}">
-                    <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-hidden="true">*</span><span class="sr-only"> required</span>{% endif %}</label>
-                    {{ field }}
-                    {% if field.help_text %}<small class="muted">{{ field.help_text }}</small>{% endif %}
-                    {{ field.errors }}
-                  </div>
-                {% endif %}
-              {% endfor %}
-            </div>
-          </div>
           <div class="collection-entry-note">
             <strong>Pricing calculated automatically</strong>
             <span>Use actual measured FAT, SNF and lactose readings. Pricing is applied by your configured dairy rules.</span>
@@ -108,6 +93,9 @@
       <label>Farmer / customer
         <input type="search" name="party" value="{{ party_filter }}" placeholder="Search name" aria-label="Filter by farmer or customer">
       </label>
+      <label>Shift
+        <select name="shift"><option value="">All shifts</option><option value="morning" {% if shift_filter == "morning" %}selected{% endif %}>Morning</option><option value="evening" {% if shift_filter == "evening" %}selected{% endif %}>Evening</option></select>
+      </label>
       <label>Status
         <select name="status">
           <option value="">All statuses</option>
@@ -115,13 +103,14 @@
         </select>
       </label>
       <button class="button button-secondary" type="submit">Apply filters</button>
-      {% if search_query or date_from or date_to or status_filter or branch_filter or party_filter %}<a class="button button-ghost" href="{% url 'collections:list' organization.slug %}">Clear</a>{% endif %}
+      {% if search_query or date_from or date_to or status_filter or branch_filter or party_filter or shift_filter %}<a class="button button-ghost" href="{% url 'collections:list' organization.slug %}">Clear</a>{% endif %}
     </form>
     <form class="collection-export-form" method="post" action="{% url 'data_exports:queue' organization.slug 'collections' %}">
       {% csrf_token %}
       {% if export_from %}<input type="hidden" name="from" value="{{ export_from }}">{% endif %}
       {% if export_to %}<input type="hidden" name="to" value="{{ export_to }}">{% endif %}
       {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+      {% if shift_filter %}<input type="hidden" name="shift" value="{{ shift_filter }}">{% endif %}
       <label class="sr-only" for="collection-export-format">Export format</label>
       <select id="collection-export-format" name="file_format"><option value="xlsx">Excel</option><option value="csv">CSV</option><option value="pdf">PDF</option></select>
       <button class="button button-secondary" type="submit">Export</button>
@@ -135,13 +124,13 @@
     </div>
     <div class="table-wrap collection-table-wrap">
       <table>
-        <thead><tr><th>Reference</th><th>Date</th><th>Branch</th><th>Farmer / Customer</th><th>Litres</th><th>SNF</th><th>FAT</th><th>Lactose</th><th>Rate</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Reference</th><th>Date</th><th>Branch</th><th>Farmer / Customer</th><th>Shift</th><th>Litres</th><th>SNF</th><th>FAT</th><th>Lactose</th><th>Rate</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
         {% for item in page_obj %}<tr>
           <td><span class="collection-reference">{{ item.reference }}</span></td>
           <td>{{ item.collected_at|local_date }}</td>
           <td>{{ item.branch.name }}</td>
-          <td class="collection-party">{% if item.farmer %}{{ item.farmer.full_name }}{% else %}{{ item.customer.full_name }}{% endif %}</td>
+          <td class="collection-party">{% if item.farmer %}{{ item.farmer.full_name }}{% else %}{{ item.customer.full_name }}{% endif %}</td><td>{{ item.get_shift_display }}</td>
           <td class="collection-number">{{ item.quantity_litres|floatformat:3 }}</td><td>{{ item.snf|floatformat:2 }}%</td><td>{{ item.fat|floatformat:2 }}%</td><td>{{ item.lactose|floatformat:2 }}%</td>
           <td>{{ item.milk_rate|floatformat:2 }}</td><td class="collection-amount">{{ item.total_amount|floatformat:2 }}</td>
           <td><span class="collection-status status-{{ item.status }}">{{ item.get_status_display }}</span></td>
@@ -152,7 +141,7 @@
             {% endif %}{% endif %}
             {% if item.status == "submitted" and can_approve_collection %}<form method="post" action="{% url 'collections:approve' organization.slug item.id %}">{% csrf_token %}<button class="button button-small button-secondary" type="submit">Approve</button></form>{% endif %}
           </div></td>
-        </tr>{% empty %}<tr><td colspan="12"><div class="collection-empty"><strong>No collections found</strong><span>Try changing your filters{% if can_create_collection %} or record a new collection{% endif %}.</span>{% if can_create_collection %}<a class="button button-secondary" href="#collection-entry-panel">Record collection</a>{% endif %}</div></td>{% endfor %}
+        </tr>{% empty %}<tr><td colspan="13"><div class="collection-empty"><strong>No collections found</strong><span>Try changing your filters{% if can_create_collection %} or record a new collection{% endif %}.</span>{% if can_create_collection %}<a class="button button-secondary" href="#collection-entry-panel">Record collection</a>{% endif %}</div></td>{% endfor %}
         </tbody>
       </table>
     </div>
