@@ -20,7 +20,19 @@
       {{ collection_form.non_field_errors }}
       <div class="collection-entry-layout">
         <div class="collection-entry-section collection-entry-core">
-          <h3>Milk entry</h3>
+          <div class="collection-entry-title-row">
+            <h3>Milk entry</h3>
+            <div class="collection-entry-mode" role="group" aria-label="Milk entry mode">
+              <label class="collection-entry-mode-option">
+                <input type="radio" name="collection_mode" value="manual" checked>
+                <span>Manual</span>
+              </label>
+              <label class="collection-entry-mode-option">
+                <input type="radio" name="collection_mode" value="automatic">
+                <span>Automatic</span>
+              </label>
+            </div>
+          </div>
           <div class="collection-entry-grid">
             {% for field in collection_form %}
               {% if field.name == "idempotency_key" %}
