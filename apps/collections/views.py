@@ -161,10 +161,12 @@ def collection_list(request, organization_slug):
         count=Count("id"),
         weighted_fat=Sum(F("quantity_litres") * F("fat")),
         weighted_snf=Sum(F("quantity_litres") * F("snf")),
+        weighted_lactose=Sum(F("quantity_litres") * F("lactose")),
     )
     total_litres = summary["litres"] or 0
     weighted_fat = summary["weighted_fat"] / total_litres if total_litres else None
     weighted_snf = summary["weighted_snf"] / total_litres if total_litres else None
+    weighted_lactose = summary["weighted_lactose"] / total_litres if total_litres else None
     status_counts = status_scope_records.aggregate(
         submitted=Count("id", filter=Q(status=MilkCollection.Status.SUBMITTED)),
         approved=Count("id", filter=Q(status=MilkCollection.Status.APPROVED)),
@@ -203,6 +205,7 @@ def collection_list(request, organization_slug):
             "total_records": summary["count"] or 0,
             "weighted_fat": weighted_fat,
             "weighted_snf": weighted_snf,
+            "weighted_lactose": weighted_lactose,
             "status_counts": status_counts,
             "membership": request.membership,
             "date_from": format_local_date(start, language_code) if start else start_text,
