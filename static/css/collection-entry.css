@@ -70,3 +70,13 @@
 #collection-entry-panel .collection-party-search{min-height:36px!important;padding:.45rem .6rem!important;font-size:.82rem!important;margin-bottom:.25rem!important}
 #collection-entry-panel .collection-entry-actions{margin-top:.5rem!important;padding:.45rem!important;bottom:.4rem!important}
 #collection-entry-panel .collection-entry-actions button{min-height:38px!important;padding-inline:1rem!important}
+/* Milk entry mode selector */
+#collection-entry-panel .collection-entry-title-row{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:.55rem}
+#collection-entry-panel .collection-entry-title-row h3{margin:0!important}
+#collection-entry-panel .collection-entry-mode{display:inline-flex;align-items:center;gap:.2rem;padding:.2rem;border:1px solid var(--color-border,#456);border-radius:.65rem;background:var(--color-page)}
+#collection-entry-panel .collection-entry-mode-option{display:block;cursor:pointer}
+#collection-entry-panel .collection-entry-mode-option input{position:absolute;opacity:0;pointer-events:none}
+#collection-entry-panel .collection-entry-mode-option span{display:block;padding:.4rem .75rem;border-radius:.45rem;font-size:.8rem;font-weight:650;white-space:nowrap}
+#collection-entry-panel .collection-entry-mode-option input:checked+span{background:var(--color-primary);color:white}
+#collection-entry-panel .collection-entry-mode-option input:focus-visible+span{outline:2px solid var(--color-primary);outline-offset:2px}
+@media(max-width:480px){#collection-entry-panel .collection-entry-title-row{gap:.5rem;flex-wrap:wrap}#collection-entry-panel .collection-entry-mode-option span{padding:.35rem .6rem}}
