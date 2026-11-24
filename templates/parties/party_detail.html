@@ -58,7 +58,7 @@
       <span class="profile-period-note">{% translate "Verified collections only" %}</span>
     </div>
     <div class="profile-metric-grid">
-      <article class="profile-metric-card metric-today"><span class="profile-metric-label">{% translate "Today" %}</span><strong>{{ metrics.today_litres|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">{% translate "Approved volume" %}</span></article>
+      
       <article class="profile-metric-card"><span class="profile-metric-label">{% translate "This week" %}</span><strong>{{ metrics.week_litres|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">{% translate "Since Monday" %}</span></article>
       <article class="profile-metric-card"><span class="profile-metric-label">{% translate "This month" %}</span><strong>{{ metrics.month_litres|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">{% translate "Current month" %}</span></article>
       <article class="profile-metric-card"><span class="profile-metric-label">{% translate "Previous month" %}</span><strong>{{ metrics.previous_month_litres|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">{% translate "Last month" %}</span></article>
