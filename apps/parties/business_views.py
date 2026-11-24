@@ -21,7 +21,7 @@ from apps.organizations.models import Membership
 from apps.organizations.permissions import accessible_branch_ids, can_access_branch
 
 from .forms import CustomerForm, FarmerForm
-from .models import Customer, Farmer
+from .models import Customer, Farmer, FarmerNfcCard
 
 OWNER_ROLES = (Membership.Role.OWNER, Membership.Role.ADMIN)
 PARTY_VIEW_ROLES = (
@@ -398,15 +398,9 @@ def farmer_detail(request, organization_slug, farmer_id):
         ),
         pk=farmer_id,
     )
-    return render(
-        request,
-        "parties/party_detail.html",
-        _party_profile_context(
-            party=party,
-            kind="farmer",
-            request=request,
-        ),
-    )
+    context = _party_profile_context(party=party, kind="farmer", request=request)
+    context["nfc_cards"] = FarmerNfcCard.objects.filter(farmer=party).order_by("-issued_at")
+    return render(request, "parties/party_detail.html", context)
 
 
 @login_required

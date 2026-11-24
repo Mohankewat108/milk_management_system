@@ -54,6 +54,8 @@ urlpatterns = [
         {"kind": "farmer"},
         name="farmer_trash",
     ),
+    path("<slug:organization_slug>/farmers/<uuid:farmer_id>/nfc-cards/add/", management_views.farmer_nfc_card_add, name="farmer_nfc_card_add"),
+    path("<slug:organization_slug>/farmers/<uuid:farmer_id>/nfc-cards/<uuid:card_id>/revoke/", management_views.farmer_nfc_card_revoke, name="farmer_nfc_card_revoke"),
     path("<slug:organization_slug>/trash/", management_views.party_trash_list, name="trash"),
     path(
         "<slug:organization_slug>/trash/<str:kind>/<uuid:party_id>/restore/",

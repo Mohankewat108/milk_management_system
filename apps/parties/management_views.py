@@ -10,7 +10,7 @@ from apps.organizations.models import Membership
 from apps.organizations.permissions import accessible_branch_ids, can_access_branch
 
 from .forms import CustomerForm, FarmerForm
-from .models import Customer, Farmer
+from .models import Customer, Farmer, FarmerNfcCard
 
 MANAGERS = (Membership.Role.OWNER, Membership.Role.ADMIN)
 
@@ -150,3 +150,35 @@ def party_restore(request, organization_slug, kind, party_id):
     )
     messages.success(request, f"{kind.title()} restored successfully.")
     return redirect("parties:trash", organization_slug=organization_slug)
+
+
+@login_required
+@organization_access(*MANAGERS)
+@require_POST
+def farmer_nfc_card_add(request, organization_slug, farmer_id):
+    farmer = get_object_or_404(Farmer.objects.filter(organization=request.organization, deleted_at__isnull=True), pk=farmer_id)
+    uid = request.POST.get("card_uid", "").strip().upper()
+    if not uid:
+        messages.error(request, "Enter an NFC card UID.")
+    elif FarmerNfcCard.objects.filter(card_uid=uid).exists():
+        messages.error(request, "This NFC card is already assigned. Each card UID can belong to only one farmer.")
+    else:
+        FarmerNfcCard.objects.create(farmer=farmer, card_uid=uid)
+        record_event(actor=request.user, organization=request.organization, action="farmer.nfc_card_added", target=farmer, request=request)
+        messages.success(request, "NFC card linked to farmer.")
+    return redirect("parties:farmer_detail", organization_slug=organization_slug, farmer_id=farmer.pk)
+
+
+@login_required
+@organization_access(*MANAGERS)
+@require_POST
+def farmer_nfc_card_revoke(request, organization_slug, farmer_id, card_id):
+    farmer = get_object_or_404(Farmer.objects.filter(organization=request.organization, deleted_at__isnull=True), pk=farmer_id)
+    card = get_object_or_404(FarmerNfcCard.objects.filter(farmer=farmer), pk=card_id)
+    if card.status != FarmerNfcCard.Status.REVOKED:
+        card.status = FarmerNfcCard.Status.REVOKED
+        card.revoked_at = timezone.now()
+        card.save(update_fields=["status", "revoked_at", "updated_at"])
+        record_event(actor=request.user, organization=request.organization, action="farmer.nfc_card_revoked", target=farmer, request=request)
+        messages.success(request, "NFC card revoked.")
+    return redirect("parties:farmer_detail", organization_slug=organization_slug, farmer_id=farmer.pk)

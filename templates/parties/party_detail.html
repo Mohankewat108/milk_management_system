@@ -52,6 +52,20 @@
     </div>
   </section>
 
+
+  {% if kind == "farmer" %}
+  <section class="profile-section panel" aria-labelledby="farmer-nfc-title">
+    <div class="profile-section-heading"><div><span class="profile-section-kicker">IDENTIFICATION</span><h2 id="farmer-nfc-title">NFC cards</h2><p>Link a physical NFC card to identify this farmer quickly during milk collection.</p></div></div>
+    {% if can_manage_parties %}
+    <form method="post" action="{% url 'parties:farmer_nfc_card_add' organization.slug party.pk %}" class="form-layout" style="display:flex;flex-wrap:wrap;align-items:end;gap:1rem">
+      {% csrf_token %}<div class="form-field" style="flex:1;min-width:220px"><label for="card_uid">NFC card UID</label><input id="card_uid" name="card_uid" maxlength="80" required placeholder="Tap card reader or enter UID" autocomplete="off"></div><button class="button" type="submit">Link NFC card</button>
+    </form>
+    {% endif %}
+    <div class="table-wrap"><table><thead><tr><th>Card UID</th><th>Status</th><th>Issued</th><th>Revoked</th><th>Action</th></tr></thead><tbody>
+      {% for card in nfc_cards %}<tr><td><code>{{ card.card_uid }}</code></td><td><span class="tag {{ card.status }}">{{ card.get_status_display }}</span></td><td>{{ card.issued_at|local_date }}</td><td>{% if card.revoked_at %}{{ card.revoked_at|local_date }}{% else %}—{% endif %}</td><td>{% if can_manage_parties and card.status != "revoked" %}<form method="post" action="{% url 'parties:farmer_nfc_card_revoke' organization.slug party.pk card.pk %}" onsubmit="return confirm('Revoke this NFC card?')">{% csrf_token %}<button class="button button-danger button-small" type="submit">Revoke</button></form>{% else %}—{% endif %}</td></tr>{% empty %}<tr><td colspan="5" class="profile-empty-cell">No NFC cards linked yet.</td></tr>{% endfor %}
+    </tbody></table></div>
+  </section>
+  {% endif %}
   <section class="profile-section" aria-labelledby="profile-performance-title">
     <div class="profile-section-heading profile-section-heading-outside">
       <div><span class="profile-section-kicker">{% translate "PERFORMANCE" %}</span><h2 id="profile-performance-title">{% translate "Milk performance" %}</h2><p>{% if kind == "customer" %}{% translate "Approved milk collections recorded for this customer." %}{% else %}{% translate "Approved milk supplied by this farmer." %}{% endif %}</p></div>

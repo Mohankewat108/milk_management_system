@@ -91,3 +91,24 @@ class Farmer(UUIDModel, TimeStampedModel):
 
     def __str__(self) -> str:
         return f"{self.code} · {self.full_name}"
+
+
+class FarmerNfcCard(UUIDModel, TimeStampedModel):
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Active"
+        BLOCKED = "blocked", "Blocked"
+        LOST = "lost", "Lost"
+        REVOKED = "revoked", "Revoked"
+
+    farmer = models.ForeignKey(Farmer, on_delete=models.CASCADE, related_name="nfc_cards")
+    card_uid = models.CharField(max_length=80, unique=True)
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.ACTIVE)
+    issued_at = models.DateTimeField(auto_now_add=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-issued_at"]
+        indexes = [models.Index(fields=["farmer", "status"])]
+
+    def __str__(self):
+        return f"{self.card_uid} - {self.farmer.full_name}"
