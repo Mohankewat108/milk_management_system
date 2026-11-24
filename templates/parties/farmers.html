@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% load i18n %}
 {% block title %}{% translate "Farmers" %} | {{ organization.name }}{% endblock %}
 {% block content %}
@@ -18,15 +18,15 @@
       <p class="muted">{% translate "Manage milk suppliers and their business profiles." %}</p>
     </div>
     <div class="actions">
-      <a class="button" href="{% url 'parties:farmer_create' organization.slug %}">＋ {% translate "Add farmer" %}</a>
+      <a class="button" href="{% url 'parties:farmer_create' organization.slug %}">ï¼‹ {% translate "Add farmer" %}</a>
     </div>
   </header>
 
-  <form class="module-export-form" method="post" action="{% url 'data_exports:queue' organization.slug 'farmers' %}">{% csrf_token %}<input type="hidden" name="branch" value="{{ branch_filter }}"><input type="hidden" name="status" value="{{ status_filter }}"><select name="file_format" aria-label="Export format"><option value="xlsx">Excel</option><option value="csv">CSV</option><option value="pdf">PDF</option></select><button class="button button-secondary" type="submit">Export farmers ↓</button></form>
+  <form class="module-export-form" method="post" action="{% url 'data_exports:queue' organization.slug 'farmers' %}">{% csrf_token %}<input type="hidden" name="branch" value="{{ branch_filter }}"><input type="hidden" name="status" value="{{ status_filter }}"><select name="file_format" aria-label="Export format"><option value="xlsx">Excel</option><option value="csv">CSV</option><option value="pdf">PDF</option></select><button class="button button-secondary" type="submit">Export farmers â†“</button></form>
   <form class="directory-filters" method="get" role="search">
     <div class="filter-field">
       <label for="farmer-search">{% translate "Search farmers" %}</label>
-      <input id="farmer-search" name="q" type="search" value="{{ query }}" placeholder="{% translate 'Search name, code, phone or email' %}">
+      <input id="farmer-search" name="q" type="search" value="{{ query }}" placeholder="{% translate 'Search by code, name, phone, email...' %}" autocomplete="off"><button class="button button-secondary" id="farmer-search-clear" type="button" {% if not query %}hidden{% endif %}>{% translate "Clear search" %}</button>
     </div>
     <div class="filter-field">
       <label for="farmer-status">{% translate "Status" %}</label>
@@ -48,13 +48,13 @@
     <div class="directory-filter-dates">
       <div class="filter-field">
         <label for="registered-from">{% translate "Registered from" %} ({{ date_calendar }})</label>
-        {% if date_calendar == "BS" %}<input id="registered-from" type="text" inputmode="numeric" data-calendar-date data-calendar="bs" name="registered_from" value="{{ registered_from }}" placeholder="वर्ष-महिना-दिन" autocomplete="off" aria-describedby="registered-date-help">{% else %}<input id="registered-from" type="date" name="registered_from" value="{{ registered_from }}" autocomplete="off" aria-describedby="registered-date-help">{% endif %}
+        {% if date_calendar == "BS" %}<input id="registered-from" type="text" inputmode="numeric" data-calendar-date data-calendar="bs" name="registered_from" value="{{ registered_from }}" placeholder="à¤µà¤°à¥à¤·-à¤®à¤¹à¤¿à¤¨à¤¾-à¤¦à¤¿à¤¨" autocomplete="off" aria-describedby="registered-date-help">{% else %}<input id="registered-from" type="date" name="registered_from" value="{{ registered_from }}" autocomplete="off" aria-describedby="registered-date-help">{% endif %}
       </div>
       <div class="filter-field">
         <label for="registered-to">{% translate "Registered to" %} ({{ date_calendar }})</label>
-        {% if date_calendar == "BS" %}<input id="registered-to" type="text" inputmode="numeric" data-calendar-date data-calendar="bs" name="registered_to" value="{{ registered_to }}" placeholder="वर्ष-महिना-दिन" autocomplete="off" aria-describedby="registered-date-help">{% else %}<input id="registered-to" type="date" name="registered_to" value="{{ registered_to }}" autocomplete="off" aria-describedby="registered-date-help">{% endif %}
+        {% if date_calendar == "BS" %}<input id="registered-to" type="text" inputmode="numeric" data-calendar-date data-calendar="bs" name="registered_to" value="{{ registered_to }}" placeholder="à¤µà¤°à¥à¤·-à¤®à¤¹à¤¿à¤¨à¤¾-à¤¦à¤¿à¤¨" autocomplete="off" aria-describedby="registered-date-help">{% else %}<input id="registered-to" type="date" name="registered_to" value="{{ registered_to }}" autocomplete="off" aria-describedby="registered-date-help">{% endif %}
       </div>
-      <p class="date-filter-help" id="registered-date-help">{% if date_calendar == "BS" %}क्यालेन्डरबाट विक्रम संवत् मिति छान्नुहोस्।{% else %}{% translate "Select dates using the calendar." %}{% endif %}</p>
+      <p class="date-filter-help" id="registered-date-help">{% if date_calendar == "BS" %}à¤•à¥à¤¯à¤¾à¤²à¥‡à¤¨à¥à¤¡à¤°à¤¬à¤¾à¤Ÿ à¤µà¤¿à¤•à¥à¤°à¤® à¤¸à¤‚à¤µà¤¤à¥ à¤®à¤¿à¤¤à¤¿ à¤›à¤¾à¤¨à¥à¤¨à¥à¤¹à¥‹à¤¸à¥à¥¤{% else %}{% translate "Select dates using the calendar." %}{% endif %}</p>
       <button class="button" type="submit">{% translate "Apply filters" %}</button>
       <a class="button button-secondary" href="{% url 'parties:farmers' organization.slug %}">{% translate "Reset" %}</a>
     </div>
@@ -84,8 +84,8 @@
           <tr>
             <td><input type="checkbox" name="selected" value="{{ item.pk }}" form="farmers-bulk-form" aria-label="Select {{ item.full_name }}"></td><td><strong>{{ item.code }}</strong></td>
             <td>{{ item.full_name }}</td>
-            <td>{{ item.phone|default:"—" }}</td>
-            <td>{{ item.branch.name|default:"—" }}</td>
+            <td>{{ item.phone|default:"â€”" }}</td>
+            <td>{{ item.branch.name|default:"â€”" }}</td>
             <td>{% if item.is_active %}<span class="status active">{% translate "Active" %}</span>{% else %}<span class="status inactive">{% translate "Inactive" %}</span>{% endif %}</td>
             <td class="directory-row-actions">
               <a class="button button-small button-secondary" href="{% url 'parties:farmer_detail' organization.slug item.pk %}">{% translate "View profile" %}</a>
@@ -109,4 +109,23 @@
     {% endif %}
   </section>
 </div>
+<script>
+(() => {
+  const input = document.getElementById('farmer-search');
+  const clear = document.getElementById('farmer-search-clear');
+  const form = input?.closest('form');
+  if (!input || !clear || !form) return;
+  let timer;
+  input.addEventListener('input', () => {
+    clear.hidden = !input.value;
+    window.clearTimeout(timer);
+    timer = window.setTimeout(() => form.requestSubmit(), 350);
+  });
+  clear.addEventListener('click', () => {
+    input.value = '';
+    form.requestSubmit();
+  });
+})();
+</script>
 {% endblock %}
+

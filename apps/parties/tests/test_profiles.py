@@ -288,6 +288,25 @@ class PartyProfileTests(TestCase):
             reverse("parties:farmer_detail", args=[self.organization.slug, self.farmer.pk]),
         )
 
+    def test_farmer_search_matches_partial_code_name_phone_email_address_bank_and_branch(self):
+        self.farmer.full_name = "Ram Bahadur Kewat"
+        self.farmer.phone = "9812345678"
+        self.farmer.email = "ram.kewat@gmail.test"
+        self.farmer.address = "Parasi Nepal"
+        self.farmer.bank_account_name = "Ram Kewat"
+        self.farmer.bank_account_number = "1234567890"
+        self.farmer.bank_name = "Nepal Bank"
+        self.farmer.save()
+        self.client.force_login(self.owner)
+        url = reverse("parties:farmers", args=[self.organization.slug])
+        for term in ("F00", "bahadur", "123456", "kewat@gmail", "parasi", "1234567890", "nepal bank", "main branch"):
+            with self.subTest(term=term):
+                response = self.client.get(url, {"q": term})
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(list(response.context["page_obj"].object_list), [self.farmer])
+
+
+
     def test_search_supports_email_and_filters_inactive_customers(self):
         self.customer.email = "find-me@example.test"
         self.customer.is_active = False

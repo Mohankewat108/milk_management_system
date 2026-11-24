@@ -329,6 +329,13 @@ def farmer_list(request, organization_slug):
             | Q(code__icontains=term)
             | Q(phone__icontains=term)
             | Q(email__icontains=term)
+            | Q(address__icontains=term)
+            | Q(bank_account_name__icontains=term)
+            | Q(bank_account_number__icontains=term)
+            | Q(bank_name__icontains=term)
+            | Q(user__username__icontains=term)
+            | Q(user__email__icontains=term)
+            | Q(branch__name__icontains=term)
         )
     if status in {"active", "inactive"}:
         records = records.filter(is_active=(status == "active"))
