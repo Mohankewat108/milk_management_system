@@ -18,6 +18,8 @@ from .services import register_organization
 
 @login_required
 def workspace(request):
+    if getattr(request.user, "farmer_profile", None):
+        return redirect("farmer_portal:home")
     memberships = memberships_for_user(request.user)
     if memberships.count() == 1:
         return redirect(
