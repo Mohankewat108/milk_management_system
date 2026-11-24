@@ -40,6 +40,12 @@ MODULE_ROLES = {
     "expenses": {Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.ACCOUNTANT},
     "inventory": {Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.INVENTORY_MANAGER},
     "suppliers": {Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.INVENTORY_MANAGER},
+    "reports": {
+        Membership.Role.OWNER,
+        Membership.Role.ADMIN,
+        Membership.Role.BRANCH_MANAGER,
+        Membership.Role.ACCOUNTANT,
+    },
 }
 
 
@@ -65,10 +71,16 @@ def _scoped_queryset(module, organization, membership, params, branch_scope=None
                 deleted_at__isnull=True,
             ).values_list("pk", flat=True)
         )
+    branch_ids_requested = params.getlist("branch") if hasattr(params, "getlist") else []
     branch_id = params.get("branch", "").strip()
-    if branch_id:
-        if branch_ids is not None and str(branch_id) not in {str(value) for value in branch_ids}:
-            raise PermissionDenied("You are not allowed to export this branch.")
+    if branch_id and not branch_ids_requested:
+        branch_ids_requested = [branch_id]
+    if branch_ids_requested:
+        allowed_values = {str(value) for value in (branch_ids or Branch.objects.filter(
+            organization=organization, is_active=True, deleted_at__isnull=True
+        ).values_list("pk", flat=True))}
+        if any(str(value) not in allowed_values for value in branch_ids_requested):
+            raise PermissionDenied("You are not allowed to export one or more selected branches.")
 
     if module == "farmers":
         qs = Farmer.objects.filter(
@@ -103,6 +115,11 @@ def _scoped_queryset(module, organization, membership, params, branch_scope=None
     elif module == "suppliers":
         qs = Supplier.objects.filter(organization=organization, deleted_at__isnull=True)
         date_field = "created_at__date"
+    elif module == "reports":
+        qs = MilkCollection.objects.filter(organization=organization).select_related(
+            "branch", "farmer", "customer", "recorded_by", "tested_by"
+        )
+        date_field = "collected_at__date"
     else:
         raise ValidationError("Unsupported export category.")
 
@@ -114,8 +131,12 @@ def _scoped_queryset(module, organization, membership, params, branch_scope=None
         if None in branch_scope:
             scope_filter |= Q(branch__isnull=True)
         qs = qs.filter(scope_filter)
-    if branch_id and module != "suppliers":
-        qs = qs.filter(branch_id=branch_id)
+    if branch_ids_requested and module != "suppliers":
+        qs = qs.filter(branch_id__in=branch_ids_requested)
+    if params.get("farmer") and module in {"collections", "reports"}:
+        qs = qs.filter(farmer_id=params.get("farmer"))
+    if params.get("customer") and module in {"collections", "reports"}:
+        qs = qs.filter(customer_id=params.get("customer"))
     if params.get("status"):
         if module in {"farmers", "customers"}:
             if params["status"] in {"active", "inactive"}:
@@ -176,7 +197,7 @@ def _rows(module, qs):
             for obj in qs.iterator(chunk_size=1000)
         )
         return headers, rows
-    if module == "collections":
+    if module in {"collections", "reports"}:
         headers = [
             "ID",
             "Reference",
@@ -388,6 +409,10 @@ def _numeric_columns(module):
             11: "Rate",
             12: "Total amount",
         },
+        "reports": {
+            6: "Quantity (L)", 7: "FAT", 8: "SNF", 9: "Lactose",
+            10: "Milk temperature (C)", 11: "Rate", 12: "Total amount",
+        },
         "payments": {9: "Amount"},
         "expenses": {8: "Amount"},
         "inventory": {7: "Current stock", 8: "Reorder level", 9: "Purchase price"},
@@ -418,7 +443,7 @@ def _export_summary_rows(module, headers, totals):
         field_count = totals["value_counts"].get(index, 0)
         averages[index] = (total / field_count).quantize(Decimal("0.01")) if field_count else ""
 
-    if module == "collections":
+    if module in {"collections", "reports"}:
         grand_total[6] = totals["sums"].get(6, Decimal("0"))
         grand_total[12] = totals["sums"].get(12, Decimal("0"))
     elif module == "payments":

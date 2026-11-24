@@ -2,20 +2,360 @@
 {% load i18n %}
 {% block title %}{% translate "Business reports" %} · {{ organization.name }}{% endblock %}
 {% block content %}
-<section class="export-page">
-  <header class="export-hero"><div><span class="profile-section-kicker">{% translate "BUSINESS INTELLIGENCE" %}</span><h1>{% translate "Advanced reports" %}</h1><p>{% translate "Operational and financial indicators for your permitted branches." %}</p></div><span class="export-hero-icon">▥</span></header>
-  <form class="search-form" method="get"><label>{% translate "From" %}<input type="date" name="from" value="{{ date_from }}"></label><label>{% translate "To" %}<input type="date" name="to" value="{{ date_to }}"></label><button class="button" type="submit">{% translate "Apply range" %}</button></form>
-  <div class="export-stats">
-    <article><span>{% translate "Approved collections" %}</span><strong>{{ collection_count }}</strong></article>
-    <article><span>{% translate "Milk volume (L)" %}</span><strong>{{ milk_litres|floatformat:2 }}</strong></article>
-    <article><span>{% translate "Milk value" %}</span><strong>{{ organization.currency }} {{ milk_value|floatformat:2 }}</strong></article>
-    <article><span>{% translate "Average FAT" %}</span><strong>{{ average_fat|default:"—"|floatformat:2 }}</strong></article>
-    <article><span>{% translate "Completed payments" %}</span><strong>{{ organization.currency }} {{ payments_total|floatformat:2 }}</strong></article>
-    <article><span>{% translate "Approved expenses" %}</span><strong>{{ organization.currency }} {{ expenses_total|floatformat:2 }}</strong></article>
-    <article><span>{% translate "Low-stock items" %}</span><strong>{{ low_stock_count }}</strong></article>
+<section class="export-page reports-bi">
+  <header class="export-hero">
+    <div><span class="profile-section-kicker">{% translate "BUSINESS INTELLIGENCE" %}</span>
+      <h1>{% translate "Advanced reports" %}</h1>
+      <p>{% translate "Milk production, branch performance, quality and financial analytics." %}</p>
+    </div><span class="export-hero-icon" aria-hidden="true">▥</span>
+  </header>
+
+  <form class="search-form reports-filter-form" method="get">
+    <div class="reports-filter-field reports-period-field">
+      <label for="report-period">{% translate "Report period" %}</label>
+      <select id="report-period" name="period">
+        <option value="custom" {% if period == "custom" %}selected{% endif %}>{% translate "Custom dates" %}</option>
+        <option value="today" {% if period == "today" %}selected{% endif %}>{% translate "Today" %}</option>
+        <option value="yesterday" {% if period == "yesterday" %}selected{% endif %}>{% translate "Yesterday" %}</option>
+        <option value="last_7_days" {% if period == "last_7_days" %}selected{% endif %}>{% translate "Last 7 days" %}</option>
+        <option value="last_30_days" {% if period == "last_30_days" %}selected{% endif %}>{% translate "Last 30 days" %}</option>
+        <option value="this_month" {% if period == "this_month" %}selected{% endif %}>{% translate "This month" %}</option>
+        <option value="previous_month" {% if period == "previous_month" %}selected{% endif %}>{% translate "Previous month" %}</option>
+        <option value="this_quarter" {% if period == "this_quarter" %}selected{% endif %}>{% translate "This quarter" %}</option>
+        <option value="previous_quarter" {% if period == "previous_quarter" %}selected{% endif %}>{% translate "Previous quarter" %}</option>
+        <option value="this_year" {% if period == "this_year" %}selected{% endif %}>{% translate "This year" %}</option>
+        <option value="previous_year" {% if period == "previous_year" %}selected{% endif %}>{% translate "Previous year" %}</option>
+        <option value="month" {% if period == "month" %}selected{% endif %}>{% translate "Select month" %}</option>
+      </select>
+    </div>
+    <div class="reports-filter-field reports-month-field">
+      <label for="report-month">{% translate "Month" %}</label>
+      <input id="report-month" type="month" name="month" value="{{ selected_month }}">
+    </div>
+    <div class="reports-branch-filter reports-filter-field">
+      <label for="branch-trigger">{% translate "Branches" %}</label>
+      <div class="reports-branch-dropdown">
+        <button id="branch-trigger" type="button" class="reports-branch-trigger" aria-expanded="false">
+          {% if all_branches_selected %}{% translate "All permitted branches" %}{% else %}{% translate "Selected branches" %}{% endif %} ▾
+        </button>
+        <div class="reports-branch-menu" hidden>
+          <label class="reports-branch-choice reports-all-branches"><input type="checkbox" name="all_branches" value="1" {% if all_branches_selected %}checked{% endif %}> {% translate "All permitted branches" %}</label>
+          {% for branch in available_branches %}
+            <label class="reports-branch-choice"><input type="checkbox" name="branch" value="{{ branch.id }}" {% if branch.id|stringformat:"s" in selected_branch_ids %}checked{% endif %}> {{ branch.name }}</label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="reports-filter-field">
+      <label for="report-farmer">{% translate "Farmer" %}</label>
+      <select id="report-farmer" name="farmer">
+        <option value="">{% translate "All farmers" %}</option>
+        {% for item in farmers %}<option value="{{ item.id }}" {% if selected_farmer and selected_farmer.id == item.id %}selected{% endif %}>{{ item.code }} · {{ item.full_name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="reports-filter-field">
+      <label for="report-customer">{% translate "Customer" %}</label>
+      <select id="report-customer" name="customer">
+        <option value="">{% translate "All customers" %}</option>
+        {% for item in customers %}<option value="{{ item.id }}" {% if selected_customer and selected_customer.id == item.id %}selected{% endif %}>{{ item.code }} · {{ item.full_name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="reports-filter-field">
+      <label for="report-status">{% translate "Collection status" %}</label>
+      <select id="report-status" name="status">
+        <option value="">{% translate "All statuses" %}</option>
+        {% for value,label in collection_status_choices %}<option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="reports-filter-field reports-date-field">
+      <label for="report-from">{% translate "From" %}</label><input id="report-from" type="date" name="from" value="{{ date_from }}">
+    </div>
+    <div class="reports-filter-field reports-date-field">
+      <label for="report-to">{% translate "To" %}</label><input id="report-to" type="date" name="to" value="{{ date_to }}">
+    </div>
+    <div class="reports-filter-actions">
+      <button class="button" type="submit">{% translate "Generate report" %}</button>
+      <a class="button button-secondary" href="{% url 'data_exports:reports' organization.slug %}">{% translate "Clear filters" %}</a>
+    </div>
+  </form>
+
+  <div class="reports-active-filters">
+    <span>{% translate "Reporting period" %}: <strong>{{ period_label }}</strong></span>
+    <span>{% translate "Branches" %}: <strong>{% if all_branches_selected %}{% translate "All permitted" %}{% else %}{{ selected_branch_ids|length }}{% endif %}</strong></span>
+    {% if selected_farmer %}<span>{% translate "Farmer" %}: <strong>{{ selected_farmer.full_name }}</strong></span>{% endif %}
+    {% if selected_customer %}<span>{% translate "Customer" %}: <strong>{{ selected_customer.full_name }}</strong></span>{% endif %}
   </div>
-  <section class="panel export-panel"><h2>{% translate "Monthly collection trend" %}</h2><div class="table-wrap"><table><thead><tr><th>{% translate "Month" %}</th><th>{% translate "Records" %}</th><th>{% translate "Milk volume (L)" %}</th><th>{% translate "Milk value" %}</th></tr></thead><tbody>{% for row in monthly_collections %}<tr><td>{{ row.month|date:"Y-m" }}</td><td>{{ row.records }}</td><td>{{ row.litres|floatformat:2 }}</td><td>{{ organization.currency }} {{ row.value|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="4">{% translate "No approved collections in this period." %}</td></tr>{% endfor %}</tbody></table></div></section>
-  <section class="panel export-panel"><h2>{% translate "Collection status breakdown" %}</h2><div class="table-wrap"><table><thead><tr><th>{% translate "Status" %}</th><th>{% translate "Records" %}</th></tr></thead><tbody>{% for row in collection_statuses %}<tr><td>{{ row.status|title }}</td><td>{{ row.total }}</td></tr>{% empty %}<tr><td colspan="2">{% translate "No records in this period." %}</td></tr>{% endfor %}</tbody></table></div></section>
-  <p class="export-security-note">{% translate "Reports exclude deleted financial and inventory records, use approved collections for milk value, and respect branch assignments. These indicators are operational summaries, not audited financial statements." %}</p>
+
+  <form class="reports-export-actions" method="post" action="{% url 'data_exports:reports_export' organization.slug %}">
+    {% csrf_token %}
+    {% for branch_id in selected_branch_ids %}<input type="hidden" name="branch" value="{{ branch_id }}">{% endfor %}
+    {% if all_branches_selected %}<input type="hidden" name="all_branches" value="1">{% endif %}
+    <input type="hidden" name="from" value="{{ date_from }}">
+    <input type="hidden" name="to" value="{{ date_to }}">
+    <input type="hidden" name="period" value="{{ period }}">
+    <input type="hidden" name="month" value="{{ selected_month }}">
+    <input type="hidden" name="farmer" value="{{ selected_farmer.id|default:'' }}">
+    <input type="hidden" name="customer" value="{{ selected_customer.id|default:'' }}">
+    <input type="hidden" name="status" value="{{ status_filter }}">
+    <label for="reports-export-format">{% translate "Export format" %}</label>
+    <select id="reports-export-format" name="file_format">
+      <option value="xlsx">{% translate "Excel workbook" %}</option>
+      <option value="csv">{% translate "CSV" %}</option>
+      <option value="pdf">{% translate "PDF" %}</option>
+    </select>
+    <button class="button" type="submit">{% translate "Export filtered report" %}</button>
+  </form>
+
+  <div class="reports-main">
+    <section id="reports-overview" class="reports-section">
+      <div class="reports-section-heading"><div><h2>{% translate "Overview" %}</h2><p>{% translate "Approved collection performance for the selected filters." %}</p></div></div>
+      <div class="export-stats reports-kpis">
+        <article><span>{% translate "Approved collections" %}</span><strong>{{ collection_count }}</strong></article>
+        <article><span>{% translate "Milk volume" %}</span><strong>{{ milk_litres|floatformat:2 }} L</strong></article>
+        <article><span>{% translate "Milk value" %}</span><strong>{{ organization.currency }} {{ milk_value|floatformat:2 }}</strong></article>
+        <article><span>{% translate "Weighted average price / L" %}</span><strong>{% if average_price != None %}{{ organization.currency }} {{ average_price|floatformat:2 }}{% else %}—{% endif %}</strong></article>
+        <article><span>{% translate "Farmers supplying" %}</span><strong>{{ farmers_supplied }}</strong></article>
+        <article><span>{% translate "Customers served" %}</span><strong>{{ customers_served }}</strong></article>
+        <article><span>{% translate "Customer milk delivered" %}</span><strong>{{ customer_litres|floatformat:2 }} L</strong></article>
+        <article><span>{% translate "Customer sales value" %}</span><strong>{{ organization.currency }} {{ customer_milk_value|floatformat:2 }}</strong></article>
+        <article><span>{% translate "Average litres / collection" %}</span><strong>{% if average_litres_per_collection != None %}{{ average_litres_per_collection|floatformat:2 }}{% else %}—{% endif %}</strong></article>
+        <article><span>{% translate "Completed farmer payments" %}</span><strong>{{ organization.currency }} {{ farmer_paid|floatformat:2 }}</strong></article>
+        <article><span>{% translate "Pending payments" %}</span><strong>{{ organization.currency }} {{ pending_payments|floatformat:2 }}</strong></article>
+        <article><span>{% translate "Approved expenses" %}</span><strong>{{ organization.currency }} {{ expenses_total|floatformat:2 }}</strong></article>
+        <article><span>{% translate "Low-stock items" %}</span><strong>{{ low_stock_count }}</strong></article>
+        <article><span>{% translate "Low-stock inventory value" %}</span><strong>{{ organization.currency }} {{ low_stock_value|floatformat:2 }}</strong></article>
+        <article><span>{% translate "Out-of-stock items" %}</span><strong>{{ out_of_stock_count }}</strong></article>
+      </div>
+    </section>
+
+    <section id="reports-insights" class="panel export-panel reports-section">
+      <h2>{% translate "Production insights" %}</h2>
+      {% if milk_growth_pct != None %}
+        <article class="reports-insight-card">
+          <span>{% translate "Compared with the previous equal-length period" %}</span>
+          <strong>{% if milk_growth_pct > 0 %}+{% endif %}{{ milk_growth_pct|floatformat:1 }}%</strong>
+          <small>{{ previous_period_litres|floatformat:2 }} L {% translate "in the previous period" %}</small>
+        </article>
+      {% endif %}
+      {% for insight in period_insights %}
+        <article class="reports-insight-card"><strong>{{ insight.title }}</strong><span>{{ insight.detail }}</span></article>
+      {% empty %}
+        <p class="muted small">{% translate "More trend insights will appear when there is enough historical data to compare." %}</p>
+      {% endfor %}
+    </section>
+
+    <section id="reports-daily" class="panel export-panel reports-section">
+      <h2>{% translate "Daily farmer milk collection" %}</h2>
+      <div class="reports-chart-grid">
+        <article class="reports-chart-card">
+          <h3>{% translate "Daily milk volume (L)" %}</h3>
+          <canvas id="daily-milk-chart" height="140" aria-label="{% translate 'Daily milk volume chart' %}"></canvas>
+          {{ daily_chart_data|json_script:"daily-milk-data-json" }}
+        </article>
+      </div>
+      <div class="table-wrap"><table><thead><tr>
+        <th>{% translate "Date" %}</th><th>{% translate "Records" %}</th><th>{% translate "Milk (L)" %}</th><th>{% translate "Milk value" %}</th><th>{% translate "FAT" %}</th><th>{% translate "SNF" %}</th><th>{% translate "Lactose" %}</th><th>{% translate "Farmers" %}</th>
+      </tr></thead><tbody>
+        {% for row in daily_collections %}<tr><td>{{ row.day|date:"Y-m-d" }}</td><td>{{ row.records }}</td><td>{{ row.litres|floatformat:2 }}</td><td>{{ organization.currency }} {{ row.value|floatformat:2 }}</td><td>{{ row.average_fat|default:"—"|floatformat:2 }}</td><td>{{ row.average_snf|default:"—"|floatformat:2 }}</td><td>{{ row.average_lactose|default:"—"|floatformat:2 }}</td><td>{{ row.farmers }}</td></tr>
+        {% empty %}<tr><td colspan="8">{% translate "No approved collections in this period." %}</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+
+    <section id="reports-monthly" class="panel export-panel reports-section">
+      <h2>{% translate "Monthly farmer milk collection performance" %}</h2>
+      <div class="reports-chart-card">
+        <h3>{% translate "Monthly milk volume (L)" %}</h3>
+        <canvas id="monthly-milk-chart" height="150" aria-label="{% translate 'Monthly milk volume chart' %}"></canvas>
+        {{ monthly_chart_data|json_script:"monthly-milk-data-json" }}
+      </div>
+      <div class="table-wrap"><table><thead><tr>
+        <th>{% translate "Month" %}</th><th>{% translate "Records" %}</th><th>{% translate "Milk (L)" %}</th><th>{% translate "Milk value" %}</th><th>{% translate "Average price / L" %}</th><th>{% translate "FAT" %}</th><th>{% translate "SNF" %}</th><th>{% translate "Lactose" %}</th><th>{% translate "Farmers" %}</th><th>{% translate "Customers" %}</th>
+      </tr></thead><tbody>
+        {% for row in monthly_collections %}<tr>
+          <td>{{ row.month|date:"Y-m" }}</td><td>{{ row.records }}</td><td>{{ row.litres|floatformat:2 }}</td><td>{{ organization.currency }} {{ row.value|floatformat:2 }}</td>
+          <td>{% if row.litres %}{{ row.value|floatformat:2 }}{% else %}—{% endif %}</td><td>{{ row.average_fat|default:"—"|floatformat:2 }}</td><td>{{ row.average_snf|default:"—"|floatformat:2 }}</td><td>{{ row.average_lactose|default:"—"|floatformat:2 }}</td><td>{{ row.farmers }}</td>
+        </tr>{% empty %}<tr><td colspan="9">{% translate "No approved farmer collections in this period." %}</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+
+    <section id="reports-branches" class="panel export-panel reports-section">
+      <h2>{% translate "Branch farmer-supply performance" %}</h2>
+      <div class="table-wrap"><table><thead><tr>
+        <th>{% translate "Branch" %}</th><th>{% translate "Records" %}</th><th>{% translate "Milk (L)" %}</th><th>{% translate "Milk value" %}</th><th>{% translate "Average price / L" %}</th><th>{% translate "FAT" %}</th><th>{% translate "SNF" %}</th><th>{% translate "Lactose" %}</th><th>{% translate "Farmers" %}</th><th>{% translate "Customers" %}</th><th>{% translate "Customer sales (L)" %}</th><th>{% translate "Customer sales value" %}</th><th>{% translate "Share" %}</th>
+      </tr></thead><tbody>
+        {% for row in branch_rows %}<tr><td>{{ row.branch__name }}</td><td>{{ row.records }}</td><td>{{ row.litres|floatformat:2 }}</td><td>{{ organization.currency }} {{ row.value|floatformat:2 }}</td><td>{{ organization.currency }} {{ row.average_price|floatformat:2 }}</td><td>{{ row.average_fat|default:"—"|floatformat:2 }}</td><td>{{ row.average_snf|default:"—"|floatformat:2 }}</td><td>{{ row.average_lactose|default:"—"|floatformat:2 }}</td><td>{{ row.farmers }}</td><td>{{ row.customer_count }}</td><td>{{ row.customer_litres|floatformat:2 }}</td><td>{{ organization.currency }} {{ row.customer_value|floatformat:2 }}</td><td>{{ row.contribution_pct|floatformat:1 }}%</td></tr>
+        {% empty %}<tr><td colspan="13">{% translate "No branch collection data for this period." %}</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+
+    <section id="reports-farmers" class="panel export-panel reports-section">
+      <h2>{% translate "Farmer performance leaderboard" %}</h2>
+      <div class="table-wrap"><table><thead><tr>
+        <th>{% translate "Rank" %}</th><th>{% translate "Farmer" %}</th><th>{% translate "Branch" %}</th><th>{% translate "Records" %}</th><th>{% translate "Milk (L)" %}</th><th>{% translate "Value" %}</th><th>{% translate "Avg FAT" %}</th><th>{% translate "Avg SNF" %}</th><th>{% translate "Avg price / L" %}</th>
+      </tr></thead><tbody>
+        {% for row in farmer_leaderboard %}<tr><td>{{ forloop.counter }}</td><td>{{ row.farmer__full_name }} <small>{{ row.farmer__code }}</small></td><td>{{ row.branch__name }}</td><td>{{ row.records }}</td><td>{{ row.litres|floatformat:2 }}</td><td>{{ organization.currency }} {{ row.value|floatformat:2 }}</td><td>{{ row.average_fat|default:"—"|floatformat:2 }}</td><td>{{ row.average_snf|default:"—"|floatformat:2 }}</td><td>{{ organization.currency }} {{ row.average_price|floatformat:2 }}</td></tr>
+        {% empty %}<tr><td colspan="9">{% translate "No farmer collection data for this period." %}</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+
+    <section id="reports-customers" class="panel export-panel reports-section">
+      <h2>{% translate "Customer milk sales performance" %}</h2>
+      <div class="table-wrap"><table><thead><tr>
+        <th>{% translate "Rank" %}</th><th>{% translate "Customer" %}</th><th>{% translate "Branch" %}</th><th>{% translate "Records" %}</th><th>{% translate "Milk (L)" %}</th><th>{% translate "Value" %}</th><th>{% translate "Avg FAT" %}</th><th>{% translate "Avg SNF" %}</th>
+      </tr></thead><tbody>
+        {% for row in customer_rows %}<tr><td>{{ forloop.counter }}</td><td>{{ row.customer__full_name }} <small>{{ row.customer__code }}</small></td><td>{{ row.branch__name }}</td><td>{{ row.records }}</td><td>{{ row.litres|floatformat:2 }}</td><td>{{ organization.currency }} {{ row.value|floatformat:2 }}</td><td>{{ row.average_fat|default:"—"|floatformat:2 }}</td><td>{{ row.average_snf|default:"—"|floatformat:2 }}</td></tr>
+        {% empty %}<tr><td colspan="8">{% translate "No customer-linked approved collection records." %}</td></tr>{% endfor %}
+      </tbody></table></div>
+      <p class="muted small">{% translate "Customer analytics use only approved collection records explicitly linked to a customer. These are customer sales/deliveries and are not included in farmer procurement litres or farmer payable calculations." %}</p>
+    </section>
+
+    <section id="reports-quality" class="panel export-panel reports-section">
+      <h2>{% translate "Milk quality analysis" %}</h2>
+      <p class="muted small">{% translate "Simple averages are per collection record; weighted averages give each litre equal influence. Missing measurements are excluded, not treated as zero." %}</p>
+      <div class="reports-quality-grid">
+        <article><span>{% translate "Average FAT" %}</span><strong>{{ average_fat|default:"—"|floatformat:3 }}</strong><small>{% translate "Volume weighted" %}: {{ weighted_fat|default:"—"|floatformat:3 }}</small></article>
+        <article><span>{% translate "Average SNF" %}</span><strong>{{ average_snf|default:"—"|floatformat:3 }}</strong><small>{% translate "Volume weighted" %}: {{ weighted_snf|default:"—"|floatformat:3 }}</small></article>
+        <article><span>{% translate "Average lactose" %}</span><strong>{{ average_lactose|default:"—"|floatformat:3 }}</strong><small>{% translate "Volume weighted" %}: {{ weighted_lactose|default:"—"|floatformat:3 }}</small></article>
+        <article><span>{% translate "Milk temperature °C" %}</span><strong>{{ average_temperature|default:"—"|floatformat:2 }}</strong></article>
+        <article><span>{% translate "Lactometer reading" %}</span><strong>{{ average_lactometer|default:"—"|floatformat:3 }}</strong></article>
+      </div>
+    </section>
+
+    <section id="reports-finance" class="panel export-panel reports-section">
+      <h2>{% translate "Financial analytics" %}</h2>
+      <div class="reports-finance-grid">
+        <article><span>{% translate "Approved milk value" %}</span><strong>{{ organization.currency }} {{ milk_value|floatformat:2 }}</strong></article>
+        <article><span>{% translate "Completed farmer payments (outgoing)" %}</span><strong>{{ organization.currency }} {{ farmer_paid|floatformat:2 }}</strong></article>
+        <article><span>{% translate "Customer receipts (incoming)" %}</span><strong>{{ organization.currency }} {{ customer_receipts|floatformat:2 }}</strong></article>
+        <article><span>{% translate "Pending payments" %}</span><strong>{{ organization.currency }} {{ pending_payments|floatformat:2 }}</strong></article>
+        <article><span>{% translate "Approved expenses" %}</span><strong>{{ organization.currency }} {{ expenses_total|floatformat:2 }}</strong></article>
+        <article><span>{% translate "Outstanding farmer payable" %}</span><strong>{% if ledger_balance_available %}{{ organization.currency }} {{ farmer_balance|floatformat:2 }}{% else %}?{% endif %}</strong></article>
+      </div>
+      <p class="muted small">{% if ledger_balance_available %}{% translate "Outstanding farmer payable is calculated from posted journal entries on the configured farmer-payable account within the selected branches and period." %}{% else %}{% translate "A verified payable balance is unavailable because farmer collection ledger posting is not enabled and configured. Completed farmer payouts are shown separately." %}{% endif %}</p>
+      <h3>{% translate "Approved expenses by category" %}</h3>
+      <div class="table-wrap"><table><thead><tr><th>{% translate "Category" %}</th><th>{% translate "Records" %}</th><th>{% translate "Amount" %}</th></tr></thead><tbody>{% for row in expense_categories %}<tr><td>{{ row.category }}</td><td>{{ row.records }}</td><td>{{ organization.currency }} {{ row.total|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="3">{% translate "No approved expenses." %}</td></tr>{% endfor %}</tbody></table></div>
+    </section>
+
+    <section id="reports-inventory" class="panel export-panel reports-section">
+      <h2>{% translate "Inventory analytics" %}</h2>
+      <div class="reports-inventory-grid">
+        <article><span>{% translate "Low-stock items" %}</span><strong>{{ low_stock_count }}</strong></article>
+        <article><span>{% translate "Low-stock inventory value" %}</span><strong>{{ organization.currency }} {{ low_stock_value|floatformat:2 }}</strong></article>
+        <article><span>{% translate "Out-of-stock items" %}</span><strong>{{ out_of_stock_count }}</strong></article>
+        <article><span>{% translate "Purchase movements" %}</span><strong>{{ purchase_movements }}</strong><small>{{ stock_purchase_quantity|floatformat:3 }} {{ organization.inventory_items.first.unit|default:"units" }}</small></article>
+        <article><span>{% translate "Usage movements" %}</span><strong>{{ usage_movements }}</strong><small>{{ stock_usage_quantity|floatformat:3 }} {% translate "units consumed" %}</small></article>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>{% translate "Item" %}</th><th>{% translate "Branch" %}</th><th>{% translate "Current stock" %}</th><th>{% translate "Reorder level" %}</th><th>{% translate "Unit" %}</th><th>{% translate "Stock value" %}</th></tr></thead><tbody>
+        {% for item in low_stock_items %}<tr><td>{{ item.name }} · {{ item.code }}</td><td>{{ item.branch.name }}</td><td>{{ item.current_stock|floatformat:3 }}</td><td>{{ item.reorder_level|floatformat:3 }}</td><td>{{ item.unit }}</td><td>{{ organization.currency }} {{ item.current_stock|floatformat:2 }} × {{ item.purchase_price|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="6">{% translate "No low-stock items." %}</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+
+    <section id="reports-status" class="panel export-panel reports-section">
+      <h2>{% translate "Collection status breakdown" %}</h2>
+      <div class="table-wrap"><table><thead><tr><th>{% translate "Status" %}</th><th>{% translate "Records" %}</th></tr></thead><tbody>
+        {% for row in collection_statuses %}<tr><td>{{ row.status|title }}</td><td>{{ row.total }}</td></tr>
+        {% empty %}<tr><td colspan="2">{% translate "No records in this period." %}</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+
+    <p class="export-security-note">{% translate "Reports exclude deleted financial and inventory records, use approved collections for milk value, enforce permitted branch access, and distinguish customer receipts from farmer payments. These indicators are operational summaries, not audited financial statements." %}</p>
+  </div>
 </section>
+<script>
+(function () {
+  const form = document.querySelector(".reports-filter-form");
+  if (!form) return;
+  const all = form.querySelector('input[name="all_branches"]');
+  const branches = [...form.querySelectorAll('input[name="branch"]')];
+  const trigger = form.querySelector(".reports-branch-trigger");
+  const menu = form.querySelector(".reports-branch-menu");
+  const period = form.querySelector("#report-period");
+  const month = form.querySelector("#report-month");
+  const from = form.querySelector("#report-from");
+  const to = form.querySelector("#report-to");
+
+  trigger?.addEventListener("click", () => {
+    menu.hidden = !menu.hidden;
+    trigger.setAttribute("aria-expanded", String(!menu.hidden));
+  });
+  all?.addEventListener("change", () => branches.forEach(box => { box.checked = all.checked; }));
+  branches.forEach(box => box.addEventListener("change", () => {
+    if (all) all.checked = branches.length > 0 && branches.every(item => item.checked);
+  }));
+  period?.addEventListener("change", () => {
+    if (period.value === "month" && month && !month.value) month.focus();
+    if (period.value !== "custom" && period.value !== "month") {
+      if (from) from.value = "";
+      if (to) to.value = "";
+      if (month) month.value = "";
+    }
+  });
+  month?.addEventListener("change", () => {
+    if (month.value && period) period.value = "month";
+  });
+  form.addEventListener("submit", () => { if (menu) menu.hidden = true; });
+  const drawMilkChart = (canvasId, dataId) => {
+    const canvas = document.getElementById(canvasId);
+    const source = document.getElementById(dataId);
+    if (!canvas || !source) return;
+    let rows = [];
+    try { rows = JSON.parse(source.textContent || "[]"); } catch (_) { return; }
+    const ctx = canvas.getContext("2d");
+    if (!ctx || !rows.length) {
+      const parent = canvas.parentElement;
+      if (parent && !rows.length) {
+        const empty = document.createElement("p");
+        empty.className = "muted small";
+        empty.textContent = "No collection data for this period.";
+        parent.appendChild(empty);
+      }
+      return;
+    }
+    const width = Math.max(canvas.clientWidth, 300);
+    const height = canvas.height;
+    const ratio = window.devicePixelRatio || 1;
+    canvas.width = width * ratio;
+    canvas.height = height * ratio;
+    ctx.scale(ratio, ratio);
+    const padding = {top: 12, right: 12, bottom: 32, left: 48};
+    const plotW = width - padding.left - padding.right;
+    const plotH = height - padding.top - padding.bottom;
+    const values = rows.map(row => Number(row.litres) || 0);
+    const max = Math.max(...values, 1);
+    ctx.font = "11px system-ui";
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--color-text-muted") || "#718096";
+    ctx.strokeStyle = "rgba(128,148,168,.25)";
+    for (let i = 0; i <= 4; i++) {
+      const y = padding.top + plotH * i / 4;
+      ctx.beginPath(); ctx.moveTo(padding.left, y); ctx.lineTo(width-padding.right, y); ctx.stroke();
+      ctx.fillText((max * (4-i) / 4).toFixed(0), 4, y + 4);
+    }
+    const step = plotW / rows.length;
+    const barW = Math.max(3, Math.min(28, step * .58));
+    rows.forEach((row, index) => {
+      const value = values[index];
+      const x = padding.left + index * step + (step-barW)/2;
+      const barH = value / max * plotH;
+      ctx.fillStyle = "#299B8B";
+      ctx.fillRect(x, padding.top + plotH - barH, barW, barH);
+      if (rows.length <= 14 || index % Math.ceil(rows.length/14) === 0) {
+        ctx.save();
+        ctx.fillStyle = "#8494A7";
+        ctx.textAlign = "center";
+        ctx.fillText(String(row.label).slice(-5), x + barW/2, height - 10);
+        ctx.restore();
+      }
+    });
+  };
+  drawMilkChart("daily-milk-chart", "daily-milk-data-json");
+  drawMilkChart("monthly-milk-chart", "monthly-milk-data-json");
+  document.addEventListener("click", event => {
+    const dropdown = form.querySelector(".reports-branch-dropdown");
+    if (menu && !menu.hidden && dropdown && !dropdown.contains(event.target)) {
+      menu.hidden = true;
+      trigger?.setAttribute("aria-expanded", "false");
+    }
+  });
+})();
+</script>
 {% endblock %}
