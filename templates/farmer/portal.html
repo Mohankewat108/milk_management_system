@@ -27,9 +27,6 @@
       <span class="profile-period-note">Approved records</span>
     </div>
     <div class="profile-metric-grid">
-      <article class="profile-metric-card metric-today"><span class="profile-metric-label">Today</span><strong>{{ today_summary.litres|default:0|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">Today's approved milk</span></article>
-      <article class="profile-metric-card profile-shift-card"><span class="profile-metric-label">Morning today</span><strong>{{ today_shift.morning|default:0|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">Morning shift</span></article>
-      <article class="profile-metric-card profile-shift-card"><span class="profile-metric-label">Evening today</span><strong>{{ today_shift.evening|default:0|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">Evening shift</span></article>
       <article class="profile-metric-card"><span class="profile-metric-label">This week</span><strong>{{ week_summary.litres|default:0|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">Since Monday</span></article>
       <article class="profile-metric-card"><span class="profile-metric-label">This month</span><strong>{{ month_summary.litres|default:0|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">Current month</span></article>
       <article class="profile-metric-card"><span class="profile-metric-label">Previous month</span><strong>{{ previous_month_summary.litres|default:0|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">Last month</span></article>
