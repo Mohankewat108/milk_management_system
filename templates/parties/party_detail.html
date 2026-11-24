@@ -64,7 +64,6 @@
       <article class="profile-metric-card"><span class="profile-metric-label">{% translate "Previous month" %}</span><strong>{{ metrics.previous_month_litres|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">{% translate "Last month" %}</span></article>
       <article class="profile-metric-card metric-highlight"><span class="profile-metric-label">{% translate "Lifetime volume" %}</span><strong>{{ metrics.lifetime_litres|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">{% translate "All approved collections" %}</span></article>
       <article class="profile-metric-card"><span class="profile-metric-label">{% translate "Average per collection" %}</span><strong>{{ metrics.average_litres|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">{% translate "Average quantity" %}</span></article>
-      <article class="profile-metric-card"><span class="profile-metric-label">{% translate "Collection days" %}</span><strong>{{ metrics.active_collection_days }}</strong><span class="profile-metric-foot">{% translate "Days with approved milk" %}</span></article>
       <article class="profile-metric-card"><span class="profile-metric-label">{% translate "Daily average" %}</span><strong>{{ metrics.average_per_collection_day|floatformat:3 }} <small>L</small></strong><span class="profile-metric-foot">{% translate "Per active day" %}</span></article>
     </div>
   </section>
@@ -82,8 +81,12 @@
   <section class="profile-section panel" aria-labelledby="profile-finance-title">
     <div class="profile-section-heading"><div><span class="profile-section-kicker">{% translate "FINANCIAL SUMMARY" %}</span><h2 id="profile-finance-title">{% translate "Financial overview" %}</h2><p>{% translate "Collection value and completed payments are presented separately." %}</p></div></div>
     <div class="profile-finance-grid">
-      <div><span>{% translate "Approved collection value" %}</span><strong>{{ currency }} {{ metrics.lifetime_value|floatformat:2 }}</strong></div>
-      <div><span>{{ payment_direction_label }}</span><strong>{{ currency }} {{ completed_payment_total|floatformat:2 }}</strong></div>
+      <div><span>{% translate "Lifetime income" %}</span><strong>Rs. {{ metrics.lifetime_value|floatformat:2 }}</strong><small>{% translate "All approved collections" %}</small></div>
+      <div><span>{% translate "Income for selected dates" %}</span><strong>Rs. {{ selected_metrics.value|floatformat:2 }}</strong><small>{% translate "Approved collection value" %}</small></div>
+      <div><span>{% translate "Lifetime received income" %}</span><strong>Rs. {{ completed_payment_total|floatformat:2 }}</strong><small>{{ payment_direction_label }}</small></div>
+      <div><span>{% translate "Received in selected dates" %}</span><strong>Rs. {{ period_completed_payment_total|floatformat:2 }}</strong><small>{% translate "Completed payments only" %}</small></div>
+      <div><span>{% translate "Lifetime unpaid income" %}</span><strong>Rs. {{ lifetime_unpaid_income|floatformat:2 }}</strong><small>{% translate "Collection value minus completed payments" %}</small></div>
+      <div><span>{% translate "Unpaid for selected dates" %}</span><strong>Rs. {{ period_unpaid_income|floatformat:2 }}</strong><small>{% translate "Selected collection value minus payments in this period" %}</small></div>
     </div>
   </section>
   {% endif %}
@@ -91,6 +94,11 @@
   <section class="profile-section panel" aria-labelledby="profile-history-title">
     <div class="profile-section-heading"><div><span class="profile-section-kicker">{% translate "ACTIVITY" %}</span><h2 id="profile-history-title">{% translate "Collection history" %}</h2><p>{% translate "Review milk records for a selected date range." %}</p></div></div>
     {% if date_error %}<p class="alert error" role="alert">{{ date_error }}</p>{% endif %}
+    <div class="profile-export-actions">
+      <a class="button button-secondary" href="{% url 'parties:party_collection_export' organization.slug kind party.pk %}?from={{ date_from|local_date|urlencode }}&to={{ date_to|local_date|urlencode }}&format=xlsx">Export Excel</a>
+      <a class="button button-secondary" href="{% url 'parties:party_collection_export' organization.slug kind party.pk %}?from={{ date_from|local_date|urlencode }}&to={{ date_to|local_date|urlencode }}&format=csv">Export CSV</a>
+      <a class="button button-secondary" href="{% url 'parties:party_collection_export' organization.slug kind party.pk %}?from={{ date_from|local_date|urlencode }}&to={{ date_to|local_date|urlencode }}&format=pdf">Export PDF</a>
+    </div>
     <form class="profile-date-filter" method="get">
       <label>{% translate "From" %} ({{ date_calendar }}) {% if date_calendar == "BS" %}<input type="text" inputmode="numeric" data-calendar-date data-calendar="bs" name="from" value="{{ date_from|local_date }}" placeholder="वर्ष-महिना-दिन">{% else %}<input type="date" name="from" value="{{ date_from|date:'Y-m-d' }}">{% endif %}</label>
       <label>{% translate "To" %} ({{ date_calendar }}) {% if date_calendar == "BS" %}<input type="text" inputmode="numeric" data-calendar-date data-calendar="bs" name="to" value="{{ date_to|local_date }}" placeholder="वर्ष-महिना-दिन">{% else %}<input type="date" name="to" value="{{ date_to|date:'Y-m-d' }}">{% endif %}</label>
@@ -98,10 +106,24 @@
     </form>
     <div class="profile-summary-strip"><span>{% translate "Selected period" %}</span><strong>{{ selected_metrics.litres|default:0|floatformat:3 }} L</strong><span>{% translate "Approved collection value" %}</span><strong>{{ currency }} {{ selected_metrics.value|default:0|floatformat:2 }}</strong></div>
     <div class="table-wrap profile-table-wrap"><table>
-      <thead><tr><th>{% translate "Date" %}</th><th>{% translate "Reference" %}</th><th>{% translate "Branch" %}</th><th>{% translate "Quantity" %}</th><th>{% translate "FAT" %}</th><th>{% translate "SNF" %}</th><th>{% translate "Rate" %}</th><th>{% translate "Value" %}</th><th>{% translate "Status" %}</th><th>{% translate "Recorded by" %}</th></tr></thead>
+      <thead><tr><th>{% translate "Date" %}</th><th>{% translate "Reference" %}</th><th>{% translate "Branch" %}</th><th>{% translate "Quantity" %}</th><th>{% translate "FAT" %}</th><th>{% translate "SNF" %}</th><th>{% translate "Lactose" %}</th><th>{% translate "Rate" %}</th><th>{% translate "Value" %}</th><th>{% translate "Status" %}</th><th>{% translate "Recorded by" %}</th></tr></thead>
       <tbody>{% for item in history %}
-        <tr><td>{{ item.collected_at|local_date }}</td><td>{{ item.reference }}</td><td>{{ item.branch.name }}</td><td>{{ item.quantity_litres|floatformat:3 }} L</td><td>{{ item.fat|default:"—" }}</td><td>{{ item.snf|default:"—" }}</td><td>{{ item.milk_rate }}</td><td>{{ currency }} {{ item.total_amount }}</td><td><span class="tag {{ item.status }}">{{ item.get_status_display }}</span></td><td>{{ item.recorded_by.get_full_name|default:item.recorded_by.username }}</td></tr>
-      {% empty %}<tr><td colspan="10" class="profile-empty-cell">{% translate "No collection records match this date range." %}</td></tr>{% endfor %}</tbody>
+        <tr><td>{{ item.collected_at|local_date }}</td><td>{{ item.reference }}</td><td>{{ item.branch.name }}</td><td>{{ item.quantity_litres|floatformat:3 }} L</td><td>{{ item.fat|default:"—" }}</td><td>{{ item.snf|default:"—" }}</td><td>{{ item.lactose|default:"—" }}</td><td>{{ item.milk_rate }}</td><td>{{ currency }} {{ item.total_amount }}</td><td><span class="tag {{ item.status }}">{{ item.get_status_display }}</span></td><td>{{ item.recorded_by.get_full_name|default:item.recorded_by.username }}</td></tr>
+      {% empty %}<tr><td colspan="11" class="profile-empty-cell">{% translate "No collection records match this date range." %}</td></tr>{% endfor %}
+      <tr class="profile-collection-summary">
+        <th colspan="3">TOTAL / AVERAGE</th>
+        <th>{{ collection_summary.litres|floatformat:3 }} L</th>
+        <th>{{ collection_summary.fat|floatformat:3|default:"—" }}</th>
+        <th>{{ collection_summary.snf|floatformat:3|default:"—" }}</th>
+        <th>{{ collection_summary.lactose|floatformat:3|default:"—" }}</th>
+        <th>Rs. {{ collection_summary.rate|floatformat:2 }}</th>
+        <th>Rs. {{ collection_summary.value|floatformat:2 }}</th>
+        <th colspan="2">{{ collection_summary.count }} records</th>
+      </tr>
+      <tr class="profile-collection-summary-secondary">
+        <td colspan="11"></td>
+      </tr>
+      </tbody>
     </table></div>
     {% if history.has_other_pages %}<nav class="pagination" aria-label="{% translate 'Collection pages' %}">
       {% if history.has_previous %}<a href="?from={{ date_from|local_date|urlencode }}&to={{ date_to|local_date|urlencode }}&page={{ history.previous_page_number }}">{% translate "Previous" %}</a>{% endif %}

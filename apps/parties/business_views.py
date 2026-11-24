@@ -1,4 +1,5 @@
 from datetime import timedelta
+import csv
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
@@ -7,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Avg, Count, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
+from django.http import HttpResponse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
@@ -132,6 +134,11 @@ def _party_profile_context(*, party, kind, request):
     completed_sum = completed.filter(direction=payment_direction).aggregate(v=Sum("amount"))[
         "v"
     ] or Decimal("0")
+    period_completed_sum = completed.filter(
+        direction=payment_direction,
+        paid_at__date__gte=start,
+        paid_at__date__lte=end,
+    ).aggregate(v=Sum("amount"))["v"] or Decimal("0")
 
     filtered_approved = (
         filtered_approved.filter(branch_id__in=accessible_branch_ids(request.membership))
@@ -144,6 +151,26 @@ def _party_profile_context(*, party, kind, request):
         average_fat=Avg("fat"),
         average_snf=Avg("snf"),
     )
+    selected_metrics["value"] = selected_metrics["value"] or Decimal("0")
+    summary_qs = collections.filter(collected_at__date__gte=start, collected_at__date__lte=end)
+    summary = summary_qs.aggregate(litres=Sum("quantity_litres"), value=Sum("total_amount"))
+    summary_rows = list(summary_qs.values("quantity_litres", "fat", "snf", "lactose"))
+    total_litres = sum((r["quantity_litres"] or Decimal("0")) for r in summary_rows) or Decimal("0")
+    def weighted(field):
+        if not total_litres:
+            return None
+        return sum((r["quantity_litres"] or Decimal("0")) * (r[field] or Decimal("0")) for r in summary_rows) / total_litres
+    collection_summary = {
+        "litres": total_litres,
+        "fat": weighted("fat"),
+        "snf": weighted("snf"),
+        "lactose": weighted("lactose"),
+        "rate": (summary["value"] or Decimal("0")) / total_litres if total_litres else Decimal("0"),
+        "value": summary["value"] or Decimal("0"),
+        "count": len(summary_rows),
+    }
+    lifetime_unpaid_income = metrics["lifetime_value"] - completed_sum
+    period_unpaid_income = selected_metrics["value"] - period_completed_sum
     history = Paginator(
         collections.filter(collected_at__date__gte=start, collected_at__date__lte=end), 25
     ).get_page(request.GET.get("page"))
@@ -157,6 +184,7 @@ def _party_profile_context(*, party, kind, request):
         "kind": kind,
         "metrics": metrics,
         "selected_metrics": selected_metrics,
+        "collection_summary": collection_summary,
         "date_from": start,
         "date_to": end,
         "date_error": date_error,
@@ -164,6 +192,9 @@ def _party_profile_context(*, party, kind, request):
         "history": history,
         "payments": payment_history,
         "completed_payment_total": completed_sum,
+        "period_completed_payment_total": period_completed_sum,
+        "lifetime_unpaid_income": lifetime_unpaid_income,
+        "period_unpaid_income": period_unpaid_income,
         "payment_direction_label": "Received from customer"
         if kind == "customer"
         else "Paid to farmer",
@@ -446,3 +477,63 @@ def farmer_create(request, organization_slug):
             messages.success(request, f"Farmer {farmer.full_name} created.")
             return redirect("parties:farmers", organization_slug=organization_slug)
     return render(request, "parties/farmer_form.html", {"organization": org, "form": form})
+
+
+@login_required
+@organization_access(*PARTY_VIEW_ROLES, permission="parties.view")
+def party_collection_export(request, organization_slug, kind, party_id):
+    party_model = Customer if kind == "customer" else Farmer
+    party = get_object_or_404(
+        _party_scope(party_model.objects.filter(organization=request.organization, deleted_at__isnull=True), request.membership),
+        pk=party_id,
+    )
+    start, end, date_error = _date_bounds(request)
+    if date_error:
+        return HttpResponse("Invalid date range", status=400)
+    relation = "customer" if kind == "customer" else "farmer"
+    qs = MilkCollection.objects.filter(organization=request.organization, **{relation: party}, collected_at__date__gte=start, collected_at__date__lte=end).select_related("branch","recorded_by").order_by("collected_at")
+    qs = _party_scope(qs, request.membership)
+    rows=list(qs)
+    litres=sum((r.quantity_litres or Decimal("0")) for r in rows) or Decimal("0")
+    value=sum((r.total_amount or Decimal("0")) for r in rows) or Decimal("0")
+    def weighted(field):
+        if not litres: return None
+        return sum((r.quantity_litres or Decimal("0"))*(getattr(r,field) or Decimal("0")) for r in rows)/litres
+    averages={"fat":weighted("fat"),"snf":weighted("snf"),"lactose":weighted("lactose")}
+    rate=value/litres if litres else Decimal("0")
+    fmt=request.GET.get("format","csv").lower()
+    headers=["S.N.","Date","Reference","Branch","Quantity (L)","FAT","SNF","Lactose","Rate per L","Value","Status","Recorded by"]
+    data=[[index, r.collected_at.strftime("%Y-%m-%d %H:%M"),r.reference,r.branch.name,str(r.quantity_litres),str(r.fat),str(r.snf),str(r.lactose),str(r.milk_rate),str(r.total_amount),r.get_status_display(),r.recorded_by.get_full_name() or r.recorded_by.username] for index, r in enumerate(rows, start=1)]
+    summary=["","TOTAL / WEIGHTED AVERAGE","", "",str(litres),str(averages["fat"] or ""),str(averages["snf"] or ""),str(averages["lactose"] or ""),str(rate),str(value),"Records: "+str(len(rows)),""]
+    filename=f"{kind}-{party.code}-collections-{start}-{end}"
+    if fmt=="csv":
+        response=HttpResponse(content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"]=f'attachment; filename="{filename}.csv"'
+        response.write("\ufeff")
+        writer=csv.writer(response); writer.writerow([f"{party.full_name} collection report",f"{start} to {end}"]); writer.writerow(headers); writer.writerows(data); writer.writerow([]); writer.writerow(summary)
+        return response
+    if fmt=="xlsx":
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill
+        wb=Workbook(); ws=wb.active; ws.title="Collection Report"
+        ws.append([party.full_name, f"Collection report {start} to {end}"]); ws.append(headers)
+        for row in data: ws.append(row)
+        ws.append([]); ws.append(summary); ws.freeze_panes="A3"; ws.auto_filter.ref=f"A2:K{len(data)+2}"
+        for cell in ws[2]: cell.font=Font(bold=True,color="FFFFFF"); cell.fill=PatternFill("solid",fgColor="244A6A")
+        for cell in ws[ws.max_row]: cell.font=Font(bold=True); cell.fill=PatternFill("solid",fgColor="E8F2E8")
+        for col in ws.columns:
+            letter=col[0].column_letter; ws.column_dimensions[letter].width=min(max(max(len(str(c.value or "")) for c in col)+2,12),32)
+        response=HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); response["Content-Disposition"]=f'attachment; filename="{filename}.xlsx"'; wb.save(response); return response
+    if fmt=="pdf":
+        from io import BytesIO
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import landscape, A4
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet
+        buf=BytesIO(); doc=SimpleDocTemplate(buf,pagesize=landscape(A4),rightMargin=20,leftMargin=20,topMargin=24,bottomMargin=24)
+        styles=getSampleStyleSheet(); story=[Paragraph(f"{party.full_name} - Collection Report",styles["Title"]),Paragraph(f"Period: {start} to {end}",styles["Normal"]),Spacer(1,10)]
+        table=Table([headers]+data+[summary],colWidths=[34,88,116,68,58,48,48,62,64,64,64,68],repeatRows=1)
+        table.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,0),colors.HexColor("#244A6A")),("TEXTCOLOR",(0,0),(-1,0),colors.white),("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),("GRID",(0,0),(-1,-1),0.35,colors.grey),("BACKGROUND",(0,-1),(-1,-1),colors.HexColor("#E8F2E8")),("FONTSIZE",(0,0),(-1,-1),7),("VALIGN",(0,0),(-1,-1),"MIDDLE"),("ALIGN",(0,0),(0,-1),"CENTER"),("ALIGN",(4,1),(8,-2),"RIGHT"),("LEFTPADDING",(0,0),(-1,-1),4),("RIGHTPADDING",(0,0),(-1,-1),4)]))
+        story.append(table); doc.build(story)
+        response=HttpResponse(buf.getvalue(),content_type="application/pdf"); response["Content-Disposition"]=f'attachment; filename="{filename}.pdf"'; return response
+    return HttpResponse("Unsupported export format",status=400)
