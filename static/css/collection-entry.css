@@ -57,3 +57,16 @@
 #collection-entry-panel .collection-entry-field label{font-size:.9rem;font-weight:650}
 #collection-entry-panel .collection-party-search{margin-bottom:.4rem}
 @media(max-width:700px){#collection-entry-panel .collection-entry-grid{grid-template-columns:1fr!important}#collection-entry-panel .collection-entry-field[data-collection-field="notes"]{grid-column:auto}#collection-entry-panel .collection-entry-actions{position:static;display:grid;grid-template-columns:1fr}#collection-entry-panel .collection-entry-actions button{width:100%}}
+
+/* Compact milk-entry panel */
+#collection-entry-panel{padding:.55rem!important;margin-bottom:.65rem!important;border-radius:.8rem!important}
+#collection-entry-panel .collection-entry-core{padding:.65rem!important;border-radius:.65rem!important}
+#collection-entry-panel .collection-entry-core h3{font-size:1.05rem!important;margin-bottom:.55rem!important}
+#collection-entry-panel .collection-entry-grid{gap:.5rem .65rem!important}
+#collection-entry-panel .collection-entry-field{gap:.15rem!important}
+#collection-entry-panel .collection-entry-field label{font-size:.78rem!important;margin-bottom:0!important}
+#collection-entry-panel .collection-entry-field input,#collection-entry-panel .collection-entry-field select{min-height:38px!important;padding:.45rem .6rem!important;font-size:.84rem!important}
+#collection-entry-panel .collection-entry-field textarea{min-height:58px!important;padding:.45rem .6rem!important;font-size:.84rem!important}
+#collection-entry-panel .collection-party-search{min-height:36px!important;padding:.45rem .6rem!important;font-size:.82rem!important;margin-bottom:.25rem!important}
+#collection-entry-panel .collection-entry-actions{margin-top:.5rem!important;padding:.45rem!important;bottom:.4rem!important}
+#collection-entry-panel .collection-entry-actions button{min-height:38px!important;padding-inline:1rem!important}
