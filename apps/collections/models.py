@@ -10,10 +10,14 @@ from apps.pricing.models import PricingConfiguration
 
 
 class MilkCollection(UUIDModel, TimeStampedModel):
+    class Shift(models.TextChoices):
+        MORNING = "morning", "Morning"
+        EVENING = "evening", "Evening"
+
     class Status(models.TextChoices):
         DRAFT = "draft", "Draft"
         SUBMITTED = "submitted", "Submitted"
-        APPROVED = "approved", "Approved"
+        APPROVED = "approved", "Completed"
         REJECTED = "rejected", "Rejected"
         REVERSED = "reversed", "Reversed"
 
@@ -32,6 +36,9 @@ class MilkCollection(UUIDModel, TimeStampedModel):
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="recorded_milk_collections"
     )
     collected_at = models.DateTimeField(db_index=True)
+    shift = models.CharField(
+        max_length=8, choices=Shift.choices, default=Shift.MORNING, db_index=True
+    )
     quantity_litres = models.DecimalField(max_digits=12, decimal_places=3)
     snf = models.DecimalField(max_digits=7, decimal_places=3)
     fat = models.DecimalField(max_digits=7, decimal_places=3)
@@ -57,7 +64,7 @@ class MilkCollection(UUIDModel, TimeStampedModel):
     pricing_snapshot = models.JSONField(default=dict)
     idempotency_key = models.CharField(max_length=64, blank=True)
     status = models.CharField(
-        max_length=16, choices=Status.choices, default=Status.SUBMITTED, db_index=True
+        max_length=16, choices=Status.choices, default=Status.APPROVED, db_index=True
     )
     notes = models.TextField(blank=True)
 

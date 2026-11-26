@@ -1,4 +1,4 @@
-/* DairyNexus responsive system — global rules for every authenticated and public screen.
+﻿/* Dairy Nepal responsive system â€” global rules for every authenticated and public screen.
    Keep content readable at 320px and prevent page-level horizontal scrolling. */
 :root{
   --mobile-gutter:clamp(.75rem,3vw,1.5rem);
@@ -139,3 +139,4 @@ body.nav-open{overflow:hidden}
   .site-header .brand{overflow:hidden}
   .top-actions .language-form{display:block}
 }
+

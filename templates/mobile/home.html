@@ -1,0 +1,29 @@
+﻿{% extends "base.html" %}
+{% load static %}
+{% block title %}Dairy Nepal Mobile | Dairy operations{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/mobile-app.css' %}"><link rel="manifest" href="{% url 'mobile_manifest' %}"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="mobile-web-app-capable" content="yes">{% endblock %}
+{% block content %}
+<div class="dnx-mobile-app">
+<header class="dnx-mobile-hero"><div><span class="dnx-mobile-kicker">DAIRY NEPAL MOBILE</span><h1>Your dairy, in your pocket.</h1><p>One secure app for the same live Dairy Nepal records.</p></div><button type="button" class="dnx-install-button" id="dnx-install" hidden>Install app</button></header>
+<div class="dnx-connectivity" id="dnx-connectivity" role="status"><span class="dnx-online-dot"></span><span id="dnx-network-label">Checking connectionâ€¦</span><span class="dnx-sync-note">Your business data stays on the secure server.</span></div>
+{% if mobile_workspaces %}
+{% for workspace in mobile_workspaces %}
+<section class="dnx-workspace-card"><div class="dnx-workspace-heading"><div><span class="dnx-mobile-kicker">{{ workspace.organization.name }}</span><h2>{{ workspace.membership.get_role_display }}</h2></div><a class="dnx-open-workspace" href="{% url 'business:dashboard' workspace.organization.slug %}">Open dashboard <span aria-hidden="true">â†’</span></a></div>
+<div class="dnx-mobile-grid">
+{% if workspace.dashboard %}<a class="dnx-mobile-tile dnx-tile-primary" href="{% url 'business:dashboard' workspace.organization.slug %}"><span class="dnx-tile-icon">âŒ‚</span><strong>Dashboard</strong><small>Overview and activity</small></a>{% endif %}
+{% if workspace.collections %}<a class="dnx-mobile-tile" href="{% url 'collections:list' workspace.organization.slug %}"><span class="dnx-tile-icon">â—‰</span><strong>Milk collection</strong><small>Record and manage</small></a>{% endif %}
+{% if workspace.collection_create %}<a class="dnx-mobile-tile" href="{% url 'collections:create' workspace.organization.slug %}"><span class="dnx-tile-icon">ï¼‹</span><strong>New collection</strong><small>Enter milk measurements</small></a>{% endif %}
+{% if workspace.parties %}<a class="dnx-mobile-tile" href="{% url 'parties:farmers' workspace.organization.slug %}"><span class="dnx-tile-icon">â™™</span><strong>Farmers</strong><small>Profiles and collection history</small></a><a class="dnx-mobile-tile" href="{% url 'parties:customers' workspace.organization.slug %}"><span class="dnx-tile-icon">â™§</span><strong>Customers</strong><small>Customer records</small></a>{% endif %}
+{% if workspace.finance %}<a class="dnx-mobile-tile" href="{% url 'finance:list' workspace.organization.slug %}"><span class="dnx-tile-icon">Â¤</span><strong>Payments</strong><small>Payments and status</small></a><a class="dnx-mobile-tile" href="{% url 'finance:expenses' workspace.organization.slug %}"><span class="dnx-tile-icon">â†—</span><strong>Expenses</strong><small>Costs and approvals</small></a>{% endif %}
+{% if workspace.inventory %}<a class="dnx-mobile-tile" href="{% url 'inventory:items' workspace.organization.slug %}"><span class="dnx-tile-icon">â–£</span><strong>Inventory</strong><small>Items and stock</small></a>{% endif %}
+{% if workspace.exports %}<a class="dnx-mobile-tile" href="{% url 'data_exports:centre' workspace.organization.slug %}"><span class="dnx-tile-icon">â‡©</span><strong>Export centre</strong><small>Download business data</small></a>{% endif %}
+{% if workspace.reports %}<a class="dnx-mobile-tile" href="{% url 'data_exports:reports' workspace.organization.slug %}"><span class="dnx-tile-icon">â–¥</span><strong>Reports</strong><small>Performance and analytics</small></a>{% endif %}
+{% if workspace.configuration %}<a class="dnx-mobile-tile" href="{% url 'pricing:settings' workspace.organization.slug %}"><span class="dnx-tile-icon">â‚¹</span><strong>Milk rates</strong><small>Effective pricing schedules</small></a><a class="dnx-mobile-tile" href="{% url 'pricing:quality' workspace.organization.slug %}"><span class="dnx-tile-icon">â—‡</span><strong>Quality settings</strong><small>Quality profiles</small></a><a class="dnx-mobile-tile" href="{% url 'business:branches' workspace.organization.slug %}"><span class="dnx-tile-icon">âŒ–</span><strong>Branches</strong><small>Branch management</small></a><a class="dnx-mobile-tile" href="{% url 'business:staff' workspace.organization.slug %}"><span class="dnx-tile-icon">â™Ÿ</span><strong>Staff & access</strong><small>Team permissions</small></a>{% endif %}
+</div></section>
+{% endfor %}
+{% else %}<section class="dnx-empty-card"><h2>No active dairy workspace</h2><p>Your account does not currently have an active organisation membership.</p><a class="button" href="{% url 'business:workspace' %}">View workspaces</a></section>{% endif %}
+<section class="dnx-mobile-footer"><a href="{% url 'accounts:password_change' %}">Account security</a><a href="{% url 'business:workspace' %}">All workspaces</a><span>Dairy Nepal Â· Same secure data, smaller screen.</span></section>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/mobile-app.js' %}" defer></script>{% endblock %}
+

@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from apps.collections.models import MilkCollection
-from apps.collections.services import approve_collection, create_collection, reverse_collection
+from apps.collections.services import create_collection, reverse_collection
 from apps.finance.ledger_services import create_accounting_period
 from apps.finance.models import Account, JournalEntry, LedgerConfiguration
 from apps.organizations.models import Branch, Membership, Organization
@@ -94,7 +94,7 @@ class CollectionReversalTests(TestCase):
             created_by=self.user,
         )
 
-    def _approved_collection(self, *, party):
+    def _completed_collection(self, *, party):
         values = {"farmer": party} if isinstance(party, Farmer) else {"customer": party}
         entry = create_collection(
             organization=self.organization,
@@ -107,11 +107,7 @@ class CollectionReversalTests(TestCase):
             lactose="4.5",
             **values,
         )
-        return approve_collection(
-            collection_id=entry.pk,
-            organization=self.organization,
-            actor=self.user,
-        )
+        return entry
 
     def _assert_journal_reversed(self, *, source_type, collection):
         original = JournalEntry.objects.get(
@@ -131,14 +127,14 @@ class CollectionReversalTests(TestCase):
             sum((line.debit for line in reversal.lines.all()), Decimal("0.00")),
         )
 
-    def test_reversing_approved_farmer_collection_posts_journal_reversal(self):
+    def test_reversing_completed_farmer_collection_posts_journal_reversal(self):
         farmer = Farmer.objects.create(
             organization=self.organization,
             branch=self.branch,
             code="F-REV",
             full_name="Farmer to Reverse",
         )
-        collection = self._approved_collection(party=farmer)
+        collection = self._completed_collection(party=farmer)
 
         reversed_entry = reverse_collection(
             collection_id=collection.pk,
@@ -160,14 +156,14 @@ class CollectionReversalTests(TestCase):
         )
         self.assertEqual(JournalEntry.objects.count(), 2)
 
-    def test_reversing_approved_customer_collection_reverses_sales_journal(self):
+    def test_reversing_completed_customer_collection_reverses_sales_journal(self):
         customer = Customer.objects.create(
             organization=self.organization,
             branch=self.branch,
             code="C-REV",
             full_name="Customer to Reverse",
         )
-        collection = self._approved_collection(party=customer)
+        collection = self._completed_collection(party=customer)
 
         reversed_entry = reverse_collection(
             collection_id=collection.pk,
@@ -187,7 +183,7 @@ class CollectionReversalTests(TestCase):
             code="F-CLOSED",
             full_name="Closed Period Farmer",
         )
-        collection = self._approved_collection(party=farmer)
+        collection = self._completed_collection(party=farmer)
         self.period.status = self.period.Status.CLOSED
         self.period.save(update_fields=["status", "updated_at"])
 

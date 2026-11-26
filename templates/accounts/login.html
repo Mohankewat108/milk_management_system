@@ -1,36 +1,37 @@
-{% extends "base.html" %}
-{% block title %}Sign in | DairyNexus{% endblock %}
+﻿{% extends "base.html" %}
+{% load static %}
+{% block title %}Sign in | Dairy Nepal{% endblock %}
 {% block content %}
 <section class="login-experience" aria-labelledby="login-title">
   <div class="login-intro">
-    <a class="login-brand" href="{% url 'home' %}" aria-label="DairyNexus home">
-      <span class="login-brand-mark" aria-hidden="true">D</span>
-      <span><strong>DairyNexus</strong><small>DAIRY MANAGEMENT PLATFORM</small></span>
+    <a class="login-brand" href="{% url 'home' %}" aria-label="Dairy Nepal home">
+      <img class="brand-logo login-brand-logo" src="{% static 'pwa/dairy-nepal-logo.svg' %}" alt="Dairy Nepal logo">
+      <span><strong>Dairy Nepal</strong><small>NEPAL DAIRY MANAGEMENT</small></span>
     </a>
     <div class="login-welcome">
       <span class="eyebrow">WELCOME BACK</span>
       <h1 id="login-title">One secure sign-in.<br>Every part of your dairy.</h1>
-      <p>Sign in with the account provided to you. DairyNexus will securely identify your access and open the right workspace.</p>
+      <p>Sign in with the account provided to you. Dairy Nepal will securely identify your access and open the right workspace.</p>
     </div>
-    <div class="login-audience" aria-label="DairyNexus account types">
+    <div class="login-audience" aria-label="Dairy Nepal account types">
       <article class="login-audience-item">
-        <span class="login-audience-icon" aria-hidden="true">⌂</span>
+        <span class="login-audience-icon" aria-hidden="true">âŒ‚</span>
         <div><h2>Dairy owners & managers</h2><p>Manage your dairy, branches, team, collections and finances.</p></div>
       </article>
       <article class="login-audience-item">
-        <span class="login-audience-icon" aria-hidden="true">◎</span>
+        <span class="login-audience-icon" aria-hidden="true">â—Ž</span>
         <div><h2>Staff members</h2><p>Access the tools and branches assigned by your dairy manager.</p></div>
       </article>
       <article class="login-audience-item">
-        <span class="login-audience-icon" aria-hidden="true">♧</span>
+        <span class="login-audience-icon" aria-hidden="true">â™§</span>
         <div><h2>Farmers & customers</h2><p>View your own milk collection, payment and account information.</p></div>
       </article>
       <article class="login-audience-item">
-        <span class="login-audience-icon" aria-hidden="true">◇</span>
+        <span class="login-audience-icon" aria-hidden="true">â—‡</span>
         <div><h2>Platform administrators</h2><p>Use your authorised platform account to manage the SaaS platform.</p></div>
       </article>
     </div>
-    <p class="login-trust-note"><span aria-hidden="true">✓</span> Your access is controlled by your account permissions.</p>
+    <p class="login-trust-note"><span aria-hidden="true">âœ“</span> Your access is controlled by your account permissions.</p>
   </div>
 
   <div class="login-form-panel">
@@ -57,12 +58,13 @@
         {{ form.password }}
         {{ form.password.errors }}
       </div>
-      <button class="button full login-submit" type="submit">Sign in securely <span aria-hidden="true">→</span></button>
+      <button class="button full login-submit" type="submit">Sign in securely <span aria-hidden="true">â†’</span></button>
     </form>
     <div class="login-form-footer">
-      <p>New to DairyNexus? <a href="{% url 'accounts:register' %}">Create an account</a></p>
-      <p class="login-security-copy"><span aria-hidden="true">▣</span> Never share your password. DairyNexus will never ask you to disclose it by email.</p>
+      <p>New to Dairy Nepal? <a href="{% url 'accounts:register' %}">Create an account</a></p>
+      <p class="login-security-copy"><span aria-hidden="true">â–£</span> Never share your password. Dairy Nepal will never ask you to disclose it by email.</p>
     </div>
   </div>
 </section>
 {% endblock %}
+

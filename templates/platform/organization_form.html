@@ -1,19 +1,51 @@
 {% extends "base.html" %}
-{% block title %}Create dairy farm | Platform | DairyNexus{% endblock %}
+{% block title %}Create dairy farm | Platform | Dairy Nepal{% endblock %}
 {% block content %}
 <section class="content-card">
-  <div class="eyebrow">PLATFORM OWNER · TENANT ONBOARDING</div>
+  <div class="eyebrow">PLATFORM OWNER Â· TENANT ONBOARDING</div>
   <h1>Create a dairy farm</h1>
   <p class="muted">Create an independent dairy workspace. We will email its owner a secure invitation to activate their account and set their own password.</p>
   <form method="post" novalidate>
     {% csrf_token %}
     {{ form.non_field_errors }}
-    <h2>Farm owner invitation</h2>
+    <h2>Subscription</h2>
+    {% if active_subscription_plans %}
     <div class="form-grid">
+      <div class="form-field">
+        <label for="{{ form.subscription_plan.id_for_label }}">{{ form.subscription_plan.label }}<span class="required"> *</span></label>
+        {{ form.subscription_plan }}
+        {% if form.subscription_plan.help_text %}<small class="field-help">{{ form.subscription_plan.help_text }}</small>{% endif %}
+        {% for error in form.subscription_plan.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <h3>No active subscription plans</h3>
+      <p>Create and activate at least one subscription plan in the platform admin before registering a dairy farm.</p>
+    </div>
+    {% endif %}
+    <h2>Farm owner account setup</h2>
+    <div class="form-grid">
+      <div class="form-field">
+        <label for="{{ form.invitation_method.id_for_label }}">{{ form.invitation_method.label }}</label>
+        {{ form.invitation_method }}
+        {% for error in form.invitation_method.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+      </div>
       {% for field in form %}
-      {% if field.name == "owner_first_name" or field.name == "owner_last_name" or field.name == "owner_email" %}
+      {% if field.name == "owner_first_name" or field.name == "owner_last_name" %}
       <div class="form-field">
         <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span class="required"> *</span>{% endif %}</label>
+        {{ field }}
+        {% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+    <div class="form-grid" id="owner-email-fields">
+      {% for field in form %}
+      {% if field.name == "owner_email" %}
+      <div class="form-field">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
         {{ field }}
         {% if field.help_text %}<small class="field-help">{{ field.help_text }}</small>{% endif %}
         {% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
@@ -21,10 +53,23 @@
       {% endif %}
       {% endfor %}
     </div>
+    <div class="form-grid" id="owner-manual-fields" hidden>
+      {% for field in form %}
+      {% if field.name == "manual_username" or field.name == "manual_password" %}
+      <div class="form-field">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}<small class="field-help">{{ field.help_text }}</small>{% endif %}
+        {% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+      </div>
+      {% endif %}
+      {% endfor %}
+      <p class="field-help">No email is required. Give the farmer their username and temporary password directly. Ask them to change the password after first login.</p>
+    </div>
     <h2>Farm details</h2>
     <div class="form-grid">
       {% for field in form %}
-      {% if field.name != "owner_first_name" and field.name != "owner_last_name" and field.name != "owner_email" %}
+      {% if field.name != "owner_first_name" and field.name != "owner_last_name" and field.name != "owner_email" and field.name != "subscription_plan" %}
       <div class="form-field">
         <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span class="required"> *</span>{% endif %}</label>
         {{ field }}
@@ -36,8 +81,22 @@
     </div>
     <div class="form-actions">
       <a class="button button-secondary" href="{% url 'platform:dashboard' %}">Cancel</a>
-      <button class="button" type="submit">Create farm and send invitation</button>
+      <button class="button" type="submit" {% if not active_subscription_plans %}disabled{% endif %}>Create farm and owner account</button>
     </div>
   </form>
+<script>(function () {
+  const method = document.getElementById('id_invitation_method');
+  const emailFields = document.getElementById('owner-email-fields');
+  const manualFields = document.getElementById('owner-manual-fields');
+  function updateAccountFields() {
+    const manual = method && method.value === 'manual';
+    if (emailFields) emailFields.hidden = manual;
+    if (manualFields) manualFields.hidden = !manual;
+  }
+  if (method) { method.addEventListener('change', updateAccountFields); updateAccountFields(); }
+})();
+</script>
+
 </section>
 {% endblock %}
+

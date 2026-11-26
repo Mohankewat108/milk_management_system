@@ -129,3 +129,38 @@ class FarmerPortalTests(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(reverse("farmer_portal:home"))
         self.assertEqual(response.status_code, 403)
+
+    def test_filtered_collection_totals_are_scoped_to_filters(self):
+        self.create_collection(self.farmer, "MORNING-A", MilkCollection.Status.APPROVED)
+        evening = self.create_collection(self.farmer, "EVENING-B", MilkCollection.Status.APPROVED)
+        evening.shift = MilkCollection.Shift.EVENING
+        evening.quantity_litres = Decimal("5.000")
+        evening.total_amount = Decimal("362.50")
+        evening.save(update_fields=["shift", "quantity_litres", "total_amount", "updated_at"])
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("farmer_portal:home"), {"shift": "morning"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["collection_count"], 1)
+        self.assertEqual(response.context["total_litres"], Decimal("3.000"))
+        # Lifetime production must not be reduced by the history filter.
+        self.assertEqual(response.context["lifetime_summary"]["litres"], Decimal("8.000"))
+
+    def test_csv_export_respects_filters_and_contains_column_headings(self):
+        self.create_collection(self.farmer, "CSV-APPROVED", MilkCollection.Status.APPROVED)
+        self.client.force_login(self.user)
+        response = self.client.get(
+            reverse("farmer_portal:home"), {"export": "1", "export_format": "csv"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/csv", response["Content-Type"])
+        self.assertIn("CSV-APPROVED", response.content.decode("utf-8-sig"))
+
+    def test_pdf_export_returns_pdf_content(self):
+        self.create_collection(self.farmer, "PDF-APPROVED", MilkCollection.Status.APPROVED)
+        self.client.force_login(self.user)
+        response = self.client.get(
+            reverse("farmer_portal:home"), {"export": "1", "export_format": "pdf"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertTrue(response.content.startswith(b"%PDF"))

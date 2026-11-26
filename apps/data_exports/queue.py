@@ -154,11 +154,11 @@ def _notify_export_ready(job):
     if not job.requested_by.email or job.notification_sent_at:
         return
     state = "ready" if job.status == ExportJob.Status.COMPLETED else "failed"
-    subject = f"DairyNexus export {state}: {job.get_module_display()}"
+    subject = f"Dairy Nepal export {state}: {job.get_module_display()}"
     message = (
         f"Your {job.get_module_display()} export is {state}. "
         f"Records: {job.record_count}. "
-        f"Sign in to your DairyNexus workspace to view the export centre. "
+        f"Sign in to your Dairy Nepal workspace to view the export centre. "
         f"Files expire after seven days."
     )
     try:

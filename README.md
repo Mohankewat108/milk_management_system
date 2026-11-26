@@ -1,6 +1,6 @@
-# DairyNexus — multi-tenant dairy management SaaS
+﻿# Dairy Nepal â€” multi-tenant dairy management SaaS
 
-DairyNexus is the Python/Django replacement being developed for the original PHP Milk Management System.
+Dairy Nepal is the Python/Django replacement being developed for the original PHP Milk Management System.
 
 > Migration status: active foundation branch, not yet a production-ready commercial release. The original PHP files remain on main and have not been overwritten.
 
@@ -97,12 +97,12 @@ Advanced supplier purchasing/payables, double-entry accounting, invoice/statemen
 The original PHP implementation remains on main. The original README described the PHP project as educational; confirm licensing before distributing the replacement commercially.
 ## Front-end design system
 
-DairyNexus uses a mobile-first, light-theme design system in `static/css/app.css`. The shared layout is `templates/base.html`; new pages should extend it and use the existing component classes rather than adding page-global rules.
+Dairy Nepal uses a mobile-first, light-theme design system in `static/css/app.css`. The shared layout is `templates/base.html`; new pages should extend it and use the existing component classes rather than adding page-global rules.
 
 ### Tokens
-- **Primary:** `--color-primary` and `--color-primary-strong` — trustworthy dairy blue for primary actions and navigation.
-- **Surfaces:** `--color-page`, `--color-surface`, and `--color-border` — soft blue-gray page canvas, white cards and subtle dividers.
-- **Accent:** `--color-accent` — teal accent for supporting emphasis.
+- **Primary:** `--color-primary` and `--color-primary-strong` â€” trustworthy dairy blue for primary actions and navigation.
+- **Surfaces:** `--color-page`, `--color-surface`, and `--color-border` â€” soft blue-gray page canvas, white cards and subtle dividers.
+- **Accent:** `--color-accent` â€” teal accent for supporting emphasis.
 - **Feedback:** `--color-success`, `--color-warning`, `--color-danger`, and `--color-info` with matching background tokens.
 - **Typography, spacing, radii and shadows:** use the `--font-size-*`, `--space-*`, `--radius-*` and `--shadow-*` tokens.
 
@@ -115,7 +115,7 @@ The shared shell includes a skip link and visible keyboard focus. Respect reduce
 Avoid styling `body`, `main`, bare `table` or bare headings in legacy feature stylesheets. Scope any remaining legacy page styles under a page-specific class. Keep Django template tags and server field contracts unchanged.
 ## Farm-owner email invitations
 
-The platform owner can create a dairy tenant by entering the farm owner's name and email address. DairyNexus creates the tenant, initial branch, inactive account (when the email is new), pending OWNER membership and a single-use invitation token in one database transaction. The invitation link expires after 48 hours and only its SHA-256 hash is stored.
+The platform owner can create a dairy tenant by entering the farm owner's name and email address. Dairy Nepal creates the tenant, initial branch, inactive account (when the email is new), pending OWNER membership and a single-use invitation token in one database transaction. The invitation link expires after 48 hours and only its SHA-256 hash is stored.
 
 A new recipient opens the link and sets their password. An existing account holder must sign in with the invited account before accepting. Acceptance activates the membership and adds the farm to the user's workspace list. Replayed, expired or revoked tokens are rejected.
 
@@ -171,3 +171,4 @@ Branch: `feature/full-crud-soft-delete`
 
 ### Verification
 This branch includes central soft-delete unit tests and migration files. Run `python manage.py makemigrations --check --dry-run`, `python manage.py migrate`, `python manage.py check`, and `python manage.py test` in the configured environment before production deployment. This development branch has not been approved or merged into `main`.
+

@@ -23,8 +23,11 @@ from apps.audit.services import record_event
 from apps.core.site_urls import build_site_absolute_uri
 from apps.organizations.models import Membership, Organization
 from apps.platform_admin.forms import PlatformOrganizationCreateForm
-from apps.platform_admin.models import FarmOwnerInvitation, Subscription
-from apps.platform_admin.services import create_platform_organization_invitation
+from apps.platform_admin.models import FarmOwnerInvitation, Subscription, SubscriptionPlan
+from apps.platform_admin.services import (
+    create_platform_organization_invitation,
+    create_platform_organization_manual_owner,
+)
 
 User = get_user_model()
 
@@ -53,7 +56,35 @@ def dashboard(request):
         )
         .order_by("-created_at")
     )
+    today = timezone.localdate()
+    upcoming_expiry = (
+        Subscription.objects.filter(
+            status__in=[Subscription.Status.ACTIVE, Subscription.Status.TRIAL],
+            ends_at__gte=today,
+            ends_at__lte=today + timedelta(days=30),
+        )
+        .select_related("plan", "organization")
+        .order_by("ends_at")
+    )
+    active_subscription_values = Subscription.objects.filter(
+        status=Subscription.Status.ACTIVE
+    ).select_related("plan")
+    estimated_mrr = sum((sub.plan.monthly_price for sub in active_subscription_values), start=0)
+    from apps.audit.models import AuditEvent
+
     context = {
+        "estimated_mrr": estimated_mrr,
+        "expiring_subscriptions": upcoming_expiry[:8],
+        "expiring_subscription_count": upcoming_expiry.count(),
+        "past_due_subscription_count": Subscription.objects.filter(
+            status=Subscription.Status.PAST_DUE
+        ).count(),
+        "recent_organizations": Organization.objects.select_related("owner").order_by(
+            "-created_at"
+        )[:5],
+        "recent_activity": AuditEvent.objects.select_related("actor", "organization").order_by(
+            "-created_at"
+        )[:8],
         "organization_count": Organization.objects.count(),
         "active_organizations": Organization.objects.filter(
             status=Organization.Status.ACTIVE
@@ -81,16 +112,49 @@ def organization_create(request):
     form = PlatformOrganizationCreateForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         data = form.cleaned_data.copy()
-        owner_email = data.pop("owner_email")
+        invitation_method = data.pop("invitation_method", "email")
+        owner_email = data.pop("owner_email", "")
+        manual_username = data.pop("manual_username", "")
+        manual_password = data.pop("manual_password", "")
         owner_first_name = data.pop("owner_first_name")
         owner_last_name = data.pop("owner_last_name")
         name = data.pop("name")
+        subscription_plan = data.pop("subscription_plan")
+        if invitation_method == "manual":
+            organization, membership, owner_user = create_platform_organization_manual_owner(
+                invited_by=request.user,
+                owner_first_name=owner_first_name,
+                owner_last_name=owner_last_name,
+                username=manual_username,
+                temporary_password=manual_password,
+                name=name,
+                subscription_plan=subscription_plan,
+                phone_number=data.get("phone", ""),
+                **data,
+            )
+            record_event(
+                actor=request.user,
+                organization=organization,
+                action="platform.organization.created_manual_owner",
+                target=membership,
+                changes={"owner_username": manual_username, "account_method": "manual"},
+                request=request,
+            )
+            messages.success(
+                request,
+                f"Farm {organization.name} created. Owner login: {manual_username}. "
+                f"Temporary password: {manual_password}. "
+                "Give these credentials directly to the owner.",
+            )
+            return redirect("platform:dashboard")
+
         organization, membership, invitation, raw_token = create_platform_organization_invitation(
             invited_by=request.user,
             owner_email=owner_email,
             owner_first_name=owner_first_name,
             owner_last_name=owner_last_name,
             name=name,
+            subscription_plan=subscription_plan,
             **data,
         )
         invite_path = reverse(
@@ -104,7 +168,7 @@ def organization_create(request):
             "invitation_url": invitation_url,
             "expires_at": invitation.expires_at,
         }
-        subject = f"You are invited to manage {organization.name} on DairyNexus"
+        subject = f"You are invited to manage {organization.name} on Dairy Nepal"
         text_body = render_to_string("emails/farm_owner_invitation.txt", context)
         html_body = render_to_string("emails/farm_owner_invitation.html", context)
         try:
@@ -146,7 +210,16 @@ def organization_create(request):
             f"{organization.name} was created. An invitation was sent to {owner_email}.",
         )
         return redirect("platform:dashboard")
-    return render(request, "platform/organization_form.html", {"form": form})
+    return render(
+        request,
+        "platform/organization_form.html",
+        {
+            "form": form,
+            "active_subscription_plans": SubscriptionPlan.objects.filter(is_active=True).order_by(
+                "monthly_price"
+            ),
+        },
+    )
 
 
 def _valid_invitation(invitation, raw_token):
@@ -282,6 +355,65 @@ def organization_set_status(request, organization_id):
 @login_required
 @user_passes_test(is_platform_owner)
 @require_POST
+def organization_delete(request, organization_id):
+    organization = get_object_or_404(Organization, pk=organization_id)
+    confirmation = request.POST.get("confirm_name", "").strip()
+    if confirmation != organization.name:
+        messages.error(request, "Farm deletion cancelled: the confirmation name did not match.")
+        return redirect("platform:dashboard")
+
+    from django.db.models.deletion import ProtectedError
+
+    from apps.audit.models import AuditEvent
+    from apps.collections.models import MilkCollection
+    from apps.finance.models import Expense, Payment
+
+    # Never hard-delete farms with business/financial history.
+    protected_counts = {
+        "milk collections": MilkCollection.objects.filter(organization=organization).count(),
+        "payments": Payment.objects.filter(organization=organization).count(),
+        "expenses": Expense.objects.filter(organization=organization).count(),
+    }
+    nonzero = {label: count for label, count in protected_counts.items() if count}
+    if nonzero:
+        details = ", ".join(f"{count} {label}" for label, count in nonzero.items())
+        messages.error(
+            request,
+            f"{organization.name} cannot be deleted because it has records ({details}). "
+            "Close or suspend it instead.",
+        )
+        return redirect("platform:dashboard")
+
+    org_name = organization.name
+    org_id = str(organization.pk)
+    try:
+        with transaction.atomic():
+            Subscription.objects.filter(organization=organization).delete()
+            FarmOwnerInvitation.objects.filter(organization=organization).delete()
+            AuditEvent.objects.filter(organization=organization).delete()
+            organization.delete()
+            record_event(
+                actor=request.user,
+                organization=None,
+                action="platform.organization.deleted",
+                target=None,
+                changes={"organization_id": org_id, "organization_name": org_name},
+                request=request,
+            )
+    except ProtectedError:
+        messages.error(
+            request,
+            f"{org_name} contains protected data and could not be deleted. No data was removed.",
+        )
+        return redirect("platform:dashboard")
+
+    messages.success(request, f"{org_name} was deleted. Its owner account was not deleted.")
+    return redirect("platform:dashboard")
+
+
+@login_required
+@user_passes_test(is_platform_owner)
+@require_POST
 def organization_resend_invitation(request, organization_id):
     organization = get_object_or_404(
         Organization.objects.select_related("owner"), pk=organization_id
@@ -322,7 +454,7 @@ def organization_resend_invitation(request, organization_id):
     }
     try:
         send_mail(
-            f"Your DairyNexus invitation for {organization.name}",
+            f"Your Dairy Nepal invitation for {organization.name}",
             render_to_string("emails/farm_owner_invitation.txt", context),
             settings.DEFAULT_FROM_EMAIL,
             [email],
@@ -348,5 +480,33 @@ def organization_resend_invitation(request, organization_id):
     )
     messages.success(
         request, f"A fresh invitation was sent to {email}. The previous link is no longer valid."
+    )
+    return redirect("platform:dashboard")
+
+
+@login_required
+@user_passes_test(is_platform_owner)
+@require_POST
+def organization_reset_owner_password(request, organization_id):
+    organization = get_object_or_404(
+        Organization.objects.select_related("owner"), pk=organization_id
+    )
+    owner = organization.owner
+    temporary_password = secrets.token_urlsafe(12)
+    owner.set_password(temporary_password)
+    owner.force_password_change = True
+    owner.save(update_fields=["password", "force_password_change"])
+    record_event(
+        actor=request.user,
+        organization=organization,
+        action="platform.organization.owner_password_reset",
+        target=owner,
+        changes={"force_password_change": True, "reset_by_platform_owner": True},
+        request=request,
+    )
+    messages.warning(
+        request,
+        f"Temporary password for {owner.username}: {temporary_password}. "
+        "Provide it directly to the owner. They must change it at next login.",
     )
     return redirect("platform:dashboard")

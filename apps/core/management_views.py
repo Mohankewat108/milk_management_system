@@ -53,13 +53,17 @@ def trash_list(request, organization_slug):
             label=Value(label, output_field=CharField()),
             object_id=F("pk"),
             display=Coalesce(
-                *[F(field_name) for field_name in display_fields],
-                Cast("pk", CharField()),
+                *([F(field_name) for field_name in display_fields] or [Cast("pk", CharField())]),
+                Value("-"),
                 output_field=CharField(),
             ),
-            code_reference=Coalesce(*code_fields, Value("—"), output_field=CharField()),
+            code_reference=Coalesce(
+                *(code_fields or [Cast("pk", CharField())]),
+                Value("-"),
+                output_field=CharField(),
+            ),
             deleted_by_name=Coalesce(
-                F("deleted_by__username"), Value("—"), output_field=CharField()
+                F("deleted_by__username"), Value("â€”"), output_field=CharField()
             ),
         ).values(
             "key",
@@ -69,7 +73,7 @@ def trash_list(request, organization_slug):
             "code_reference",
             "deleted_at",
             "deleted_by_name",
-        )
+        ).order_by()
         querysets.append(queryset)
 
     if querysets:
@@ -165,3 +169,4 @@ def trash_restore(request, organization_slug, model_key, object_id):
     else:
         messages.success(request, f"{display_record(record)} restored successfully.")
     return redirect("business:trash", organization_slug=organization_slug)
+

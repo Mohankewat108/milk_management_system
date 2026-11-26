@@ -386,6 +386,11 @@ def reports_dashboard(request, organization_slug):
     )
 
     status_filter = request.GET.get("status", "").strip()
+    shift_filter = request.GET.get("shift", "").strip()
+    if shift_filter not in {"", "morning", "evening"}:
+        shift_filter = ""
+    if shift_filter:
+        collections = collections.filter(shift=shift_filter)
     valid_statuses = {choice[0] for choice in MilkCollection.Status.choices}
     if status_filter and status_filter not in valid_statuses:
         status_filter = ""
@@ -461,9 +466,13 @@ def reports_dashboard(request, organization_slug):
     farmer_paid = farmer_payments.aggregate(v=Sum("amount"))["v"] or Decimal("0")
     farmer_balance = None
     ledger_enabled = False
-    ledger_configuration = LedgerConfiguration.objects.filter(
-        organization=organization, is_enabled=True, enable_farmer_collection_posting=True
-    ).select_related("farmer_payable_account").first()
+    ledger_configuration = (
+        LedgerConfiguration.objects.filter(
+            organization=organization, is_enabled=True, enable_farmer_collection_posting=True
+        )
+        .select_related("farmer_payable_account")
+        .first()
+    )
     if ledger_configuration:
         ledger_enabled = True
         payable_account = ledger_configuration.farmer_payable_account
@@ -548,8 +557,7 @@ def reports_dashboard(request, organization_slug):
     )
     customer_branch_rows = {
         str(row["branch_id"]): row
-        for row in customer_approved.values("branch_id")
-        .annotate(
+        for row in customer_approved.values("branch_id").annotate(
             customer_litres=Sum("quantity_litres"),
             customer_value=Sum("total_amount"),
             customer_count=Count("id"),
@@ -561,32 +569,31 @@ def reports_dashboard(request, organization_slug):
     for branch in selected_branches:
         customer_row = customer_branch_rows.get(str(branch.pk), {})
         if str(branch.pk) not in existing_branch_ids:
-            branch_rows.append({
-                "branch_id": branch.pk,
-                "branch__name": branch.name,
-                "records": 0,
-                "litres": Decimal("0"),
-                "value": Decimal("0"),
-                "average_fat": None,
-                "average_snf": None,
-                "average_lactose": None,
-                "farmers": 0,
-            })
+            branch_rows.append(
+                {
+                    "branch_id": branch.pk,
+                    "branch__name": branch.name,
+                    "records": 0,
+                    "litres": Decimal("0"),
+                    "value": Decimal("0"),
+                    "average_fat": None,
+                    "average_snf": None,
+                    "average_lactose": None,
+                    "farmers": 0,
+                }
+            )
     for row in branch_rows:
         row["average_price"] = _safe_ratio(row["value"], row["litres"])
-        row["contribution_pct"] = (
-            (row["litres"] / litres * Decimal("100")) if litres else None
-        )
+        row["contribution_pct"] = (row["litres"] / litres * Decimal("100")) if litres else None
         customer_row = customer_branch_rows.get(str(row["branch_id"]), {})
         row["customer_litres"] = customer_row.get("customer_litres") or Decimal("0")
         row["customer_value"] = customer_row.get("customer_value") or Decimal("0")
         row["customer_count"] = customer_row.get("customers") or 0
         row["customer_records"] = customer_row.get("customer_count") or 0
-    branch_rows.sort(key=lambda row: (row["litres"] or Decimal("0")), reverse=True)
+    branch_rows.sort(key=lambda row: row["litres"] or Decimal("0"), reverse=True)
 
     farmer_rows = list(
-        farmer_approved
-        .values("farmer_id", "farmer__code", "farmer__full_name", "branch__name")
+        farmer_approved.values("farmer_id", "farmer__code", "farmer__full_name", "branch__name")
         .annotate(
             records=Count("id"),
             litres=Sum("quantity_litres"),
@@ -602,8 +609,9 @@ def reports_dashboard(request, organization_slug):
     farmer_leaderboard = farmer_rows
 
     customer_rows = list(
-        customer_approved
-        .values("customer_id", "customer__code", "customer__full_name", "branch__name")
+        customer_approved.values(
+            "customer_id", "customer__code", "customer__full_name", "branch__name"
+        )
         .annotate(
             records=Count("id"),
             litres=Sum("quantity_litres"),
@@ -626,15 +634,13 @@ def reports_dashboard(request, organization_slug):
     if end_date:
         branch_movement = branch_movement.filter(created_at__date__lte=end_date)
 
-    stock_purchase_quantity = branch_movement.filter(
-        kind=StockMovement.Kind.PURCHASE
-    ).aggregate(total=Sum("quantity_delta"))["total"] or Decimal("0")
-    stock_usage_quantity = branch_movement.filter(
-        kind=StockMovement.Kind.USAGE
-    ).aggregate(total=Sum("quantity_delta"))["total"] or Decimal("0")
-    status_rows = list(
-        collections.values("status").annotate(total=Count("id")).order_by("status")
-    )
+    stock_purchase_quantity = branch_movement.filter(kind=StockMovement.Kind.PURCHASE).aggregate(
+        total=Sum("quantity_delta")
+    )["total"] or Decimal("0")
+    stock_usage_quantity = branch_movement.filter(kind=StockMovement.Kind.USAGE).aggregate(
+        total=Sum("quantity_delta")
+    )["total"] or Decimal("0")
+    status_rows = list(collections.values("status").annotate(total=Count("id")).order_by("status"))
     period_insights = []
     previous_litres = Decimal("0")
     if start_date and end_date:
@@ -670,27 +676,33 @@ def reports_dashboard(request, organization_slug):
             direction = "decreased"
         else:
             direction = "unchanged"
-        period_insights.append({
-            "title": f"Milk supply {direction} compared with the previous equal-length period",
-            "detail": f"{growth_pct:+.1f}% ? {previous_start} to {previous_end}",
-        })
+        period_insights.append(
+            {
+                "title": f"Milk supply {direction} compared with the previous equal-length period",
+                "detail": f"{growth_pct:+.1f}% ? {previous_start} to {previous_end}",
+            }
+        )
     if branch_rows and litres:
         top_branch = branch_rows[0]
-        period_insights.append({
-            "title": f"{top_branch['branch__name']} is the highest-volume branch",
-            "detail": (
-                f"{top_branch['litres']:.2f} L ? "
-                f"{top_branch['contribution_pct']:.1f}% of farmer supply"
-            ),
-        })
+        period_insights.append(
+            {
+                "title": f"{top_branch['branch__name']} is the highest-volume branch",
+                "detail": (
+                    f"{top_branch['litres']:.2f} L ? "
+                    f"{top_branch['contribution_pct']:.1f}% of farmer supply"
+                ),
+            }
+        )
     if farmer_rows and len(farmer_rows) > 1:
-        period_insights.append({
-            "title": "Farmer leaderboard",
-            "detail": (
-                f"{farmer_rows[0]['farmer__full_name']} leads with "
-                f"{farmer_rows[0]['litres']:.2f} L"
-            ),
-        })
+        period_insights.append(
+            {
+                "title": "Farmer leaderboard",
+                "detail": (
+                    f"{farmer_rows[0]['farmer__full_name']} leads with "
+                    f"{farmer_rows[0]['litres']:.2f} L"
+                ),
+            }
+        )
     financial_by_branch = list(
         farmer_approved.values("branch_id", "branch__name")
         .annotate(milk_value=Sum("total_amount"))
@@ -712,6 +724,7 @@ def reports_dashboard(request, organization_slug):
         "period": period,
         "selected_month": selected_month,
         "status_filter": status_filter,
+        "shift_filter": shift_filter,
         "collection_status_choices": COLLECTION_STATUS_CHOICES,
         "selected_farmer": farmer,
         "selected_customer": customer,
@@ -755,9 +768,11 @@ def reports_dashboard(request, organization_slug):
         "out_of_stock_count": out_of_stock_items.count(),
         "low_stock_value": low_stock_items.aggregate(
             total=Sum(F("current_stock") * F("purchase_price"))
-        )["total"] or Decimal("0"),
-        "low_stock_items": low_stock_items.select_related("branch")
-        .order_by("branch__name", "name")[:50],
+        )["total"]
+        or Decimal("0"),
+        "low_stock_items": low_stock_items.select_related("branch").order_by(
+            "branch__name", "name"
+        )[:50],
         "daily_collections": daily_collections,
         "monthly_collections": monthly_collections,
         "daily_chart_data": daily_chart_data,
@@ -780,7 +795,6 @@ def reports_dashboard(request, organization_slug):
         "period_label": f"{start_date or 'All time'} – {end_date or 'Today'}",
     }
     return render(request, "data_exports/reports.html", context)
-
 
 
 @login_required
@@ -808,6 +822,7 @@ def queue_report_export(request, organization_slug):
         raise PermissionDenied from exc
     messages.success(request, "Export queued. Open Export Centre to download when ready.")
     return redirect("data_exports:centre", organization_slug=organization_slug)
+
 
 @login_required
 @organization_access(Membership.Role.OWNER, Membership.Role.ADMIN)

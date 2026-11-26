@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from apps.collections.services import approve_collection, create_collection
+from apps.collections.services import create_collection
 from apps.finance.ledger_services import create_accounting_period
 from apps.finance.models import Account, Expense, JournalEntry, LedgerConfiguration, Payment
 from apps.finance.services import approve_expense, complete_payment, record_expense, record_payment
@@ -188,11 +188,6 @@ class AutomatedLedgerPostingTests(TestCase):
             lactose="4.5",
             farmer=farmer,
         )
-        approve_collection(
-            collection_id=collection.pk,
-            organization=self.org,
-            actor=self.user,
-        )
         journal = self.journal_for("milk_collection", collection.pk)
         self.assertEqual(
             journal.lines.get(account=self.accounts["procurement"]).debit, collection.total_amount
@@ -248,11 +243,6 @@ class AutomatedLedgerPostingTests(TestCase):
             fat="4.0",
             lactose="4.5",
             customer=customer,
-        )
-        approve_collection(
-            collection_id=collection.pk,
-            organization=self.org,
-            actor=self.user,
         )
         journal = self.journal_for("customer_milk_sale", collection.pk)
         self.assertEqual(

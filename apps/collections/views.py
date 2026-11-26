@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count, F, Q, Sum
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods, require_POST
 
@@ -19,10 +19,10 @@ from apps.organizations.permissions import (
     can_access_branch,
     has_organization_permission,
 )
+from apps.parties.models import Farmer
 
 from .forms import CollectionEditForm, CollectionEntryForm
 from .models import MilkCollection
-from .services import approve_collection as approve_collection_service
 from .services import create_collection
 from .services import reverse_collection as reverse_collection_service
 
@@ -69,6 +69,7 @@ def collection_list(request, organization_slug):
                     branch=data["branch"],
                     actor=request.user,
                     collected_at=data["collected_at"],
+                    shift=data["shift"],
                     quantity_litres=data["quantity_litres"],
                     snf=data["snf"],
                     fat=data["fat"],
@@ -127,6 +128,9 @@ def collection_list(request, organization_slug):
     end_text = request.GET.get("to", "").strip()
     query = request.GET.get("q", "").strip()[:100]
     status_filter = request.GET.get("status", "").strip()
+    shift_filter = request.GET.get("shift", "").strip()
+    if shift_filter in {"morning", "evening"}:
+        records = records.filter(shift=shift_filter)
     language_code = getattr(request, "LANGUAGE_CODE", "en")
     date_error = ""
     try:
@@ -191,9 +195,10 @@ def collection_list(request, organization_slug):
             else filter_branches.first().name
         )
     if selected_branch:
-        branch_context = filter_branches.filter(pk=selected_branch).values_list(
-            "name", flat=True
-        ).first() or branch_context
+        branch_context = (
+            filter_branches.filter(pk=selected_branch).values_list("name", flat=True).first()
+            or branch_context
+        )
     return render(
         request,
         "collections/list.html",
@@ -214,19 +219,12 @@ def collection_list(request, organization_slug):
             "date_calendar": "BS" if language_code == "ne" else "AD",
             "search_query": query,
             "status_filter": status_filter,
+            "shift_filter": shift_filter,
             "branch_filter": selected_branch,
             "party_filter": party_filter,
             "filter_branches": filter_branches,
             "branch_context": branch_context,
             "can_create_collection": can_create,
-            "can_approve_collection": request.membership.role in {
-                Membership.Role.OWNER,
-                Membership.Role.ADMIN,
-                Membership.Role.QUALITY_OFFICER,
-            } or (
-                request.membership.role == Membership.Role.DAIRY_MANAGER
-                and has_organization_permission(request.membership, "collections.approve")
-            ),
             "filter_querystring": filter_querystring.urlencode(),
             "status_choices": MilkCollection.Status.choices,
             "collection_form": collection_form,
@@ -248,39 +246,6 @@ def collection_list(request, organization_slug):
 @require_http_methods(["GET", "POST"])
 def collection_create(request, organization_slug):
     # Keep old bookmarks working while routing all entry through the unified page.
-    return redirect("collections:list", organization_slug=organization_slug)
-
-
-@login_required
-@organization_access(
-    Membership.Role.OWNER,
-    Membership.Role.ADMIN,
-    Membership.Role.DAIRY_MANAGER,
-    Membership.Role.QUALITY_OFFICER,
-    permission="collections.approve",
-)
-@require_POST
-def approve_collection(request, organization_slug, collection_id):
-    branch_ids = accessible_branch_ids(request.membership)
-    scoped = MilkCollection.objects.filter(organization=request.organization)
-    if branch_ids is not None:
-        scoped = scoped.filter(branch_id__in=branch_ids)
-    get_object_or_404(scoped, pk=collection_id)
-    try:
-        entry = approve_collection_service(
-            collection_id=collection_id, organization=request.organization, actor=request.user
-        )
-    except (MilkCollection.DoesNotExist, ValidationError) as exc:
-        messages.error(request, str(exc))
-    else:
-        record_event(
-            actor=request.user,
-            organization=request.organization,
-            action="milk_collection.approved",
-            target=entry,
-            request=request,
-        )
-        messages.success(request, "Collection approved.")
     return redirect("collections:list", organization_slug=organization_slug)
 
 
@@ -325,6 +290,7 @@ def collection_edit(request, organization_slug, collection_id):
             }
             from decimal import ROUND_HALF_UP, Decimal
 
+            entry.shift = data["shift"]
             entry.quantity_litres = data["quantity_litres"]
             entry.snf = data["snf"]
             entry.fat = data["fat"]
@@ -347,6 +313,7 @@ def collection_edit(request, organization_slug, collection_id):
             )
             entry.save(
                 update_fields=[
+                    "shift",
                     "quantity_litres",
                     "snf",
                     "fat",
@@ -435,3 +402,45 @@ def collection_reverse(request, organization_slug, collection_id):
     except (MilkCollection.DoesNotExist, ValidationError) as exc:
         messages.error(request, str(exc))
     return redirect("collections:list", organization_slug=organization_slug)
+
+
+@login_required
+@organization_access(
+    Membership.Role.OWNER,
+    Membership.Role.ADMIN,
+    Membership.Role.DAIRY_MANAGER,
+    Membership.Role.BRANCH_MANAGER,
+    Membership.Role.COLLECTION_OPERATOR,
+    Membership.Role.QUALITY_OFFICER,
+    permission="collections.create",
+)
+def farmer_qr_lookup(request, organization_slug):
+    token = request.GET.get("token", "").strip()
+    if not token.startswith("DNX-FARMER:"):
+        return JsonResponse({"ok": False, "error": "Invalid QR format."}, status=400)
+    token = token.split(":", 1)[1]
+    branch_ids = accessible_branch_ids(request.membership)
+    farmers = Farmer.objects.filter(
+        organization=request.organization,
+        qr_token=token,
+        is_active=True,
+        deleted_at__isnull=True,
+    )
+    if branch_ids is not None:
+        farmers = farmers.filter(branch_id__in=branch_ids)
+    farmer = farmers.select_related("branch").first()
+    if not farmer:
+        return JsonResponse(
+            {"ok": False, "error": "Farmer not found or not accessible."}, status=404
+        )
+    return JsonResponse(
+        {
+            "ok": True,
+            "farmer": {
+                "id": str(farmer.pk),
+                "code": farmer.code,
+                "name": farmer.full_name,
+                "branch_id": str(farmer.branch_id or ""),
+            },
+        }
+    )

@@ -1,15 +1,22 @@
-from datetime import timedelta
 import csv
+from datetime import timedelta
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
+from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.password_validation import validate_password
+from django.core import signing
+from django.core.mail import send_mail
 from django.core.paginator import Paginator
 from django.db.models import Avg, Count, Q, Sum
-from django.shortcuts import get_object_or_404, redirect, render
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_http_methods
 
 from apps.audit.services import record_event
@@ -156,10 +163,18 @@ def _party_profile_context(*, party, kind, request):
     summary = summary_qs.aggregate(litres=Sum("quantity_litres"), value=Sum("total_amount"))
     summary_rows = list(summary_qs.values("quantity_litres", "fat", "snf", "lactose"))
     total_litres = sum((r["quantity_litres"] or Decimal("0")) for r in summary_rows) or Decimal("0")
+
     def weighted(field):
         if not total_litres:
             return None
-        return sum((r["quantity_litres"] or Decimal("0")) * (r[field] or Decimal("0")) for r in summary_rows) / total_litres
+        return (
+            sum(
+                (r["quantity_litres"] or Decimal("0")) * (r[field] or Decimal("0"))
+                for r in summary_rows
+            )
+            / total_litres
+        )
+
     collection_summary = {
         "litres": total_litres,
         "fat": weighted("fat"),
@@ -468,16 +483,168 @@ def farmer_create(request, organization_slug):
             farmer = form.save(commit=False)
             farmer.organization = org
             farmer.save()
-            record_event(
-                actor=request.user,
-                organization=org,
-                action="farmer.created",
-                target=farmer,
-                request=request,
-            )
-            messages.success(request, f"Farmer {farmer.full_name} created.")
-            return redirect("parties:farmers", organization_slug=organization_slug)
+            User = get_user_model()
+            username = f"farmer_{farmer.code.lower().replace('-', '_')}"
+            email_address = (farmer.email or "").strip()
+            account_email = email_address or f"{username}@no-email.dairynexus.invalid"
+            if (
+                User.objects.filter(username=username).exists()
+                or User.objects.filter(email=account_email).exists()
+            ):
+                form.add_error(
+                    None,
+                    (
+                        "An account already exists for this farmer/email. "
+                        "Please review the farmer record."
+                    ),
+                )
+            else:
+                user = User.objects.create_user(username=username, email=account_email)
+                user.set_unusable_password()
+                user.first_name = farmer.full_name[:150]
+                user.phone_number = farmer.phone
+                user.force_password_change = True
+                user.save()
+                farmer.user = user
+                farmer.save(update_fields=["user", "updated_at"])
+                record_event(
+                    actor=request.user,
+                    organization=org,
+                    action="farmer.created",
+                    target=farmer,
+                    request=request,
+                )
+                token = signing.dumps(str(farmer.pk), salt="farmer-account-invitation")
+                invitation_path = reverse(
+                    "parties:farmer_invitation_accept", kwargs={"token": token}
+                )
+                public_base_url = getattr(settings, "DJANGO_SITE_URL", "").strip().rstrip("/")
+                invitation_url = (
+                    f"{public_base_url}{invitation_path}"
+                    if public_base_url
+                    else request.build_absolute_uri(invitation_path)
+                )
+                email_sent = False
+                email_error = ""
+                send_invitation = request.POST.get("send_invitation") == "on"
+                if send_invitation and email_address:
+                    if (
+                        not public_base_url
+                        or "127.0.0.1" in public_base_url
+                        or "localhost" in public_base_url
+                        or not public_base_url.startswith("https://")
+                    ):
+                        email_error = (
+                            "Email not sent: a public HTTPS DJANGO_SITE_URL is required. "
+                            "Copy the setup link below and share it manually."
+                        )
+                    else:
+                        try:
+                            email_sent = bool(
+                                send_mail(
+                                    subject=f"Set up your farmer portal account - {org.name}",
+                                    message=(
+                                        f"Hello {farmer.full_name},\n\n"
+                                        f"Your account for {org.name} has been created. "
+                                        "Set your password using this one-time link "
+                                        "(expires in 24 hours):\n"
+                                        f"{invitation_url}\n\n"
+                                        "If you did not expect this message, contact your dairy."
+                                    ),
+                                    from_email=settings.DEFAULT_FROM_EMAIL,
+                                    recipient_list=[email_address],
+                                    fail_silently=False,
+                                )
+                            )
+                        except Exception:
+                            email_error = (
+                                "Email sending failed. Check SMTP settings. "
+                                "Copy and share the setup link manually."
+                            )
+                elif send_invitation and not email_address:
+                    email_error = (
+                        "Invitation email not sent because this farmer has no email address. "
+                        "Copy and share the setup link manually."
+                    )
+                messages.success(request, f"Farmer {farmer.full_name} and account created.")
+                return render(
+                    request,
+                    "parties/farmer_created.html",
+                    {
+                        "organization": org,
+                        "farmer": farmer,
+                        "invitation_url": invitation_url,
+                        "email_sent": email_sent,
+                        "email_error": email_error,
+                        "email_address": email_address,
+                        "send_invitation": send_invitation,
+                    },
+                )
     return render(request, "parties/farmer_form.html", {"organization": org, "form": form})
+
+
+@csrf_protect
+@require_http_methods(["GET", "POST"])
+def farmer_invitation_accept(request, token):
+    try:
+        farmer_id = signing.loads(token, salt="farmer-account-invitation", max_age=24 * 60 * 60)
+    except signing.BadSignature:
+        return render(request, "parties/farmer_invitation_invalid.html", status=400)
+    farmer = get_object_or_404(Farmer, pk=farmer_id, deleted_at__isnull=True, is_active=True)
+    if farmer.user_id and not getattr(farmer.user, "force_password_change", False):
+        return render(
+            request,
+            "parties/farmer_invitation_invalid.html",
+            {"message": "This account already has a password. Please log in instead."},
+            status=400,
+        )
+    error = ""
+    if request.method == "POST":
+        password = request.POST.get("password", "")
+        confirm = request.POST.get("confirm_password", "")
+        if password != confirm:
+            error = "Passwords do not match."
+        else:
+            User = get_user_model()
+            username = f"farmer_{farmer.code.lower().replace('-', '_')}"
+            email = farmer.email.strip() or f"{username}@no-email.dairynexus.invalid"
+            if not farmer.user_id and (
+                User.objects.filter(username=username).exists()
+                or User.objects.filter(email=email).exists()
+            ):
+                error = "An account conflict was found. Please contact your dairy administrator."
+            else:
+                try:
+                    validate_password(password)
+                except Exception as exc:
+                    error = " ".join(str(item) for item in exc.messages)
+                if not error:
+                    if farmer.user_id:
+                        user = farmer.user
+                        user.set_password(password)
+                        user.force_password_change = False
+                        user.save(update_fields=["password", "force_password_change"])
+                    else:
+                        user = User.objects.create_user(
+                            username=username, email=email, password=password
+                        )
+                        user.first_name = farmer.full_name[:150]
+                        user.phone_number = farmer.phone
+                        user.save(update_fields=["first_name", "phone_number"])
+                        farmer.user = user
+                        farmer.save(update_fields=["user", "updated_at"])
+                    record_event(
+                        actor=user,
+                        organization=farmer.organization,
+                        action="farmer.account_activated",
+                        target=farmer,
+                        request=request,
+                    )
+                    messages.success(request, "Your farmer account is ready. Please log in.")
+                    return redirect("accounts:login")
+    return render(
+        request, "parties/farmer_invitation_accept.html", {"farmer": farmer, "error": error}
+    )
 
 
 @login_required
@@ -485,56 +652,182 @@ def farmer_create(request, organization_slug):
 def party_collection_export(request, organization_slug, kind, party_id):
     party_model = Customer if kind == "customer" else Farmer
     party = get_object_or_404(
-        _party_scope(party_model.objects.filter(organization=request.organization, deleted_at__isnull=True), request.membership),
+        _party_scope(
+            party_model.objects.filter(organization=request.organization, deleted_at__isnull=True),
+            request.membership,
+        ),
         pk=party_id,
     )
     start, end, date_error = _date_bounds(request)
     if date_error:
         return HttpResponse("Invalid date range", status=400)
     relation = "customer" if kind == "customer" else "farmer"
-    qs = MilkCollection.objects.filter(organization=request.organization, **{relation: party}, collected_at__date__gte=start, collected_at__date__lte=end).select_related("branch","recorded_by").order_by("collected_at")
+    qs = (
+        MilkCollection.objects.filter(
+            organization=request.organization,
+            **{relation: party},
+            collected_at__date__gte=start,
+            collected_at__date__lte=end,
+        )
+        .select_related("branch", "recorded_by")
+        .order_by("collected_at")
+    )
     qs = _party_scope(qs, request.membership)
-    rows=list(qs)
-    litres=sum((r.quantity_litres or Decimal("0")) for r in rows) or Decimal("0")
-    value=sum((r.total_amount or Decimal("0")) for r in rows) or Decimal("0")
+    rows = list(qs)
+    litres = sum((r.quantity_litres or Decimal("0")) for r in rows) or Decimal("0")
+    value = sum((r.total_amount or Decimal("0")) for r in rows) or Decimal("0")
+
     def weighted(field):
-        if not litres: return None
-        return sum((r.quantity_litres or Decimal("0"))*(getattr(r,field) or Decimal("0")) for r in rows)/litres
-    averages={"fat":weighted("fat"),"snf":weighted("snf"),"lactose":weighted("lactose")}
-    rate=value/litres if litres else Decimal("0")
-    fmt=request.GET.get("format","csv").lower()
-    headers=["S.N.","Date","Reference","Branch","Quantity (L)","FAT","SNF","Lactose","Rate per L","Value","Status","Recorded by"]
-    data=[[index, r.collected_at.strftime("%Y-%m-%d %H:%M"),r.reference,r.branch.name,str(r.quantity_litres),str(r.fat),str(r.snf),str(r.lactose),str(r.milk_rate),str(r.total_amount),r.get_status_display(),r.recorded_by.get_full_name() or r.recorded_by.username] for index, r in enumerate(rows, start=1)]
-    summary=["","TOTAL / WEIGHTED AVERAGE","", "",str(litres),str(averages["fat"] or ""),str(averages["snf"] or ""),str(averages["lactose"] or ""),str(rate),str(value),"Records: "+str(len(rows)),""]
-    filename=f"{kind}-{party.code}-collections-{start}-{end}"
-    if fmt=="csv":
-        response=HttpResponse(content_type="text/csv; charset=utf-8")
-        response["Content-Disposition"]=f'attachment; filename="{filename}.csv"'
+        if not litres:
+            return None
+        return (
+            sum(
+                (r.quantity_litres or Decimal("0")) * (getattr(r, field) or Decimal("0"))
+                for r in rows
+            )
+            / litres
+        )
+
+    averages = {"fat": weighted("fat"), "snf": weighted("snf"), "lactose": weighted("lactose")}
+    rate = value / litres if litres else Decimal("0")
+    fmt = request.GET.get("format", "csv").lower()
+    headers = [
+        "S.N.",
+        "Date",
+        "Reference",
+        "Branch",
+        "Quantity (L)",
+        "FAT",
+        "SNF",
+        "Lactose",
+        "Rate per L",
+        "Value",
+        "Status",
+        "Recorded by",
+    ]
+    data = [
+        [
+            index,
+            r.collected_at.strftime("%Y-%m-%d %H:%M"),
+            r.reference,
+            r.branch.name,
+            str(r.quantity_litres),
+            str(r.fat),
+            str(r.snf),
+            str(r.lactose),
+            str(r.milk_rate),
+            str(r.total_amount),
+            r.get_status_display(),
+            r.recorded_by.get_full_name() or r.recorded_by.username,
+        ]
+        for index, r in enumerate(rows, start=1)
+    ]
+    summary = [
+        "",
+        "TOTAL / WEIGHTED AVERAGE",
+        "",
+        "",
+        str(litres),
+        str(averages["fat"] or ""),
+        str(averages["snf"] or ""),
+        str(averages["lactose"] or ""),
+        str(rate),
+        str(value),
+        "Records: " + str(len(rows)),
+        "",
+    ]
+    filename = f"{kind}-{party.code}-collections-{start}-{end}"
+    if fmt == "csv":
+        response = HttpResponse(content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = f'attachment; filename="{filename}.csv"'
         response.write("\ufeff")
-        writer=csv.writer(response); writer.writerow([f"{party.full_name} collection report",f"{start} to {end}"]); writer.writerow(headers); writer.writerows(data); writer.writerow([]); writer.writerow(summary)
+        writer = csv.writer(response)
+        writer.writerow([f"{party.full_name} collection report", f"{start} to {end}"])
+        writer.writerow(headers)
+        writer.writerows(data)
+        writer.writerow([])
+        writer.writerow(summary)
         return response
-    if fmt=="xlsx":
+    if fmt == "xlsx":
         from openpyxl import Workbook
         from openpyxl.styles import Font, PatternFill
-        wb=Workbook(); ws=wb.active; ws.title="Collection Report"
-        ws.append([party.full_name, f"Collection report {start} to {end}"]); ws.append(headers)
-        for row in data: ws.append(row)
-        ws.append([]); ws.append(summary); ws.freeze_panes="A3"; ws.auto_filter.ref=f"A2:K{len(data)+2}"
-        for cell in ws[2]: cell.font=Font(bold=True,color="FFFFFF"); cell.fill=PatternFill("solid",fgColor="244A6A")
-        for cell in ws[ws.max_row]: cell.font=Font(bold=True); cell.fill=PatternFill("solid",fgColor="E8F2E8")
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Collection Report"
+        ws.append([party.full_name, f"Collection report {start} to {end}"])
+        ws.append(headers)
+        for row in data:
+            ws.append(row)
+        ws.append([])
+        ws.append(summary)
+        ws.freeze_panes = "A3"
+        ws.auto_filter.ref = f"A2:K{len(data) + 2}"
+        for cell in ws[2]:
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill("solid", fgColor="244A6A")
+        for cell in ws[ws.max_row]:
+            cell.font = Font(bold=True)
+            cell.fill = PatternFill("solid", fgColor="E8F2E8")
         for col in ws.columns:
-            letter=col[0].column_letter; ws.column_dimensions[letter].width=min(max(max(len(str(c.value or "")) for c in col)+2,12),32)
-        response=HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); response["Content-Disposition"]=f'attachment; filename="{filename}.xlsx"'; wb.save(response); return response
-    if fmt=="pdf":
+            letter = col[0].column_letter
+            ws.column_dimensions[letter].width = min(
+                max(max(len(str(c.value or "")) for c in col) + 2, 12), 32
+            )
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response["Content-Disposition"] = f'attachment; filename="{filename}.xlsx"'
+        wb.save(response)
+        return response
+    if fmt == "pdf":
         from io import BytesIO
+
         from reportlab.lib import colors
-        from reportlab.lib.pagesizes import landscape, A4
-        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.pagesizes import A4, landscape
         from reportlab.lib.styles import getSampleStyleSheet
-        buf=BytesIO(); doc=SimpleDocTemplate(buf,pagesize=landscape(A4),rightMargin=20,leftMargin=20,topMargin=24,bottomMargin=24)
-        styles=getSampleStyleSheet(); story=[Paragraph(f"{party.full_name} - Collection Report",styles["Title"]),Paragraph(f"Period: {start} to {end}",styles["Normal"]),Spacer(1,10)]
-        table=Table([headers]+data+[summary],colWidths=[34,88,116,68,58,48,48,62,64,64,64,68],repeatRows=1)
-        table.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,0),colors.HexColor("#244A6A")),("TEXTCOLOR",(0,0),(-1,0),colors.white),("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),("GRID",(0,0),(-1,-1),0.35,colors.grey),("BACKGROUND",(0,-1),(-1,-1),colors.HexColor("#E8F2E8")),("FONTSIZE",(0,0),(-1,-1),7),("VALIGN",(0,0),(-1,-1),"MIDDLE"),("ALIGN",(0,0),(0,-1),"CENTER"),("ALIGN",(4,1),(8,-2),"RIGHT"),("LEFTPADDING",(0,0),(-1,-1),4),("RIGHTPADDING",(0,0),(-1,-1),4)]))
-        story.append(table); doc.build(story)
-        response=HttpResponse(buf.getvalue(),content_type="application/pdf"); response["Content-Disposition"]=f'attachment; filename="{filename}.pdf"'; return response
-    return HttpResponse("Unsupported export format",status=400)
+        from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
+        buf = BytesIO()
+        doc = SimpleDocTemplate(
+            buf,
+            pagesize=landscape(A4),
+            rightMargin=20,
+            leftMargin=20,
+            topMargin=24,
+            bottomMargin=24,
+        )
+        styles = getSampleStyleSheet()
+        story = [
+            Paragraph(f"{party.full_name} - Collection Report", styles["Title"]),
+            Paragraph(f"Period: {start} to {end}", styles["Normal"]),
+            Spacer(1, 10),
+        ]
+        table = Table(
+            [headers] + data + [summary],
+            colWidths=[34, 88, 116, 68, 58, 48, 48, 62, 64, 64, 64, 68],
+            repeatRows=1,
+        )
+        table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#244A6A")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("GRID", (0, 0), (-1, -1), 0.35, colors.grey),
+                    ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#E8F2E8")),
+                    ("FONTSIZE", (0, 0), (-1, -1), 7),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("ALIGN", (0, 0), (0, -1), "CENTER"),
+                    ("ALIGN", (4, 1), (8, -2), "RIGHT"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                ]
+            )
+        )
+        story.append(table)
+        doc.build(story)
+        response = HttpResponse(buf.getvalue(), content_type="application/pdf")
+        response["Content-Disposition"] = f'attachment; filename="{filename}.pdf"'
+        return response
+    return HttpResponse("Unsupported export format", status=400)

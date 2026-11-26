@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 from apps.organizations.models import Branch, Membership, Organization
-from apps.platform_admin.models import FarmOwnerInvitation
+from apps.platform_admin.models import FarmOwnerInvitation, Subscription
 
 User = get_user_model()
 
@@ -24,7 +24,14 @@ def _username_for_email(email):
 
 @transaction.atomic
 def create_platform_organization_invitation(
-    *, invited_by, owner_email, owner_first_name, owner_last_name="", name, **details
+    *,
+    invited_by,
+    owner_email,
+    owner_first_name,
+    owner_last_name="",
+    name,
+    subscription_plan,
+    **details,
 ):
     """Create a tenant and invite its owner without assigning a password.
 
@@ -66,6 +73,15 @@ def create_platform_organization_invitation(
         phone=organization.phone,
     )
 
+    today = timezone.localdate()
+    Subscription.objects.create(
+        organization=organization,
+        plan=subscription_plan,
+        status=Subscription.Status.TRIAL,
+        starts_at=today,
+        ends_at=today + timedelta(days=14),
+    )
+
     # Revoke outstanding invitations for this same tenant/email before issuing
     # a fresh token, so only the newest invitation can be used.
     FarmOwnerInvitation.objects.filter(
@@ -85,3 +101,66 @@ def create_platform_organization_invitation(
         expires_at=timezone.now() + timedelta(hours=48),
     )
     return organization, membership, invitation, raw_token
+
+
+@transaction.atomic
+def create_platform_organization_manual_owner(
+    *,
+    invited_by,
+    owner_first_name,
+    owner_last_name="",
+    username,
+    temporary_password,
+    name,
+    subscription_plan,
+    phone_number="",
+    **details,
+):
+    """Create a farm and active owner account for people without email access."""
+    username = username.strip()
+    # The account email field is required and unique by the custom User model;
+    # use a clearly non-deliverable internal address for phone/username accounts.
+    placeholder_email = f"{slugify(username)[:100]}-{uuid4().hex[:8]}@no-email.dairynexus.invalid"
+    user = User.objects.create(
+        username=username,
+        email=placeholder_email,
+        first_name=owner_first_name.strip(),
+        last_name=owner_last_name.strip(),
+        phone_number=phone_number.strip(),
+        is_active=True,
+        email_verified=False,
+    )
+    user.set_password(temporary_password)
+    user.save(update_fields=["password"])
+
+    base = slugify(name)[:150] or "dairy"
+    organization = Organization.objects.create(
+        owner=user,
+        name=name.strip(),
+        slug=f"{base}-{uuid4().hex[:8]}",
+        status=Organization.Status.TRIAL,
+        **details,
+    )
+    membership = Membership.objects.create(
+        user=user,
+        organization=organization,
+        role=Membership.Role.OWNER,
+        status=Membership.Status.ACTIVE,
+        joined_at=timezone.now(),
+    )
+    Branch.objects.create(
+        organization=organization,
+        code="MAIN",
+        name="Main branch",
+        address=organization.address,
+        phone=organization.phone,
+    )
+    today = timezone.localdate()
+    Subscription.objects.create(
+        organization=organization,
+        plan=subscription_plan,
+        status=Subscription.Status.TRIAL,
+        starts_at=today,
+        ends_at=today + timedelta(days=14),
+    )
+    return organization, membership, user

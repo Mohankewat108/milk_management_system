@@ -1,5 +1,5 @@
-{% extends "base.html" %}
-{% block title %}Your workspaces | DairyNexus{% endblock %}
+﻿{% extends "base.html" %}
+{% block title %}Your workspaces | Dairy Nepal{% endblock %}
 {% block content %}
 <section class="workspace-selection" aria-labelledby="workspace-title">
   <div class="page-heading">
@@ -22,14 +22,13 @@
             <span class="status">{{ membership.organization.get_status_display }}</span>
           </div>
           <h2>{{ membership.organization.name }}</h2>
-          <p class="muted">{{ membership.organization.country }} · {{ membership.organization.currency }}</p>
-          <span class="text-link">Open workspace →</span>
+          <span class="text-link">Open workspace â†’</span>
         </a>
       {% endfor %}
     </div>
   {% else %}
     <section class="empty-state workspace-empty" aria-labelledby="workspace-empty-title">
-      <div class="workspace-empty-icon" aria-hidden="true">＋</div>
+      <div class="workspace-empty-icon" aria-hidden="true">ï¼‹</div>
       <div class="eyebrow">GET STARTED</div>
       <h2 id="workspace-empty-title">Create your dairy workspace</h2>
       <p>You haven't joined a business workspace yet. Register your dairy business to set up your workspace, manage your dairy operations, and invite your team.</p>
@@ -38,3 +37,4 @@
   {% endif %}
 </section>
 {% endblock %}
+

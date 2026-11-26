@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
@@ -6,6 +8,7 @@ from django.views.decorators.http import require_http_methods
 
 from apps.audit.services import record_event
 from apps.organizations.permissions import accessible_branch_ids
+from apps.platform_admin.models import Subscription, SubscriptionPlan
 from apps.pricing.services import active_pricing_on
 
 from .decorators import organization_access
@@ -33,7 +36,26 @@ def workspace(request):
 def register_business(request):
     form = OrganizationRegistrationForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
-        data = form.cleaned_data
+        request.session["dairy_registration_data"] = form.cleaned_data
+        return redirect("business:subscription_plans")
+    return render(request, "organizations/register.html", {"form": form})
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def subscription_plans(request):
+    registration_data = request.session.get("dairy_registration_data")
+    if not registration_data:
+        messages.info(request, "Please complete your dairy profile first.")
+        return redirect("business:register")
+    plans = SubscriptionPlan.objects.filter(is_active=True).order_by("monthly_price")
+    if request.method == "POST":
+        plan_id = request.POST.get("plan")
+        plan = plans.filter(pk=plan_id).first()
+        if not plan:
+            messages.error(request, "Please select a valid subscription plan.")
+            return redirect("business:subscription_plans")
+        data = registration_data
         organization = register_organization(
             user=request.user,
             name=data["name"],
@@ -43,6 +65,15 @@ def register_business(request):
             country=data.get("country", "Nepal"),
             address=data.get("address", ""),
         )
+        today = timezone.localdate()
+        Subscription.objects.create(
+            organization=organization,
+            plan=plan,
+            status=Subscription.Status.TRIAL,
+            starts_at=today,
+            ends_at=today + timedelta(days=14),
+        )
+        request.session.pop("dairy_registration_data", None)
         record_event(
             actor=request.user,
             organization=organization,
@@ -50,9 +81,17 @@ def register_business(request):
             target=organization,
             request=request,
         )
-        messages.success(request, "Your dairy workspace is ready.")
+        record_event(
+            actor=request.user,
+            organization=organization,
+            action="subscription.plan_selected",
+            target=plan,
+            changes={"plan_code": plan.code},
+            request=request,
+        )
+        messages.success(request, "Your dairy workspace and subscription trial are ready.")
         return redirect("business:dashboard", organization_slug=organization.slug)
-    return render(request, "organizations/register.html", {"form": form})
+    return render(request, "organizations/subscription_plans.html", {"plans": plans})
 
 
 @login_required
@@ -97,7 +136,8 @@ def dashboard(request, organization_slug):
         "can_manage_staff": membership.role in {Membership.Role.OWNER, Membership.Role.ADMIN},
         "can_manage_finance": has_organization_permission(membership, "finance.view"),
         "can_manage_inventory": has_organization_permission(membership, "inventory.view"),
-        "can_manage_configuration": membership.role in {Membership.Role.OWNER, Membership.Role.ADMIN},
+        "can_manage_configuration": membership.role
+        in {Membership.Role.OWNER, Membership.Role.ADMIN},
     }
     return render(request, "dashboard/business.html", context)
 

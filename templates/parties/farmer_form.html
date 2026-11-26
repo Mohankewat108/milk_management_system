@@ -6,7 +6,7 @@
   <div>
     <div class="eyebrow">{{ organization.name }}</div>
     <h1>{% if is_edit %}{% translate "Edit farmer profile" %}{% else %}{% translate "Add farmer" %}{% endif %}</h1>
-    <p class="muted">{% if is_edit %}{% translate "Update the farmer's personal details, branch, bank information, portal access and account status." %}{% else %}{% translate "Create a farmer record and optionally connect a portal login." %}{% endif %}</p>
+    <p class="muted">{% if is_edit %}{% translate "Update the farmer's personal details, branch, bank information and account status." %}{% else %}{% translate "Create a farmer record with personal and bank details." %}{% endif %}</p>
   </div>
   <a class="button button-secondary" href="{% if is_edit and party %}{% url 'parties:farmer_detail' organization.slug party.pk %}{% else %}{% url 'parties:farmers' organization.slug %}{% endif %}">{% translate "Cancel" %}</a>
 </div>
@@ -15,6 +15,12 @@
   <form method="post" class="form-layout">
     {% csrf_token %}
     {{ form.non_field_errors }}
+    {% if not is_edit %}
+      <div class="form-field">
+        <label for="send_invitation"><input type="checkbox" id="send_invitation" name="send_invitation" checked> Send password setup invitation by Gmail</label>
+        <p class="small muted">If unchecked, no email will be sent. You can copy the secure password setup link after creating the farmer and share it manually.</p>
+      </div>
+    {% endif %}
     {% for field in form %}
       <div class="form-field">
         {% if field.field.widget.input_type == "checkbox" %}

@@ -81,7 +81,7 @@ def staff_list(request, organization_slug):
                 )
                 invitation_url = build_site_absolute_uri(request, invite_path)
                 body = (
-                    f"You have been invited to join {org.name} on DairyNexus.\n\n"
+                    f"You have been invited to join {org.name} on Dairy Nepal.\n\n"
                     f"Role: {invitation.get_role_display()}\n"
                     f"Accept your invitation within 48 hours: {invitation_url}\n\n"
                     "If you were not expecting this invitation, you can ignore this email."

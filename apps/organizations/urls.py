@@ -15,6 +15,7 @@ app_name = "business"
 urlpatterns = [
     path("", views.workspace, name="workspace"),
     path("register/", views.register_business, name="register"),
+    path("subscription-plans/", views.subscription_plans, name="subscription_plans"),
     path("<slug:organization_slug>/trash/", management_views.trash_list, name="trash"),
     path(
         "<slug:organization_slug>/trash/<str:model_key>/<uuid:object_id>/delete/",

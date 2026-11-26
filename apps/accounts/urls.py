@@ -1,6 +1,5 @@
 from django.contrib.auth.views import (
     PasswordChangeDoneView,
-    PasswordChangeView,
     PasswordResetCompleteView,
     PasswordResetConfirmView,
     PasswordResetDoneView,
@@ -10,7 +9,12 @@ from django.urls import path, reverse_lazy
 
 from apps.organizations.staff_views import staff_invitation_accept
 
-from .views import AccountLoginView, account_logout, register_account
+from .views import (
+    AccountLoginView,
+    ForcedPasswordChangeView,
+    account_logout,
+    register_account,
+)
 
 app_name = "accounts"
 
@@ -25,10 +29,7 @@ urlpatterns = [
     path("logout/", account_logout, name="logout"),
     path(
         "password/change/",
-        PasswordChangeView.as_view(
-            template_name="accounts/password_change.html",
-            success_url=reverse_lazy("accounts:password_change_done"),
-        ),
+        ForcedPasswordChangeView.as_view(),
         name="password_change",
     ),
     path(

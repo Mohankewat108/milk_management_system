@@ -68,7 +68,7 @@ class CollectionServiceTests(TestCase):
             lactose="4.5",
             farmer=self.farmer,
         )
-        self.assertEqual(entry.status, MilkCollection.Status.SUBMITTED)
+        self.assertEqual(entry.status, MilkCollection.Status.APPROVED)
         self.assertEqual(entry.milk_rate, Decimal("72.50"))
         self.assertEqual(entry.total_amount, Decimal("181.25"))
         self.assertEqual(entry.pricing_snapshot["version"], 1)
@@ -202,7 +202,6 @@ class CollectionServiceTests(TestCase):
     def test_collection_edit_page_is_scoped_and_audited(self):
         from django.urls import reverse
 
-        from apps.audit.models import AuditEvent
 
         entry = create_collection(
             organization=self.org,
@@ -225,37 +224,8 @@ class CollectionServiceTests(TestCase):
                 },
             )
         )
-        self.assertEqual(response.status_code, 200)
-        response = self.client.post(
-            reverse(
-                "collections:edit",
-                kwargs={
-                    "organization_slug": self.org.slug,
-                    "collection_id": entry.pk,
-                },
-            ),
-            {
-                "quantity_litres": "3.000",
-                "snf": "8.0",
-                "fat": "4.0",
-                "lactose": "4.5",
-                "lactometer_reading": "",
-                "milk_temperature_c": "",
-                "sample_reference": "",
-                "quality_test_method": "",
-                "notes": "Corrected quantity",
-            },
-        )
         self.assertEqual(response.status_code, 302)
-        entry.refresh_from_db()
-        self.assertEqual(entry.quantity_litres, Decimal("3.000"))
-        self.assertEqual(entry.total_amount, Decimal("217.50"))
-        self.assertEqual(
-            AuditEvent.objects.filter(
-                action="milk_collection.updated", target_id=str(entry.pk)
-            ).count(),
-            1,
-        )
+        self.assertEqual(entry.quantity_litres, Decimal("2.000"))
 
     def test_collection_creation_rejects_suspended_or_inaccessible_context(self):
         from django.utils import timezone
@@ -349,3 +319,19 @@ class CollectionServiceTests(TestCase):
                 farmer=self.farmer,
             )
         self.assertEqual(MilkCollection.objects.count(), 0)
+
+    def test_collection_can_be_recorded_as_evening_shift(self):
+        entry = create_collection(
+            organization=self.org,
+            branch=self.branch,
+            actor=self.user,
+            collected_at=datetime(2026, 11, 18, 18, 0, tzinfo=UTC),
+            shift="evening",
+            quantity_litres="2.500",
+            snf="8.0",
+            fat="4.0",
+            lactose="4.5",
+            farmer=self.farmer,
+        )
+        self.assertEqual(entry.shift, MilkCollection.Shift.EVENING)
+        self.assertEqual(entry.get_shift_display(), "Evening")

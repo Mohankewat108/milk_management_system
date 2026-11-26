@@ -8,6 +8,7 @@ from apps.parties.models import Customer, Farmer
 
 class SearchablePartyChoiceField(forms.ModelChoiceField):
     """Include searchable contact identifiers in each party option."""
+
     def label_from_instance(self, obj):
         parts = [getattr(obj, "full_name", "")]
         for attr in ("code", "phone", "email", "address"):
@@ -27,11 +28,17 @@ class CollectionEntryForm(forms.Form):
     customer = SearchablePartyChoiceField(queryset=Customer.objects.none(), required=False)
     collected_at = forms.DateTimeField(
         widget=forms.DateTimeInput(
-            attrs={"type": "datetime-local", "class": "collection-current-datetime", "data-current-datetime": "true"}
+            attrs={
+                "type": "datetime-local",
+                "class": "collection-current-datetime",
+                "data-current-datetime": "true",
+            }
         ),
         initial=None,
     )
-    shift = forms.ChoiceField(choices=(("morning", "Morning"), ("evening", "Evening")), initial="morning", required=False)
+    shift = forms.ChoiceField(
+        choices=(("morning", "Morning"), ("evening", "Evening")), initial="morning", required=False
+    )
     quantity_litres = forms.DecimalField(max_digits=12, decimal_places=3, min_value=0.001)
     snf = forms.DecimalField(max_digits=7, decimal_places=3, min_value=0)
     fat = forms.DecimalField(max_digits=7, decimal_places=3, min_value=0)
@@ -55,6 +62,7 @@ class CollectionEntryForm(forms.Form):
         )
         # Default collection timestamp to the actual local current date/time.
         from django.utils import timezone
+
         self.initial.setdefault("collected_at", timezone.localtime())
         farmers = Farmer.objects.filter(
             organization=organization, is_active=True, deleted_at__isnull=True
@@ -81,7 +89,9 @@ class CollectionEntryForm(forms.Form):
         assigned_branch_ids = []
         if membership is not None:
             assigned_branch_ids = list(
-                membership.branch_assignments.order_by("branch__name").values_list("branch_id", flat=True)
+                membership.branch_assignments.order_by("branch__name").values_list(
+                    "branch_id", flat=True
+                )
             )
         if assigned_branch_ids:
             self.initial["branch"] = assigned_branch_ids[0]
@@ -90,9 +100,13 @@ class CollectionEntryForm(forms.Form):
             # assignments, so use the first active branch as the default.
             self.initial["branch"] = branches.first().pk
         self.fields["farmer"].queryset = farmers.order_by("full_name")
-        self.fields["farmer"].widget.attrs.update({"class": "collection-party-select", "data-collection-party": "farmer"})
+        self.fields["farmer"].widget.attrs.update(
+            {"class": "collection-party-select", "data-collection-party": "farmer"}
+        )
         self.fields["customer"].queryset = customers.order_by("full_name")
-        self.fields["customer"].widget.attrs.update({"class": "collection-party-select", "data-collection-party": "customer"})
+        self.fields["customer"].widget.attrs.update(
+            {"class": "collection-party-select", "data-collection-party": "customer"}
+        )
         self.fields["party_type"].widget.attrs.update(
             {"class": "collection-party-type", "data-collection-party-type": "true"}
         )
@@ -126,7 +140,10 @@ class CollectionEntryForm(forms.Form):
 
 class CollectionEditForm(forms.Form):
     """Edit operational measurements while retaining historical pricing."""
-    shift = forms.ChoiceField(choices=(("morning", "Morning"), ("evening", "Evening")), required=False)
+
+    shift = forms.ChoiceField(
+        choices=(("morning", "Morning"), ("evening", "Evening")), required=False
+    )
 
     quantity_litres = forms.DecimalField(max_digits=12, decimal_places=3, min_value=0.001)
     snf = forms.DecimalField(max_digits=7, decimal_places=3, min_value=0)
@@ -158,6 +175,7 @@ class CollectionEditForm(forms.Form):
         super().__init__(*args, initial=initial, **kwargs)
         if self.is_bound and not self.data.get(self.add_prefix("shift")):
             self.initial["shift"] = instance.shift
+
     def clean(self):
         cleaned = super().clean()
         if not cleaned.get("shift"):

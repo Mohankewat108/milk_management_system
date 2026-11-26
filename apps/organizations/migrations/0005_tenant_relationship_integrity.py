@@ -900,7 +900,7 @@ class Migration(migrations.Migration):
         ("finance", "0006_payment_payment_direction_matches_party"),
         ("inventory", "0003_inventoryitem_inventory_stock_nonnegative_and_more"),
         ("organizations", "0004_branch_soft_delete"),
-        ("parties", "0002_soft_delete"),
+        ("parties", "0005_populate_farmer_qr_tokens"),
         ("pricing", "0003_pricing_soft_delete"),
     ]
 

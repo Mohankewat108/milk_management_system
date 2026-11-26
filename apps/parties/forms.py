@@ -1,7 +1,8 @@
+import secrets
+
 from django import forms
 from django.contrib.auth import get_user_model
 from django.db.models import Q
-import secrets
 
 from apps.organizations.models import Branch
 from apps.organizations.permissions import accessible_branch_ids
@@ -83,7 +84,6 @@ class FarmerForm(forms.ModelForm):
             "bank_account_name",
             "bank_account_number",
             "bank_name",
-            "user",
             "is_active",
         )
 
@@ -96,15 +96,11 @@ class FarmerForm(forms.ModelForm):
         self.fields["branch"].required = bool(
             membership and membership.role not in {"owner", "admin"}
         )
-        self.fields["user"].required = False
-        self.fields["user"].label = "Farmer login account"
-        self.fields[
-            "user"
-        ].help_text = "Optional: link an existing account to enable the farmer self-service portal."
-        self.fields["user"].queryset = _available_portal_users(self.instance)
         if not self.instance.pk:
             self.fields["code"].required = False
-            self.fields["code"].help_text = "Leave blank to generate a unique Farmer ID automatically."
+            self.fields[
+                "code"
+            ].help_text = "Leave blank to generate a unique Farmer ID automatically."
             self.fields["code"].widget.attrs["placeholder"] = "Auto-generated if left blank"
 
     def clean_code(self):
@@ -112,11 +108,15 @@ class FarmerForm(forms.ModelForm):
         if not code and not self.instance.pk:
             for _ in range(10):
                 candidate = f"FRM-{secrets.token_hex(4).upper()}"
-                if not Farmer.objects.filter(organization=self.organization, code=candidate).exists():
+                if not Farmer.objects.filter(
+                    organization=self.organization, code=candidate
+                ).exists():
                     code = candidate
                     break
             if not code:
-                raise forms.ValidationError("Could not generate a unique Farmer ID. Please try again.")
+                raise forms.ValidationError(
+                    "Could not generate a unique Farmer ID. Please try again."
+                )
         existing = Farmer.objects.filter(organization=self.organization, code=code)
         if self.instance.pk:
             existing = existing.exclude(pk=self.instance.pk)

@@ -22,7 +22,10 @@ class StaffMembershipForm(forms.Form):
         queryset=Branch.objects.none(),
         required=False,
         label="Assigned branches (required)",
-        help_text="On staff edit, their current branch assignments are preselected. Select the branches this staff member can access.",
+        help_text=(
+            "On staff edit, their current branch assignments are preselected. "
+            "Select the branches this staff member can access."
+        ),
     )
     permissions = forms.ModelMultipleChoiceField(
         queryset=OrganizationPermission.objects.none(),

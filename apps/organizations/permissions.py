@@ -11,24 +11,45 @@ ORGANISATION_WIDE_ROLES = {
 ROLE_PERMISSION_DEFAULTS = {
     Membership.Role.DAIRY_MANAGER: set(),
     Membership.Role.BRANCH_MANAGER: {
-        "dashboard.view", "parties.view", "parties.manage",
-        "collections.view", "collections.create",
-        "reports.view", "exports.create",
+        "dashboard.view",
+        "parties.view",
+        "parties.manage",
+        "collections.view",
+        "collections.create",
+        "reports.view",
+        "exports.create",
     },
     Membership.Role.COLLECTION_OPERATOR: {
-        "dashboard.view", "collections.view", "collections.create", "exports.create",
+        "dashboard.view",
+        "collections.view",
+        "collections.create",
+        "exports.create",
     },
     Membership.Role.QUALITY_OFFICER: {
-        "dashboard.view", "collections.view", "collections.approve", "reports.view", "exports.create",
+        "dashboard.view",
+        "collections.view",
+        "collections.approve",
+        "reports.view",
+        "exports.create",
     },
     Membership.Role.ACCOUNTANT: {
-        "dashboard.view", "finance.view", "finance.manage", "reports.view", "exports.create",
+        "dashboard.view",
+        "finance.view",
+        "finance.manage",
+        "reports.view",
+        "exports.create",
     },
     Membership.Role.INVENTORY_MANAGER: {
-        "dashboard.view", "inventory.view", "inventory.manage", "reports.view", "exports.create",
+        "dashboard.view",
+        "inventory.view",
+        "inventory.manage",
+        "reports.view",
+        "exports.create",
     },
     Membership.Role.SUPPORT: {
-        "dashboard.view", "parties.view", "reports.view",
+        "dashboard.view",
+        "parties.view",
+        "reports.view",
     },
 }
 

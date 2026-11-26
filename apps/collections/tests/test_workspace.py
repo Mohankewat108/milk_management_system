@@ -46,9 +46,7 @@ class CollectionWorkspaceTests(TestCase):
             is_approved=True,
             created_by=self.owner,
         )
-        self.url = reverse(
-            "collections:list", kwargs={"organization_slug": self.organization.slug}
-        )
+        self.url = reverse("collections:list", kwargs={"organization_slug": self.organization.slug})
         self.client.force_login(self.owner)
 
     def test_workspace_renders_entry_and_records_together(self):
@@ -97,9 +95,7 @@ class CollectionWorkspaceTests(TestCase):
             farmer=self.farmer,
         )
 
-        response = self.client.get(
-            self.url, {"branch": str(self.branch.pk), "party": "Avery"}
-        )
+        response = self.client.get(self.url, {"branch": str(self.branch.pk), "party": "Avery"})
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["page_obj"].paginator.count, 1)

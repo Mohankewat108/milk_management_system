@@ -59,7 +59,6 @@ class CollectionEntryFormTests(TestCase):
         self.assertIn(self.customer_a, form.fields["customer"].queryset)
         self.assertEqual(form["branch"].value(), self.branch_a.pk)
 
-
     def test_branch_operator_only_sees_assigned_branch_parties(self):
         operator = User.objects.create_user(
             username="collection-form-operator",

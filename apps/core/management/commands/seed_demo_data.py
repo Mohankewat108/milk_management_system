@@ -23,7 +23,7 @@ User = get_user_model()
 
 
 class Command(BaseCommand):
-    help = "Create a reproducible linked DairyNexus demonstration dataset."
+    help = "Create a reproducible linked Dairy Nepal demonstration dataset."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -345,7 +345,7 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                "DairyNexus demo data is ready: 3 organisations, 6 branches, 12 staff "
+                "Dairy Nepal demo data is ready: 3 organisations, 6 branches, 12 staff "
                 "(plus 3 owners and 1 platform administrator), 15 farmers, 20 customers, "
                 "30 collections, 6 pricing versions, 10 payments and 5 inventory items."
             )

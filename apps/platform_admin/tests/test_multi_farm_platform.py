@@ -8,7 +8,7 @@ from django.urls import reverse
 
 from apps.organizations.models import Branch, Membership, Organization
 from apps.parties.models import Customer
-from apps.platform_admin.models import FarmOwnerInvitation
+from apps.platform_admin.models import FarmOwnerInvitation, Subscription, SubscriptionPlan
 
 User = get_user_model()
 
@@ -23,6 +23,16 @@ def invitation_path_from_email(body):
 
 class PlatformMultiFarmTests(TestCase):
     def setUp(self):
+        self.plan = SubscriptionPlan.objects.create(
+            name="Starter",
+            code="starter",
+            monthly_price="1000.00",
+            annual_price="10000.00",
+            max_branches=1,
+            max_staff=5,
+            max_customers=100,
+            is_active=True,
+        )
         self.platform_owner = User.objects.create_superuser(
             username="platform-root",
             email="platform@example.test",
@@ -99,6 +109,7 @@ class PlatformMultiFarmTests(TestCase):
             "owner_first_name": "Farm",
             "owner_last_name": "Owner",
             "owner_email": email or self.farm_owner.email,
+            "subscription_plan": str(self.plan.pk),
             "name": farm_name,
             "legal_name": "",
             "registration_number": "",
@@ -120,6 +131,16 @@ class PlatformMultiFarmTests(TestCase):
 
         farms = Organization.objects.filter(owner=self.farm_owner)
         self.assertEqual(farms.count(), 2)
+        self.assertEqual(
+            Subscription.objects.filter(organization__in=farms, plan=self.plan).count(),
+            2,
+        )
+        self.assertEqual(
+            Subscription.objects.filter(
+                organization__in=farms, status=Subscription.Status.TRIAL
+            ).count(),
+            2,
+        )
         self.assertEqual(
             Membership.objects.filter(
                 user=self.farm_owner,

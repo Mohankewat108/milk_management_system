@@ -7,10 +7,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <meta name="theme-color" content="#f3f7fc">
+  <meta name="theme-color" content="#17365d">
+  <meta name="mobile-web-app-capable" content="yes">
+  {% if user.is_authenticated %}<link rel="manifest" href="{% url 'mobile_manifest' %}">{% endif %}
   <meta name="color-scheme" content="light dark">
 
-  <title>{% block title %}DairyNexus{% endblock %}</title>
+  <title>{% block title %}Dairy Nepal{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'pwa/dairy-nepal-logo.svg' %}">
+  <link rel="apple-touch-icon" href="{% static 'pwa/icon-192.svg' %}">
 
   <!-- Theme initialization: run before styles to prevent theme flashing -->
   <script>
@@ -67,13 +71,13 @@
   <a
     class="brand"
     href="{% url 'home' %}"
-    aria-label="{% translate 'DairyNexus home' %}">
+    aria-label="{% translate 'Dairy Nepal home' %}">
 
-    <span class="brand-mark" aria-hidden="true">D</span>
+    <img class="brand-logo" src="{% static 'pwa/dairy-nepal-logo.svg' %}" alt="Dairy Nepal logo">
 
     <span class="brand-copy">
-      <strong>DairyNexus</strong>
-      <small>{% translate "DAIRY OPERATIONS" %}</small>
+      <strong>Dairy Nepal</strong>
+      <small>{% translate "NEPAL DAIRY MANAGEMENT" %}</small>
     </span>
   </a>
 
@@ -99,6 +103,7 @@
         </a>
       {% endif %}
 
+      <a href="{% url 'mobile_app' %}" class="mobile-app-shortcut">◫ {% translate "Mobile app" %}</a>
       <a href="{% url 'accounts:password_change' %}">
         {% translate "Security" %}
       </a>
@@ -403,7 +408,7 @@
 <!-- ================= FOOTER ================= -->
 
 <footer class="footer">
-  <span class="footer-brand">DairyNexus</span>
+  <span class="footer-brand">Dairy Nepal</span>
   <span>
     {% translate "Dairy operations, made accountable." %}
   </span>
@@ -710,6 +715,7 @@
   src="{% static 'js/nepali-date-picker.js' %}"
   defer>
 </script>
+{% if user.is_authenticated %}<script>if("serviceWorker" in navigator && location.protocol === "https:"){window.addEventListener("load",()=>navigator.serviceWorker.register("{% url 'mobile_service_worker' %}").catch(()=>{}));}</script>{% endif %}
 
 {% block scripts %}{% endblock %}
 

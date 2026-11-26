@@ -1,0 +1,3 @@
+{% extends "base.html" %}
+{% block title %}Invitation unavailable{% endblock %}
+{% block content %}<section class="panel" style="max-width:560px;margin:2rem auto"><h1>Invitation unavailable</h1><p>{{ message|default:"This invitation has expired or is invalid. Please ask your dairy to create a new invitation." }}</p><a class="button" href="{% url 'accounts:login' %}">Go to login</a></section>{% endblock %}

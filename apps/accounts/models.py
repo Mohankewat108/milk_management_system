@@ -9,6 +9,7 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     phone_number = models.CharField(max_length=30, blank=True)
     email_verified = models.BooleanField(default=False)
+    force_password_change = models.BooleanField(default=False)
     phone_verified = models.BooleanField(default=False)
     preferred_language = models.CharField(max_length=12, default="en")
     timezone = models.CharField(max_length=64, default="Asia/Kathmandu")

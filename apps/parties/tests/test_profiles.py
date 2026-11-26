@@ -9,8 +9,8 @@ from django.utils import timezone
 from apps.collections.models import MilkCollection
 from apps.finance.models import Payment
 from apps.organizations.models import Branch, BranchAssignment, Membership, Organization
-from apps.parties.models import Customer, Farmer
 from apps.parties.forms import CustomerForm
+from apps.parties.models import Customer, Farmer
 from apps.pricing.models import PricingConfiguration
 
 User = get_user_model()
@@ -83,13 +83,13 @@ class PartyProfileTests(TestCase):
             **kwargs,
         )
 
-
     def test_customer_form_only_offers_assigned_branches(self):
         other_branch = Branch.objects.create(
             organization=self.organization, code="OTHER", name="Other Branch"
         )
         staff = User.objects.create_user(
-            username="branch-customer-staff", email="branch-staff@example.test",
+            username="branch-customer-staff",
+            email="branch-staff@example.test",
             password="LongDemoPass!123",
         )
         staff_membership = Membership.objects.create(
@@ -101,8 +101,13 @@ class PartyProfileTests(TestCase):
         self.assertIn(self.branch.id, offered_ids)
         self.assertNotIn(other_branch.id, offered_ids)
         form = CustomerForm(
-            data={"branch": str(other_branch.id), "code": "C-OTHER", "full_name": "Blocked Customer"},
-            organization=self.organization, membership=staff_membership,
+            data={
+                "branch": str(other_branch.id),
+                "code": "C-OTHER",
+                "full_name": "Blocked Customer",
+            },
+            organization=self.organization,
+            membership=staff_membership,
         )
         self.assertFalse(form.is_valid())
         self.assertIn("branch", form.errors)
@@ -324,13 +329,20 @@ class PartyProfileTests(TestCase):
         self.farmer.save()
         self.client.force_login(self.owner)
         url = reverse("parties:farmers", args=[self.organization.slug])
-        for term in ("F00", "bahadur", "123456", "kewat@gmail", "parasi", "1234567890", "nepal bank", "main branch"):
+        for term in (
+            "F00",
+            "bahadur",
+            "123456",
+            "kewat@gmail",
+            "parasi",
+            "1234567890",
+            "nepal bank",
+            "main branch",
+        ):
             with self.subTest(term=term):
                 response = self.client.get(url, {"q": term})
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(list(response.context["page_obj"].object_list), [self.farmer])
-
-
 
     def test_search_supports_email_and_filters_inactive_customers(self):
         self.customer.email = "find-me@example.test"
@@ -345,18 +357,21 @@ class PartyProfileTests(TestCase):
     def test_owner_can_edit_all_farmer_profile_fields_and_status(self):
         self.client.force_login(self.owner)
         url = reverse("parties:farmer_edit", args=[self.organization.slug, self.farmer.pk])
-        response = self.client.post(url, {
-            "branch": str(self.branch.pk),
-            "code": "F001-UPDATED",
-            "full_name": "Updated Farmer",
-            "phone": "9812345678",
-            "email": "updated-farmer@example.test",
-            "address": "Updated address",
-            "bank_account_name": "Updated Account",
-            "bank_account_number": "123456789",
-            "bank_name": "Updated Bank",
-            "is_active": "",
-        })
+        response = self.client.post(
+            url,
+            {
+                "branch": str(self.branch.pk),
+                "code": "F001-UPDATED",
+                "full_name": "Updated Farmer",
+                "phone": "9812345678",
+                "email": "updated-farmer@example.test",
+                "address": "Updated address",
+                "bank_account_name": "Updated Account",
+                "bank_account_number": "123456789",
+                "bank_name": "Updated Bank",
+                "is_active": "",
+            },
+        )
         self.assertEqual(response.status_code, 302)
         self.farmer.refresh_from_db()
         self.assertEqual(self.farmer.code, "F001-UPDATED")

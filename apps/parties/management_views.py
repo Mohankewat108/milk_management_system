@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_POST
@@ -156,29 +157,74 @@ def party_restore(request, organization_slug, kind, party_id):
 @organization_access(*MANAGERS)
 @require_POST
 def farmer_nfc_card_add(request, organization_slug, farmer_id):
-    farmer = get_object_or_404(Farmer.objects.filter(organization=request.organization, deleted_at__isnull=True), pk=farmer_id)
+    farmer = get_object_or_404(
+        Farmer.objects.filter(organization=request.organization, deleted_at__isnull=True),
+        pk=farmer_id,
+    )
     uid = request.POST.get("card_uid", "").strip().upper()
     if not uid:
         messages.error(request, "Enter an NFC card UID.")
     elif FarmerNfcCard.objects.filter(card_uid=uid).exists():
-        messages.error(request, "This NFC card is already assigned. Each card UID can belong to only one farmer.")
+        messages.error(
+            request,
+            "This NFC card is already assigned. Each card UID can belong to only one farmer.",
+        )
     else:
         FarmerNfcCard.objects.create(farmer=farmer, card_uid=uid)
-        record_event(actor=request.user, organization=request.organization, action="farmer.nfc_card_added", target=farmer, request=request)
+        record_event(
+            actor=request.user,
+            organization=request.organization,
+            action="farmer.nfc_card_added",
+            target=farmer,
+            request=request,
+        )
         messages.success(request, "NFC card linked to farmer.")
-    return redirect("parties:farmer_detail", organization_slug=organization_slug, farmer_id=farmer.pk)
+    return redirect(
+        "parties:farmer_detail", organization_slug=organization_slug, farmer_id=farmer.pk
+    )
 
 
 @login_required
 @organization_access(*MANAGERS)
 @require_POST
 def farmer_nfc_card_revoke(request, organization_slug, farmer_id, card_id):
-    farmer = get_object_or_404(Farmer.objects.filter(organization=request.organization, deleted_at__isnull=True), pk=farmer_id)
+    farmer = get_object_or_404(
+        Farmer.objects.filter(organization=request.organization, deleted_at__isnull=True),
+        pk=farmer_id,
+    )
     card = get_object_or_404(FarmerNfcCard.objects.filter(farmer=farmer), pk=card_id)
     if card.status != FarmerNfcCard.Status.REVOKED:
         card.status = FarmerNfcCard.Status.REVOKED
         card.revoked_at = timezone.now()
         card.save(update_fields=["status", "revoked_at", "updated_at"])
-        record_event(actor=request.user, organization=request.organization, action="farmer.nfc_card_revoked", target=farmer, request=request)
+        record_event(
+            actor=request.user,
+            organization=request.organization,
+            action="farmer.nfc_card_revoked",
+            target=farmer,
+            request=request,
+        )
         messages.success(request, "NFC card revoked.")
-    return redirect("parties:farmer_detail", organization_slug=organization_slug, farmer_id=farmer.pk)
+    return redirect(
+        "parties:farmer_detail", organization_slug=organization_slug, farmer_id=farmer.pk
+    )
+
+
+@login_required
+@organization_access(*MANAGERS)
+def farmer_qr_card(request, organization_slug, farmer_id):
+    farmer = get_object_or_404(
+        Farmer.objects.filter(organization=request.organization, deleted_at__isnull=True),
+        pk=farmer_id,
+    )
+    from io import BytesIO
+
+    import qrcode
+
+    payload = f"DNX-FARMER:{farmer.qr_token}"
+    image = qrcode.make(payload)
+    buffer = BytesIO()
+    image.save(buffer, format="PNG")
+    response = HttpResponse(buffer.getvalue(), content_type="image/png")
+    response["Content-Disposition"] = f'attachment; filename="farmer-{farmer.code}-qr.png"'
+    return response

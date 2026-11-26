@@ -19,6 +19,9 @@ class SubscriptionPlan(UUIDModel, TimeStampedModel):
     class Meta:
         ordering = ["monthly_price"]
 
+    def __str__(self):
+        return self.name
+
 
 class Subscription(UUIDModel, TimeStampedModel):
     class Status(models.TextChoices):

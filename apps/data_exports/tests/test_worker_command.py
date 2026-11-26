@@ -13,9 +13,12 @@ class ProcessDataJobsCommandTests(SimpleTestCase):
         process_batch.assert_called_once_with(1)
 
     def test_loop_runs_batches_until_interrupted(self):
-        with patch.object(Command, "process_batch") as process_batch, patch(
-            "apps.data_exports.management.commands.process_data_jobs.time.sleep",
-            side_effect=KeyboardInterrupt,
+        with (
+            patch.object(Command, "process_batch") as process_batch,
+            patch(
+                "apps.data_exports.management.commands.process_data_jobs.time.sleep",
+                side_effect=KeyboardInterrupt,
+            ),
         ):
             with self.assertRaises(KeyboardInterrupt):
                 call_command("process_data_jobs", limit=1, loop=True, interval=1)

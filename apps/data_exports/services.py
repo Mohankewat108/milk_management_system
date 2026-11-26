@@ -76,9 +76,15 @@ def _scoped_queryset(module, organization, membership, params, branch_scope=None
     if branch_id and not branch_ids_requested:
         branch_ids_requested = [branch_id]
     if branch_ids_requested:
-        allowed_values = {str(value) for value in (branch_ids or Branch.objects.filter(
-            organization=organization, is_active=True, deleted_at__isnull=True
-        ).values_list("pk", flat=True))}
+        allowed_values = {
+            str(value)
+            for value in (
+                branch_ids
+                or Branch.objects.filter(
+                    organization=organization, is_active=True, deleted_at__isnull=True
+                ).values_list("pk", flat=True)
+            )
+        }
         if any(str(value) not in allowed_values for value in branch_ids_requested):
             raise PermissionDenied("You are not allowed to export one or more selected branches.")
 
@@ -140,6 +146,9 @@ def _scoped_queryset(module, organization, membership, params, branch_scope=None
         )
     if branch_ids_requested and module != "suppliers":
         qs = qs.filter(branch_id__in=branch_ids_requested)
+    shift = params.get("shift", "").strip()
+    if shift in {"morning", "evening"} and module in {"collections", "reports"}:
+        qs = qs.filter(shift=shift)
     if params.get("farmer") and module in {"collections", "reports"}:
         qs = qs.filter(farmer_id=params.get("farmer"))
     if params.get("customer") and module in {"collections", "reports"}:
@@ -212,6 +221,7 @@ def _rows(module, qs):
             "Customer",
             "Branch",
             "Collected at",
+            "Shift",
             "Quantity (L)",
             "FAT",
             "SNF",
@@ -231,6 +241,7 @@ def _rows(module, qs):
                 _party_name(obj.customer),
                 obj.branch.name,
                 obj.collected_at,
+                obj.get_shift_display(),
                 obj.quantity_litres,
                 obj.fat,
                 obj.snf,
@@ -408,17 +419,22 @@ def _numeric_columns(module):
     # Column indexes are based on the export row schema returned by _rows().
     return {
         "collections": {
-            6: "Quantity (L)",
-            7: "FAT",
-            8: "SNF",
-            9: "Lactose",
-            10: "Milk temperature (C)",
-            11: "Rate",
-            12: "Total amount",
+            7: "Quantity (L)",
+            8: "FAT",
+            9: "SNF",
+            10: "Lactose",
+            11: "Milk temperature (C)",
+            12: "Rate",
+            13: "Total amount",
         },
         "reports": {
-            6: "Quantity (L)", 7: "FAT", 8: "SNF", 9: "Lactose",
-            10: "Milk temperature (C)", 11: "Rate", 12: "Total amount",
+            7: "Quantity (L)",
+            8: "FAT",
+            9: "SNF",
+            10: "Lactose",
+            11: "Milk temperature (C)",
+            12: "Rate",
+            13: "Total amount",
         },
         "payments": {9: "Amount"},
         "expenses": {8: "Amount"},
@@ -451,8 +467,8 @@ def _export_summary_rows(module, headers, totals):
         averages[index] = (total / field_count).quantize(Decimal("0.01")) if field_count else ""
 
     if module in {"collections", "reports"}:
-        grand_total[6] = totals["sums"].get(6, Decimal("0"))
-        grand_total[12] = totals["sums"].get(12, Decimal("0"))
+        grand_total[7] = totals["sums"].get(7, Decimal("0"))
+        grand_total[13] = totals["sums"].get(13, Decimal("0"))
     elif module == "payments":
         grand_total[9] = totals["sums"].get(9, Decimal("0"))
     elif module == "expenses":

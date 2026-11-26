@@ -1,11 +1,11 @@
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.views import LoginView
+from django.contrib.auth.views import LoginView, PasswordChangeView
 from django.core.cache import cache
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods, require_POST
@@ -29,6 +29,8 @@ class AccountLoginView(LoginView):
         Django's get_success_url() still honours a safe ?next= URL first.
         """
         user = self.request.user
+        if getattr(user, "force_password_change", False):
+            return reverse("accounts:password_change")
         if user.is_superuser:
             return reverse("platform:dashboard")
         if Farmer.objects.filter(user=user, is_active=True, deleted_at__isnull=True).exists():
@@ -85,3 +87,15 @@ def account_logout(request):
     logout(request)
     messages.success(request, "You have been securely signed out.")
     return redirect("accounts:login")
+
+
+class ForcedPasswordChangeView(PasswordChangeView):
+    template_name = "accounts/password_change.html"
+    success_url = reverse_lazy("farmer_portal:home")
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        self.request.user.force_password_change = False
+        self.request.user.save(update_fields=["force_password_change"])
+        messages.success(self.request, "Your password has been updated successfully.")
+        return response

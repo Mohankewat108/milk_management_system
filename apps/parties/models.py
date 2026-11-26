@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from django.conf import settings
 from django.db import models
 
@@ -63,6 +65,7 @@ class Farmer(UUIDModel, TimeStampedModel):
         related_name="farmer_profile",
     )
     code = models.CharField(max_length=40)
+    qr_token = models.UUIDField(default=uuid4, unique=True, editable=False, db_index=True)
     full_name = models.CharField(max_length=180)
     phone = models.CharField(max_length=30, blank=True)
     email = models.EmailField(blank=True)
@@ -88,6 +91,11 @@ class Farmer(UUIDModel, TimeStampedModel):
             models.Index(fields=["organization", "full_name"]),
             models.Index(fields=["organization", "is_active"]),
         ]
+
+    def save(self, *args, **kwargs):
+        if not self.qr_token:
+            self.qr_token = uuid4()
+        return super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return f"{self.code} · {self.full_name}"

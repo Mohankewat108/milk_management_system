@@ -48,8 +48,16 @@ class AdvancedReportAnalyticsTests(TestCase):
         self.client.force_login(self.user)
 
     def create_collection(
-        self, *, reference, branch, party, quantity, fat, status=MilkCollection.Status.APPROVED,
-        day=20, rate="10.00",
+        self,
+        *,
+        reference,
+        branch,
+        party,
+        quantity,
+        fat,
+        status=MilkCollection.Status.APPROVED,
+        day=20,
+        rate="10.00",
     ):
         return MilkCollection.objects.create(
             organization=self.org,
@@ -77,20 +85,36 @@ class AdvancedReportAnalyticsTests(TestCase):
 
     def test_weighted_price_and_quality_and_customer_sales_are_separate(self):
         self.create_collection(
-            reference="F-1", branch=self.branch_a, party=self.farmer_a,
-            quantity="10", fat="4", rate="10",
+            reference="F-1",
+            branch=self.branch_a,
+            party=self.farmer_a,
+            quantity="10",
+            fat="4",
+            rate="10",
         )
         self.create_collection(
-            reference="F-2", branch=self.branch_a, party=self.farmer_a,
-            quantity="30", fat="6", rate="20",
+            reference="F-2",
+            branch=self.branch_a,
+            party=self.farmer_a,
+            quantity="30",
+            fat="6",
+            rate="20",
         )
         self.create_collection(
-            reference="C-1", branch=self.branch_a, party=self.customer,
-            quantity="5", fat="9", rate="25",
+            reference="C-1",
+            branch=self.branch_a,
+            party=self.customer,
+            quantity="5",
+            fat="9",
+            rate="25",
         )
         self.create_collection(
-            reference="S-1", branch=self.branch_a, party=self.farmer_a,
-            quantity="100", fat="3", status=MilkCollection.Status.SUBMITTED,
+            reference="S-1",
+            branch=self.branch_a,
+            party=self.farmer_a,
+            quantity="100",
+            fat="3",
+            status=MilkCollection.Status.SUBMITTED,
         )
         response = self.report()
         self.assertEqual(response.status_code, 200)
@@ -146,7 +170,11 @@ class AdvancedReportAnalyticsTests(TestCase):
 
     def test_month_preset_calculates_month_date_range(self):
         self.create_collection(
-            reference="A-1", branch=self.branch_a, party=self.farmer_a, quantity="3", fat="4",
+            reference="A-1",
+            branch=self.branch_a,
+            party=self.farmer_a,
+            quantity="3",
+            fat="4",
             day=20,
         )
         response = self.report("?period=month&month=2026-11")
@@ -157,7 +185,11 @@ class AdvancedReportAnalyticsTests(TestCase):
 
     def test_status_filter_can_report_submitted_without_counting_as_approved_milk(self):
         self.create_collection(
-            reference="S-1", branch=self.branch_a, party=self.farmer_a, quantity="7", fat="4",
+            reference="S-1",
+            branch=self.branch_a,
+            party=self.farmer_a,
+            quantity="7",
+            fat="4",
             status=MilkCollection.Status.SUBMITTED,
         )
         response = self.report("?status=submitted")
@@ -214,8 +246,12 @@ class AdvancedReportExportTests(TestCase):
             mutable=True,
         )
         job = queue_export(
-            module="reports", file_format="xlsx", organization=self.org,
-            membership=self.membership, actor=self.user, filters=filters,
+            module="reports",
+            file_format="xlsx",
+            organization=self.org,
+            membership=self.membership,
+            actor=self.user,
+            filters=filters,
         )
         self.assertEqual(job.status, ExportJob.Status.QUEUED)
         self.assertEqual(
@@ -236,16 +272,17 @@ class AdvancedReportExportTests(TestCase):
         other_org = Organization.objects.create(
             owner=self.user, name="Foreign BI Export", slug="foreign-bi-export"
         )
-        foreign_branch = Branch.objects.create(
-            organization=other_org, code="FX", name="Foreign"
-        )
+        foreign_branch = Branch.objects.create(organization=other_org, code="FX", name="Foreign")
         filters = QueryDict(f"branch={foreign_branch.pk}", mutable=True)
         with self.assertRaises(PermissionDenied):
             queue_export(
-                module="reports", file_format="csv", organization=self.org,
-                membership=self.membership, actor=self.user, filters=filters,
+                module="reports",
+                file_format="csv",
+                organization=self.org,
+                membership=self.membership,
+                actor=self.user,
+                filters=filters,
             )
-
 
     def test_report_export_worker_creates_private_excel_csv_and_pdf(self):
         from datetime import UTC, datetime
@@ -292,15 +329,11 @@ class AdvancedReportExportTests(TestCase):
                 organization=self.org,
                 membership=self.membership,
                 actor=self.user,
-                filters=QueryDict(
-                    f"branch={self.branch_a.pk}&from=2026-11-01&to=2026-11-30"
-                ),
+                filters=QueryDict(f"branch={self.branch_a.pk}&from=2026-11-01&to=2026-11-30"),
             )
             with patch("apps.data_exports.queue.send_mail", return_value=1):
                 processed = process_export_job(job.pk)
-            self.assertEqual(
-                processed.status, ExportJob.Status.COMPLETED, processed.error_message
-            )
+            self.assertEqual(processed.status, ExportJob.Status.COMPLETED, processed.error_message)
             self.assertEqual(processed.record_count, 1)
             self.assertTrue(processed.file.name.startswith("private_exports/"))
             with processed.file.open("rb") as stream:
@@ -313,7 +346,6 @@ class AdvancedReportExportTests(TestCase):
             else:
                 self.assertTrue(payload.startswith(b"%PDF"))
             processed.file.delete(save=False)
-
 
     def test_report_export_download_rechecks_permissions(self):
         from datetime import UTC, datetime

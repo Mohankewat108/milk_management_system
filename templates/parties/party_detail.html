@@ -54,6 +54,15 @@
 
 
   {% if kind == "farmer" %}
+  <section class="profile-section panel" aria-labelledby="farmer-qr-title">
+    <div class="profile-section-heading"><div><span class="profile-section-kicker">IDENTIFICATION</span><h2 id="farmer-qr-title">Farmer QR code</h2><p>Download this QR card for quick farmer identification at milk collection. The code contains a private identification token, not personal details.</p></div></div>
+    <div style="display:flex;gap:1.25rem;align-items:center;flex-wrap:wrap">
+      <img src="{% url 'parties:farmer_qr_card' organization.slug party.pk %}" alt="QR code for {{ party.full_name }}" style="width:180px;height:180px;border:1px solid #ddd;padding:8px;background:white">
+      <div><strong>{{ party.full_name }}</strong><p>{{ party.code }}</p><a class="button button-secondary" href="{% url 'parties:farmer_qr_card' organization.slug party.pk %}">Download QR code</a></div>
+    </div>
+  </section>
+  {% endif %}
+  {% if kind == "farmer" %}
   <section class="profile-section panel" aria-labelledby="farmer-nfc-title">
     <div class="profile-section-heading"><div><span class="profile-section-kicker">IDENTIFICATION</span><h2 id="farmer-nfc-title">NFC cards</h2><p>Link a physical NFC card to identify this farmer quickly during milk collection.</p></div></div>
     {% if can_manage_parties %}

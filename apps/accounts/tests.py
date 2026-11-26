@@ -38,6 +38,6 @@ class LoginCSRFCookieTests(TestCase):
         self.assertContains(response, "Staff members")
         self.assertContains(response, "Farmers")
         self.assertContains(response, "Platform administrators")
-        self.assertContains(response, "DairyNexus will securely identify your access")
+        self.assertContains(response, "Dairy Nepal will securely identify your access")
         self.assertNotContains(response, 'name="role"')
         self.assertNotContains(response, 'name="account_type"')

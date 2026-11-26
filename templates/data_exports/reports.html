@@ -61,6 +61,10 @@
       </select>
     </div>
     <div class="reports-filter-field">
+      <label for="report-shift">Collection shift</label>
+      <select id="report-shift" name="shift"><option value="">All shifts</option><option value="morning" {% if shift_filter == "morning" %}selected{% endif %}>Morning</option><option value="evening" {% if shift_filter == "evening" %}selected{% endif %}>Evening</option></select>
+    </div>
+    <div class="reports-filter-field">
       <label for="report-status">{% translate "Collection status" %}</label>
       <select id="report-status" name="status">
         <option value="">{% translate "All statuses" %}</option>
@@ -97,6 +101,7 @@
     <input type="hidden" name="farmer" value="{{ selected_farmer.id|default:'' }}">
     <input type="hidden" name="customer" value="{{ selected_customer.id|default:'' }}">
     <input type="hidden" name="status" value="{{ status_filter }}">
+    <input type="hidden" name="shift" value="{{ shift_filter }}">
     <label for="reports-export-format">{% translate "Export format" %}</label>
     <select id="reports-export-format" name="file_format">
       <option value="xlsx">{% translate "Excel workbook" %}</option>

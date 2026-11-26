@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Choose subscription plan | Dairy Nepal{% endblock %}
+{% block content %}
+<section class="content-card">
+  <div class="eyebrow">STEP 2 · SUBSCRIPTION</div>
+  <h1>Choose your dairy plan</h1>
+  <p class="muted">Choose a plan for your dairy workspace. Your selected plan will be attached to your workspace and start with a 14-day trial.</p>
+  {% if plans %}
+  <form method="post">{% csrf_token %}
+    <div class="card-grid">
+      {% for plan in plans %}
+      <label class="panel" style="display:block;cursor:pointer">
+        <input type="radio" name="plan" value="{{ plan.pk }}" {% if forloop.first %}required{% endif %}>
+        <h2>{{ plan.name }}</h2>
+        {% if plan.description %}<p>{{ plan.description }}</p>{% endif %}
+        <h3>{{ plan.monthly_price }} / month</h3>
+        <p>{{ plan.annual_price }} / year</p>
+        <p>Branches: {{ plan.max_branches }} · Staff: {{ plan.max_staff }} · Customers: {{ plan.max_customers }}</p>
+        {% if plan.features %}<ul>{% for feature, enabled in plan.features.items %}{% if enabled %}<li>{{ feature|title }}</li>{% endif %}{% endfor %}</ul>{% endif %}
+      </label>
+      {% endfor %}
+    </div>
+    <div class="actions"><button class="button" type="submit">Continue with selected plan</button><a class="button button-secondary" href="{% url 'business:register' %}">Back</a></div>
+  </form>
+  {% else %}
+    <div class="empty-state"><h2>No subscription plans available yet</h2><p>The platform owner needs to add and activate subscription plans before new dairy registration can continue.</p><a class="button button-secondary" href="{% url 'business:register' %}">Back to dairy profile</a></div>
+  {% endif %}
+</section>
+{% endblock %}

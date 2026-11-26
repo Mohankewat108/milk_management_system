@@ -1,72 +1,123 @@
 {% extends "base.html" %}
-{% block title %}Platform control centre | DairyNexus{% endblock %}
-{% block body_attributes %} class="platform-page"{% endblock %}
+{% block title %}Platform Control Centre | Dairy Nepal{% endblock %}
+{% block body_attributes %} class="platform-page platform-dashboard"{% endblock %}
 {% block workspace_navigation %}{% endblock %}
 {% block workspace_navigation_end %}{% endblock %}
 {% block content %}
-<section class="page-heading">
-  <div>
-    <div class="eyebrow">SAAS PLATFORM CONTROL</div>
+<section class="platform-hero">
+  <div class="platform-hero-copy">
+    <div class="platform-kicker"><span class="platform-live-dot"></span> DAIRY NEPAL Ã‚Â· SAAS ADMINISTRATION</div>
     <h1>Platform control centre</h1>
-    <p class="muted">Monitor every registered dairy business from one central administration workspace.</p>
+    <p>Monitor dairy workspaces, account activity and platform health from one central administration panel.</p>
   </div>
-  <a class="button" href="{% url 'platform:organization_create' %}">Create dairy farm</a>
+  <a class="button platform-hero-action" href="{% url 'platform:organization_create' %}"><span aria-hidden="true">Ã¯Â¼â€¹</span> Create dairy farm</a>
 </section>
-<div class="kpi-grid">
-  <div class="kpi"><span>Total dairy farms</span><strong>{{ organization_count }}</strong></div>
-  <div class="kpi"><span>Active farms</span><strong>{{ active_organizations }}</strong></div>
-  <div class="kpi"><span>Trial farms</span><strong>{{ trial_organizations }}</strong></div>
-  <div class="kpi"><span>Suspended farms</span><strong>{{ suspended_organizations }}</strong></div>
-  <div class="kpi"><span>Platform accounts</span><strong>{{ user_count }}</strong></div>
-  <div class="kpi"><span>Customers across farms</span><strong>{{ customer_count }}</strong></div>
-  <div class="kpi"><span>Subscriptions</span><strong>{{ subscription_count }}</strong></div>
-</div>
-<section class="panel platform-farms-panel">
-  <div class="row-between">
-    <div><h2>Dairy farms</h2><p class="muted">Each row represents an independent tenant workspace.</p></div>
-    <a class="button button-secondary" href="{% url 'platform:organization_create' %}">Add a farm</a>
+<section class="platform-metrics" aria-label="Platform overview">
+  <article class="platform-metric platform-metric-primary"><span class="platform-metric-icon">Ã¢â€“Â£</span><div><small>Total workspaces</small><strong>{{ organization_count }}</strong><span class="platform-metric-note">Registered dairy businesses</span></div></article>
+  <article class="platform-metric"><span class="platform-metric-icon platform-icon-green">Ã¢Å“â€œ</span><div><small>Active</small><strong>{{ active_organizations }}</strong><span class="platform-metric-note">Operating workspaces</span></div></article>
+  <article class="platform-metric"><span class="platform-metric-icon platform-icon-blue">Ã¢â€”Â·</span><div><small>Trial</small><strong>{{ trial_organizations }}</strong><span class="platform-metric-note">Evaluation workspaces</span></div></article>
+  <article class="platform-metric"><span class="platform-metric-icon platform-icon-red">Ã¢â€¦Â¡</span><div><small>Suspended workspaces</small><strong>{{ suspended_organizations }}</strong><span class="platform-metric-note">Requires attention</span></div></article>
+  <article class="platform-metric"><span class="platform-metric-icon platform-icon-purple">Ã¢â„¢â„¢</span><div><small>Platform accounts</small><strong>{{ user_count }}</strong><span class="platform-metric-note">Registered users</span></div></article>
+  <article class="platform-metric"><span class="platform-metric-icon platform-icon-teal">Ã¢â„¢Â§</span><div><small>Customers</small><strong>{{ customer_count }}</strong><span class="platform-metric-note">Across all workspaces</span></div></article>
+  <article class="platform-metric"><span class="platform-metric-icon platform-icon-orange">Ã¢â€“Â¤</span><div><small>Subscriptions</small><strong>{{ subscription_count }}</strong><span class="platform-metric-note">Platform subscription records</span></div></article>
+</section>
+<section class="panel platform-farm-delete-panel">
+  <header><h2>Farm deletion</h2><p>Permanent deletion is only allowed for farms without milk collection, payment, or expense history.</p></header>
+  <div class="platform-farm-delete-list">
+    {% for org in organizations %}
+    <div class="platform-farm-delete-row"><div><strong>{{ org.name }}</strong><small>{{ org.owner.email }}</small></div><form method="post" action="{% url 'platform:organization_delete' org.id %}" class="platform-delete-form">{% csrf_token %}<input type="hidden" name="confirm_name" value=""><button class="button button-danger platform-action-delete" type="submit" data-farm-name="{{ org.name|escape }}">Delete farm</button></form></div>
+    {% empty %}<p>No farms to delete.</p>{% endfor %}
   </div>
-  <div class="platform-table-scroll" role="region" aria-label="Dairy farms" tabindex="0">
+</section>
+<section class="platform-insight-grid">
+  <article class="panel platform-insight-card">
+    <header><div><span class="platform-section-kicker">SUBSCRIPTION HEALTH</span><h2>Renewals & billing attention</h2></div></header>
+    <div class="platform-billing-summary">
+      <div><small>Estimated monthly plan value</small><strong>{{ estimated_mrr|floatformat:2 }}</strong></div>
+      <div><small>Past due</small><strong class="platform-alert-number">{{ past_due_subscription_count }}</strong></div>
+      <div><small>Expiring in 30 days</small><strong>{{ expiring_subscription_count }}</strong></div>
+    </div>
+    <div class="platform-list">
+      {% for sub in expiring_subscriptions %}
+      <div class="platform-list-row"><div><strong>{{ sub.organization.name }}</strong><small>{{ sub.plan.name }} Ã‚Â· ends {{ sub.ends_at|date:"M j, Y" }}</small></div><span class="platform-expiry-tag">Expiring</span></div>
+      {% empty %}<p class="platform-muted-empty">No active or trial subscriptions expire within the next 30 days.</p>{% endfor %}
+    </div>
+  </article>
+  <article class="panel platform-insight-card">
+    <header><div><span class="platform-section-kicker">RECENT REGISTRATIONS</span><h2>New dairy workspaces</h2></div></header>
+    <div class="platform-list">
+      {% for org in recent_organizations %}
+      <div class="platform-list-row"><div><strong>{{ org.name }}</strong><small>{{ org.owner.email }}</small></div><span class="platform-date-tag">{{ org.created_at|date:"M j" }}</span></div>
+      {% empty %}<p class="platform-muted-empty">No workspaces registered yet.</p>{% endfor %}
+    </div>
+  </article>
+  <article class="panel platform-insight-card platform-activity-card">
+    <header><div><span class="platform-section-kicker">AUDIT & ACTIVITY</span><h2>Recent platform activity</h2></div></header>
+    <div class="platform-list">
+      {% for event in recent_activity %}
+      <div class="platform-list-row platform-activity-row"><div><strong>{{ event.action }}</strong><small>{% if event.actor %}{{ event.actor.email }}{% else %}System{% endif %}{% if event.organization %} Ã‚Â· {{ event.organization.name }}{% endif %}</small></div><span class="platform-date-tag">{{ event.created_at|date:"M j, H:i" }}</span></div>
+      {% empty %}<p class="platform-muted-empty">No recent platform events.</p>{% endfor %}
+    </div>
+  </article>
+</section>
+<section class="panel platform-farms-panel platform-workspaces-panel">
+  <div class="platform-workspaces-heading">
+    <div><div class="platform-section-kicker">WORKSPACE DIRECTORY</div><h2>Registered dairies</h2><p>Manage dairy businesses, account owners, subscriptions and access status.</p></div>
+    <a class="button platform-add-button" href="{% url 'platform:organization_create' %}">Ã¯Â¼â€¹ Add dairy workspace</a>
+  </div>
+  <div class="platform-directory-controls" aria-label="Workspace filters">
+    <label class="platform-directory-search"><span>Search workspaces</span><input id="workspaceSearch" type="search" placeholder="Business name or owner email" autocomplete="off"></label>
+    <label class="platform-directory-status"><span>Filter by status</span><select id="workspaceStatus"><option value="">All statuses</option><option value="active">Active</option><option value="trial">Trial</option><option value="suspended">Suspended</option><option value="closed">Closed</option></select></label>
+    <span id="workspaceResultCount" class="platform-directory-count" aria-live="polite"></span>
+  </div>
+  <div class="platform-table-scroll" role="region" aria-label="Registered dairies" tabindex="0">
     <table>
-      <thead><tr><th>Farm / business</th><th>Owner</th><th>Status</th><th>Customers</th><th>Farmers</th><th>Team members</th><th>Registered</th><th>Farm controls</th></tr></thead>
+      <thead><tr><th>Dairy business</th><th>Workspace owner</th><th>Status</th><th>Customers</th><th>Farmers</th><th>Team</th><th>Registration date</th><th>Workspace actions</th></tr></thead>
       <tbody>
         {% for org in organizations %}
-        <tr>
-          <td><strong>{{ org.name }}</strong><br><span class="muted">{{ org.country }} · {{ org.currency }}</span></td>
+        <tr class="platform-workspace-row" data-workspace="{{ org.name|lower }} {{ org.owner.email|lower }}" data-status="{{ org.status|lower }}">
+          <td><strong>{{ org.name }}</strong></td>
           <td>{{ org.owner.email }}{% if org.owner_invitation_pending %}<br><span class="tag">Invitation pending</span>{% endif %}</td>
-          <td><span class="status">{{ org.get_status_display }}</span></td>
-          <td>{{ org.customer_count }}</td>
-          <td>{{ org.farmer_count }}</td>
-          <td>{{ org.member_count }}</td>
-          <td>{{ org.created_at|date:"Y-m-d" }}</td>
+          <td><span class="status platform-status-{{ org.status }}">{{ org.get_status_display }}</span></td>
+          <td>{{ org.customer_count }}</td><td>{{ org.farmer_count }}</td><td>{{ org.member_count }}</td><td>{{ org.created_at|date:"Y-m-d" }}</td>
           <td>
             {% if org.owner_invitation_pending %}
-            <form method="post" action="{% url 'platform:organization_resend_invitation' org.id %}" class="stack-sm">
-              {% csrf_token %}
-              <button class="button button-secondary" type="submit">Resend invitation</button>
-            </form>
+            <form method="post" action="{% url 'platform:organization_resend_invitation' org.id %}" class="stack-sm">{% csrf_token %}<button class="button button-secondary" type="submit">Resend invitation</button></form>
             {% endif %}
+            <form method="post" action="{% url 'platform:organization_reset_owner_password' org.id %}" class="stack-sm" onsubmit="return confirm('Generate a temporary password for {{ org.owner.username|escapejs }}? They must change it on next login.');">{% csrf_token %}<button class="button button-secondary" type="submit">Reset owner password</button></form>
             {% if org.status != "closed" %}
-            <form method="post" action="{% url 'platform:organization_set_status' org.id %}" class="stack-sm">
-              {% csrf_token %}
-              {% if org.status == "suspended" %}
-              <input type="hidden" name="status" value="active">
-              <input type="text" name="reason" aria-label="Reason for reactivation" placeholder="Reason for reactivation" required>
-              <button class="button button-secondary" type="submit">Reactivate</button>
-              {% else %}
-              <input type="hidden" name="status" value="suspended">
-              <input type="text" name="reason" aria-label="Reason for suspension" placeholder="Reason for suspension" required>
-              <button class="button button-secondary" type="submit">Suspend</button>
-              {% endif %}
+            <form method="post" action="{% url 'platform:organization_set_status' org.id %}" class="stack-sm">{% csrf_token %}
+              {% if org.status == "suspended" %}<input type="hidden" name="status" value="active"><input type="text" name="reason" aria-label="Enter reactivation reason" placeholder="Enter reactivation reason" required><button class="button platform-action-reactivate" type="submit">Reactivate workspace</button>
+              {% else %}<input type="hidden" name="status" value="suspended"><input type="text" name="reason" aria-label="Enter suspension reason" placeholder="Enter suspension reason" required><button class="button button-danger platform-action-suspend" type="submit">Suspend workspace</button>{% endif %}
             </form>
             {% else %}<span class="muted">Closed</span>{% endif %}
+            <div class="platform-delete-wrapper" style="display:block!important;margin-top:12px!important;min-height:42px!important;visibility:visible!important;opacity:1!important;"><form method="post" action="{% url 'platform:organization_delete' org.id %}" class="platform-delete-form" style="display:block!important;visibility:visible!important;opacity:1!important;">
+              {% csrf_token %}
+              <input type="hidden" name="confirm_name" value="">
+              <button class="button button-danger platform-action-delete" style="display:inline-flex!important;visibility:visible!important;opacity:1!important;background:#dc3d57!important;color:#fff!important;border:1px solid #dc3d57!important;padding:10px 14px!important;min-height:40px!important;position:relative!important;z-index:999!important;" type="submit" data-farm-name="{{ org.name|escape }}">DELETE FARM</button>
+            </form>
+            </div>
           </td>
         </tr>
-        {% empty %}
-        <tr><td colspan="8">No dairy farms have been registered yet. Create the first farm to get started.</td></tr>
-        {% endfor %}
+        {% empty %}<tr><td colspan="8"><div class="platform-empty"><strong>No dairy farms have been registered yet.</strong><p>Create the first farm to get started.</p><span class="visually-hidden">No dairy farms have been registered yet. Create the first farm to get started.</span><a class="button" href="{% url 'platform:organization_create' %}">Create workspace</a></div></td>{% endfor %}
       </tbody>
     </table>
   </div>
 </section>
+
 {% endblock %}
+<script>
+(function(){
+ const search=document.getElementById('workspaceSearch'),status=document.getElementById('workspaceStatus'),count=document.getElementById('workspaceResultCount');
+ const rows=Array.from(document.querySelectorAll('.platform-workspace-row'));
+ if(!search||!status||!count)return; function apply(){const q=search.value.trim().toLowerCase(),s=status.value.toLowerCase();let shown=0;rows.forEach(row=>{const visible=(row.dataset.workspace||'').includes(q)&&(!s||(row.dataset.status||'').includes(s));row.hidden=!visible;if(visible)shown++;});count.textContent=shown+' of '+rows.length+' workspaces';}
+ search.addEventListener('input',apply);status.addEventListener('change',apply);
+ document.querySelectorAll('.platform-workspace-row form').forEach(form=>{const st=form.querySelector('input[name="status"]'),btn=form.querySelector('button[type="submit"]');if(st&&st.value==='suspended'&&btn)form.addEventListener('submit',e=>{const reason=form.querySelector('input[name="reason"]');if(reason&&reason.value.trim()&&!window.confirm('Suspend this workspace? This will change its access status.'))e.preventDefault();});});
+ document.querySelectorAll('.platform-delete-form').forEach(form=>form.addEventListener('submit',e=>{const button=form.querySelector('button[data-farm-name]'),hidden=form.querySelector('input[name="confirm_name"]');const farm=button?.dataset.farmName||'';if(!farm||!window.confirm('Delete '+farm+' permanently? Only farms without milk/financial history can be deleted.')){e.preventDefault();return;}const typed=window.prompt('Type the exact farm name to confirm deletion:', '');if(typed!==farm){e.preventDefault();window.alert('Farm name did not match. Deletion cancelled.');return;}hidden.value=typed;}));
+ apply();
+})();
+</script>
+
+
+
+

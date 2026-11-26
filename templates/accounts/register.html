@@ -1,2 +1,3 @@
-{% extends "base.html" %}{% block title %}Create account | DairyNexus{% endblock %}{% block content %}
+﻿{% extends "base.html" %}{% block title %}Create account | Dairy Nepal{% endblock %}{% block content %}
 <section class="auth-card"><div class="eyebrow">GET STARTED</div><h1>Create your account</h1><p class="muted">After creating your account, register your dairy business workspace.</p><form method="post" novalidate>{% csrf_token %}{{ form.non_field_errors }}{% for field in form %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}{% endfor %}<button class="button full" type="submit">Create account</button></form></section>{% endblock %}
+

@@ -24,6 +24,7 @@ def create_collection(
     branch,
     actor,
     collected_at,
+    shift="morning",
     quantity_litres,
     snf,
     fat,
@@ -51,9 +52,7 @@ def create_collection(
     ):
         raise ValidationError("The selected party is not active in this organisation.")
     if party.branch_id and party.branch_id != branch.id:
-        raise ValidationError(
-            "The selected farmer/customer belongs to a different branch."
-        )
+        raise ValidationError("The selected farmer/customer belongs to a different branch.")
     quantity = Decimal(str(quantity_litres))
     quality = [Decimal(str(value)) for value in (snf, fat, lactose)]
     if quantity <= 0:
@@ -75,6 +74,7 @@ def create_collection(
                 collection.customer_id == getattr(customer, "id", None),
                 collection.recorded_by_id == actor.id,
                 collection.collected_at == collected_at,
+                collection.shift == shift,
                 collection.quantity_litres == quantity,
                 collection.snf == quality[0],
                 collection.fat == quality[1],
@@ -150,7 +150,8 @@ def create_collection(
     }
     try:
         with transaction.atomic():
-            return MilkCollection.objects.create(
+            entry = MilkCollection.objects.create(
+                status=MilkCollection.Status.APPROVED,
                 organization=organization,
                 branch=branch,
                 reference=f"MC-{local_collected_at:%Y%m%d}-{uuid4().hex[:8].upper()}",
@@ -158,6 +159,7 @@ def create_collection(
                 customer=customer,
                 recorded_by=actor,
                 collected_at=collected_at,
+                shift=shift,
                 quantity_litres=quantity,
                 snf=quality[0],
                 fat=quality[1],
@@ -174,6 +176,15 @@ def create_collection(
                 notes=notes,
                 idempotency_key=idempotency_key,
             )
+            from apps.finance.ledger_services import (
+                post_approved_customer_collection_sale,
+                post_approved_farmer_collection,
+            )
+            if entry.farmer_id:
+                post_approved_farmer_collection(collection=entry, actor=actor)
+            elif entry.customer_id:
+                post_approved_customer_collection_sale(collection=entry, actor=actor)
+            return entry
     except IntegrityError:
         existing = existing_submission()
         if existing:
